@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Manhattan.Editor;
 using Manhattan.Viewer;
 using NUnit.Framework;
@@ -10,6 +11,62 @@ using Object = UnityEngine.Object;
 
 public sealed class CityBakeTests
 {
+    [Test]
+    public void ChangedGlbWithEqualLengthAndTimestampReplacesCopyAndImportedMesh()
+    {
+        string sourcePath=Path.Combine(Path.GetTempPath(),"ManhattanSourceValidation_"+Guid.NewGuid().ToString("N")+".glb");
+        string importedPath="Assets/CitySource/SourceCacheValidation_"+Guid.NewGuid().ToString("N")+".glb";
+        var timestamp=new DateTime(2025,1,1,0,0,0,DateTimeKind.Utc);
+        byte[] first=TriangleGlb(1),changed=TriangleGlb(2);
+        Assert.That(changed.Length,Is.EqualTo(first.Length));
+        try
+        {
+            Directory.CreateDirectory("Assets/CitySource");
+            File.WriteAllBytes(sourcePath,first);File.SetLastWriteTimeUtc(sourcePath,timestamp);
+            CityBake.ImportSourceModel(sourcePath,importedPath);
+            var firstAsset=AssetDatabase.LoadAssetAtPath<GameObject>(importedPath);
+            Assert.That(firstAsset,Is.Not.Null);
+            float before=firstAsset.GetComponentInChildren<MeshFilter>(true).sharedMesh.vertices[0].x;
+            File.WriteAllBytes(sourcePath,changed);File.SetLastWriteTimeUtc(sourcePath,timestamp);
+            Assert.That(new FileInfo(sourcePath).Length,Is.EqualTo(new FileInfo(importedPath).Length));
+            Assert.That(File.GetLastWriteTimeUtc(sourcePath),Is.EqualTo(File.GetLastWriteTimeUtc(importedPath)));
+
+            CityBake.ImportSourceModel(sourcePath,importedPath);
+
+            Assert.That(File.ReadAllBytes(importedPath),Is.EqualTo(changed));
+            var updated=AssetDatabase.LoadAssetAtPath<GameObject>(importedPath);
+            Assert.That(updated,Is.Not.Null);
+            float after=updated.GetComponentInChildren<MeshFilter>(true).sharedMesh.vertices[0].x;
+            Assert.That(before,Is.EqualTo(-1f).Within(.0001f));
+            Assert.That(after,Is.EqualTo(-2f).Within(.0001f),"A forced import must replace the imported mesh, not only the copied bytes.");
+        }
+        finally
+        {
+            AssetDatabase.DeleteAsset(importedPath);
+            if(File.Exists(sourcePath))File.Delete(sourcePath);
+        }
+    }
+
+    private static byte[] TriangleGlb(int x)
+    {
+        string json="{\"asset\":{\"version\":\"2.0\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],\"nodes\":[{\"mesh\":0}],"+
+            "\"buffers\":[{\"byteLength\":44}],\"bufferViews\":[{\"buffer\":0,\"byteOffset\":0,\"byteLength\":36,\"target\":34962},"+
+            "{\"buffer\":0,\"byteOffset\":36,\"byteLength\":6,\"target\":34963}],\"accessors\":[{\"bufferView\":0,\"componentType\":5126,\"count\":3,\"type\":\"VEC3\",\"min\":["+x+",0,0],\"max\":["+(x+1)+",1,0]},"+
+            "{\"bufferView\":1,\"componentType\":5123,\"count\":3,\"type\":\"SCALAR\"}],\"meshes\":[{\"primitives\":[{\"attributes\":{\"POSITION\":0},\"indices\":1}]}]}";
+        byte[] jsonBytes=Encoding.UTF8.GetBytes(json);int jsonLength=(jsonBytes.Length+3)&~3;
+        using(var stream=new MemoryStream())using(var writer=new BinaryWriter(stream))
+        {
+            writer.Write(0x46546C67u);writer.Write(2u);writer.Write(12+8+jsonLength+8+44);
+            writer.Write(jsonLength);writer.Write(0x4E4F534Au);writer.Write(jsonBytes);
+            for(int i=jsonBytes.Length;i<jsonLength;i++)writer.Write((byte)32);
+            writer.Write(44);writer.Write(0x004E4942u);
+            foreach(Vector3 p in new[]{new Vector3(x,0,0),new Vector3(x+1,0,0),new Vector3(x,1,0)})
+            {writer.Write(p.x);writer.Write(p.y);writer.Write(p.z);}
+            writer.Write((ushort)0);writer.Write((ushort)1);writer.Write((ushort)2);writer.Write((ushort)0);
+            return stream.ToArray();
+        }
+    }
+
     [Test]
     public void LandmarkFallbacksKeepOrdinarySkylineBuildingMetadataAndCollisionProxies()
     {

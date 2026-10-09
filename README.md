@@ -72,6 +72,8 @@ GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한
 
 `tools/build.ps1`는 실행 파일 옆 `Notices/`에 검증된 도시 원본 이용 조건과 라이선스·출처를 함께 준비합니다. Windows 배포 ZIP에도 이 폴더를 포함합니다. 성능 측정은 `tools/benchmark.ps1`가 1920×1200 Exclusive Fullscreen을 요청하며 AC·데스크톱 Hz·드라이버·전력 제한 가용성과 GPU 로그를 기록합니다.
 
+반복 측정 전체 목록은 `tools/benchmark_suite.ps1 -DryRun`으로 확인하고, 실측 보정 준비 후 `tools/benchmark_suite.ps1 -CalibrationDirectory '<private calibration directory>'`로 순차 실행합니다. 기본 웹캠 사용·12가지 실행의 측정 시간은 약 2시간 5분이며 준비/로딩 시간이 추가됩니다. GUID 폴더에 원본 로그와 진행 JSON을 보존합니다. `-CaseFilter`로 일부만 선택하고, `-NoTracker`·`-DurationOverride`는 명시적인 기초 비교·탐색 용도로 사용합니다. 완료 상태가 성능 합격을 의미하지는 않습니다.
+
 세 스위치의 시각 비교는 `tools/run.ps1 -PlayerArguments`로 `--comparison-captures-out <directory> --quit-after-comparison-captures`를 명시적으로 실행합니다. 30초 준비 후 기준 화면·8가지 조합·왕복 복원 화면과 보고서를 만들며, 일반 시작이나 저장 설정을 바꾸지 않습니다. 명령 예제와 수동 이미지 확인 항목은 [비교 캡처 가이드](docs/validation.md#explicit-comparison-captures)에 있습니다. 실제 성능 분석은 5개 지역×두 속도의 10가지 경로, 별도 1200초 메모리 기록과 일치하는 충돌 프록시 OFF/ON 쌍을 확인합니다.
 
 코드는 [MIT](LICENSE) 라이선스입니다. NYC 지리 데이터와 외부 모델·라이브러리의 조건은 별도로 유지합니다.

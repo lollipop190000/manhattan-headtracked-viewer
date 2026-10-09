@@ -59,7 +59,7 @@ namespace Manhattan.Editor
         {
             string source = Environment.GetEnvironmentVariable("MANHATTAN_SOURCE_ROOT");
             if (string.IsNullOrEmpty(source)) source = Path.GetFullPath(Path.Combine(Application.dataPath, "../../3d_modeling"));
-            if (!Directory.Exists(source)) throw new DirectoryNotFoundException("Prepare city-source-v1 first: " + source);
+            if (!Directory.Exists(source)) throw new DirectoryNotFoundException("Prepare the city assets listed in assets/source-manifest.json first: " + source);
             Directory.CreateDirectory(Output + "/Meshes"); Directory.CreateDirectory(Output + "/Materials");
             Directory.CreateDirectory(Output + "/Textures"); Directory.CreateDirectory(Output + "/Tiles");
             Directory.CreateDirectory("Assets/Resources"); Directory.CreateDirectory("Assets/CitySource");
@@ -81,9 +81,7 @@ namespace Manhattan.Editor
                 if (!string.IsNullOrEmpty(filter) && name.StartsWith("Near_") && !name.Contains(filter)) continue;
                 CityLayer layer = name.StartsWith("Near_") ? CityLayer.Near : name.Contains("Vegetation") ? CityLayer.Vegetation : name.Contains("Streets") ? CityLayer.Ground : CityLayer.Core;
                 string importedPath = "Assets/CitySource/" + Path.GetFileName(file);
-                if (!File.Exists(importedPath) || new FileInfo(importedPath).Length != new FileInfo(file).Length)
-                    File.Copy(file, importedPath, true);
-                ImportReadableModel(importedPath);
+                ImportSourceModel(file, importedPath);
                 GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(importedPath);
                 if (asset == null) throw new InvalidDataException("glTFast import failed: " + importedPath);
                 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
@@ -151,7 +149,7 @@ namespace Manhattan.Editor
                 string file=Path.Combine(source,"Manhattan_Unity_Core_and_Ground",name+".glb");
                 if(!File.Exists(file))throw new FileNotFoundException("Missing canonical base GLB.",file);
                 string path="Assets/CitySource/"+name+".glb";
-                File.Copy(file,path,true);ImportReadableModel(path);
+                ImportSourceModel(file,path);
                 var asset=AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if(asset==null)throw new InvalidDataException("Base GLB import failed: "+path);
                 GameObject instance=(GameObject)PrefabUtility.InstantiatePrefab(asset);
@@ -575,9 +573,16 @@ namespace Manhattan.Editor
             catch{Object.DestroyImmediate(clone);throw;}
         }
 
+        /// <summary>Always refresh the local source copy; equal length and timestamps do not identify equal GLB contents.</summary>
+        public static void ImportSourceModel(string sourcePath,string importedPath)
+        {
+            File.Copy(sourcePath,importedPath,true);
+            ImportReadableModel(importedPath);
+        }
+
         private static void ImportReadableModel(string path)
         {
-            AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport|ImportAssetOptions.ForceUpdate);
             AssetImporter importer=AssetImporter.GetAtPath(path);
             if(importer==null)throw new InvalidDataException("No glTF importer for "+path);
             var serialized=new SerializedObject(importer);

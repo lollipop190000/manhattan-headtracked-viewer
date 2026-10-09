@@ -27,5 +27,7 @@ if ($PlayerArguments) {
     if ($CalibrationDirectory) { $parameters.CalibrationDirectory = $CalibrationDirectory }
     & (Join-Path $technologyRoot 'tools\run_demo.ps1') @parameters
 }
-else { & $launcher @arguments }
-if ($LASTEXITCODE -ne 0) { throw "Viewer launcher failed with exit code $LASTEXITCODE" }
+else {
+    & $launcher @arguments
+    if ($LASTEXITCODE -ne 0) { throw "Viewer launcher failed with exit code $LASTEXITCODE" }
+}

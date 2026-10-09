@@ -43,6 +43,8 @@ namespace Manhattan.Viewer
         private bool savedInputEnabled, savedCaptured, savedStreaming, savedTracking, savedWindow, savedSurface, holding;
         private GraphicRaycaster[] raycasters;
         private bool[] raycasterStates;
+        private Canvas[] canvases;
+        private bool[] canvasStates;
         private Material[] originalMaterials;
         private string preferencesFingerprint;
 
@@ -50,7 +52,7 @@ namespace Manhattan.Viewer
         {
             if (holding) return;
             app = viewer;
-            if (ManhattanBootstrap.HasArgument("--benchmark") || ManhattanBootstrap.HasArgument("--screenshot-out"))
+            if (ManhattanBootstrap.HasArgument("--benchmark") || ManhattanBootstrap.HasArgument("--screenshot-out") || ManhattanBootstrap.HasArgument("--fade-proof-out"))
             {
                 Debug.LogError("Comparison captures require a separate run from benchmarks and single screenshots.");
                 if (quit) Application.Quit(1);
@@ -63,6 +65,8 @@ namespace Manhattan.Viewer
             savedStreaming = app.Streamer.enabled;
             savedTracking = app.Display.TrackingEnabled; savedWindow = app.Frame.EffectEnabled; savedSurface = app.Surfaces.EnabledDetails;
             preferencesFingerprint = Hash(JsonUtility.ToJson(app.Preferences));
+            canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None); canvasStates = new bool[canvases.Length];
+            for (int i = 0; i < canvases.Length; i++) canvasStates[i] = canvases[i].enabled;
             raycasters = FindObjectsByType<GraphicRaycaster>(FindObjectsSortMode.None); raycasterStates = new bool[raycasters.Length];
             for (int i = 0; i < raycasters.Length; i++) { raycasterStates[i] = raycasters[i].enabled; raycasters[i].enabled = false; }
             holding = true;
@@ -164,8 +168,9 @@ namespace Manhattan.Viewer
                 if (app.Flight != null) app.Flight.InputSource = savedInput;
                 if (app.KeyboardInput != null) { app.KeyboardInput.InputEnabled = savedInputEnabled; app.KeyboardInput.Capture(savedCaptured); }
             }
+            if (canvases != null) for (int i = 0; i < canvases.Length; i++) if (canvases[i] != null) canvases[i].enabled = canvasStates[i];
             if (raycasters != null) for (int i = 0; i < raycasters.Length; i++) if (raycasters[i] != null) raycasters[i].enabled = raycasterStates[i];
-            originalMaterials = null; savedInput = null; raycasters = null; raycasterStates = null;
+            originalMaterials = null; savedInput = null; raycasters = null; raycasterStates = null; canvases = null; canvasStates = null;
         }
         private void OnDisable() { StopAllCoroutines(); Restore(); }
 

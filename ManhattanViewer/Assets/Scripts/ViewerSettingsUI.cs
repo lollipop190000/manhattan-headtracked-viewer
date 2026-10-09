@@ -45,7 +45,7 @@ namespace Manhattan.Viewer
             diagnostics = Text(diag, "", 15, 0, 0, 900, 130); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
             BuildDrawer(canvas.transform); BuildSetup(canvas.transform);
             app.KeyboardInput.EscapePressed += OnEscape;
-            bool requiresSetup = !ViewerPersistence.HasCalibration && !ManhattanBootstrap.HasArgument("--benchmark") && !ManhattanBootstrap.HasArgument("--screenshot-out") && !ManhattanBootstrap.HasArgument("--comparison-captures-out");
+            bool requiresSetup = !ViewerPersistence.HasCalibration && !ManhattanBootstrap.HasArgument("--benchmark") && !ManhattanBootstrap.HasArgument("--screenshot-out") && !ManhattanBootstrap.HasArgument("--comparison-captures-out") && !ManhattanBootstrap.HasArgument("--fade-proof-out");
             setup.SetActive(requiresSetup); drawer.SetActive(false);
             app.KeyboardInput.InputEnabled = !requiresSetup && !ManhattanBootstrap.HasArgument("--benchmark");
         }

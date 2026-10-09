@@ -81,10 +81,16 @@ namespace Manhattan.Editor
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/Settings/AfternoonSky.mat");
             if(sky==null){sky=new Material(Shader.Find("Skybox/Procedural"));AssetDatabase.CreateAsset(sky,"Assets/Settings/AfternoonSky.mat");}
             sky.SetColor("_SkyTint",new Color(.45f,.58f,.75f));sky.SetColor("_GroundColor",new Color(.29f,.26f,.22f));sky.SetFloat("_AtmosphereThickness",1.1f);sky.SetFloat("_Exposure",1.1f);EditorUtility.SetDirty(sky);
+            // Keep the startup shader available before any streamed city bundle is loaded.
+            Directory.CreateDirectory("Assets/Resources");
+            var windowFrame = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/WindowFrameMaterial.mat");
+            if(windowFrame==null){windowFrame=new Material(Shader.Find("Universal Render Pipeline/Lit"));AssetDatabase.CreateAsset(windowFrame,"Assets/Resources/WindowFrameMaterial.mat");}
+            windowFrame.SetColor("_BaseColor",new Color(.13f,.16f,.19f));windowFrame.SetFloat("_Metallic",.4f);windowFrame.SetFloat("_Smoothness",.65f);EditorUtility.SetDirty(windowFrame);
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             RenderSettings.skybox = sky; RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
             var go = new GameObject("Manhattan Viewer"); var bootstrap = go.AddComponent<ManhattanBootstrap>();
             bootstrap.catalog = AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset");
+            bootstrap.windowFrameMaterial = windowFrame;
             EditorSceneManager.SaveScene(scene, "Assets/Scenes/ManhattanViewer.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/ManhattanViewer.unity", true) };
             AssetDatabase.SaveAssets();

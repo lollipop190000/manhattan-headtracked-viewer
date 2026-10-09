@@ -35,6 +35,27 @@ Repeat with `Park`, `Uptown` and `Air`, and pair each measured circuit with the 
 
 At least one matched proxy OFF/ON pair at the same region, speed, source, hardware and settings measures the added collision workload. The analyzer keeps this paired comparison and the long memory trace separate from the ten regional cases; it does not require a second ten-case proxy matrix.
 
+`tools/benchmark_suite.ps1` runs those cases sequentially with the webcam enabled (camera 0 by default): five regional cases at each speed, Midtown 50m/s proxy ON paired with its regional OFF run, and Full 50m/s proxy ON for the long memory trace. Regional durations are 900s at 10m/s and 180s at 50m/s; the paired run is 180s. Full memory uses **1900s**, allowing at least two recorded full circuits after the player excludes the initial partial circuit. The planned measured total is 2h04m40s, plus twelve 15s warmups and loading.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/benchmark_suite.ps1 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/benchmark_suite.ps1 -CalibrationDirectory '<private calibration directory>'
+# Select cases by wildcard. This leaves all other acceptance cases pending.
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/benchmark_suite.ps1 -CaseFilter 'Midtown-*'
+# Explicit short exploration/baseline, never a qualification shortcut.
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/benchmark_suite.ps1 -CaseFilter 'Midtown-50' -DurationOverride 60 -NoTracker -DryRun
+```
+
+Each suite creates a new GUID folder under ignored `BenchmarkResults/`, preserving every case's original frame/JSON/GPU/log files. `suite-progress.json` records pending/running/recorded/failed/interrupted status and actual artifact paths. Collection stops at the first failure unless `-ContinueOnError` is supplied. Existing launcher/benchmark `finally` blocks own player/tracker/GPU cleanup; the suite does not stop unrelated runs. `recorded` means files were collected, not performance passed. `-NoTracker` is labeled a baseline; `-DurationOverride` is explicitly exploratory and never silently shortens the standard durations.
+
+Suite case directories are nested, so pass them explicitly to the analyzer:
+
+```powershell
+$suiteDirectory = '<completed suite directory>'
+$caseDirectories = @(Get-ChildItem -LiteralPath $suiteDirectory -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'benchmark.json') } | ForEach-Object { $_.FullName })
+& python ./tools/analyze_benchmarks.py @caseDirectories --output-json (Join-Path $suiteDirectory 'aggregate.json') --output-markdown (Join-Path $suiteDirectory 'performance-report.md')
+```
+
 `tools/benchmark.ps1` creates a unique output directory by default and starts a hidden, owned NVIDIA driver collector when `nvidia-smi` is available. It writes `gpu.csv` beside the frame report and stops the collector in `finally` when the shared launcher returns, including failure paths. `-SkipGpuLog` disables it; `-GpuIntervalMs 500` samples twice per second. Existing benchmark/GPU result files are not overwritten. Collector logs remain beside the report so missing or failed measurements are explicit.
 
 The launcher requests **1920×1200 Exclusive Fullscreen** (`-screen-fullscreen 1 -window-mode exclusive -screen-width 1920 -screen-height 1200`) to use the whole measured physical panel. Check the player's actual recorded render size; a requested size alone is not evidence that the driver accepted the mode. Windowed output on a 2880×1800 panel occupies only part of the measured screen and needs calibration for that smaller physical viewport.
@@ -80,9 +101,26 @@ $captureArguments = '-screen-fullscreen 1 -window-mode exclusive -screen-width 1
 # Add -CalibrationDirectory '<private calibration directory>' when using prepared external calibration.
 ```
 
-This explicit mode holds movement and city residency while toggling the same comparison APIs, then restores original states, input and streaming. It never saves preferences and has no effect on normal startup. Run it separately from `--benchmark` and `--screenshot-out`; `-NoTracker` is available for a labeled rendering baseline. It uses existing/default calibration for QA without opening the startup form, so first prepare measured calibration for physical head-tracking checks.
+This explicit mode holds movement and city residency while toggling the same comparison APIs, then restores original states, input and streaming. It never saves preferences and has no effect on normal startup. Run it separately from `--benchmark`, `--screenshot-out` and `--fade-proof-out`; `-NoTracker` is available for a labeled rendering baseline. It uses existing/default calibration for QA without opening the startup form, so first prepare measured calibration for physical head-tracking checks.
 
 The report records state checks, image writes, round-trip restoration and fingerprints of rig/screen transforms, calibration, city/source materials, lighting and pipeline. It records requested Near fade values, which do not prove the rasterized appearance. Head observations continue, so the eye can move while tracking is enabled. Inspect every image for window/surface changes, alignment and TAA artifacts; passing report invariants do not replace image or streamed-gameplay review.
+
+## Standalone opaque distance-fade proof
+
+Use a separate rebuilt standalone run with `--fade-proof-out <directory> --quit-after-fade-proof` to test whether the actual converted Near materials honor the `unity_LODFade` property block on the GPU. This is separate from the eight comparison captures: only this explicit QA path temporarily selects AA=None and disables SSAO renderer features, fixes the physical eye with Tracking OFF, holds movement/streaming and hides UI. SSAO's per-frame blue-noise variation would otherwise invalidate exact repeated RGB controls. Normal startup and comparison switches do not alter AA or SSAO.
+
+```powershell
+$fadeDirectory = [System.IO.Path]::GetFullPath('BenchmarkResults/fade-proof-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$fadeArguments = '-screen-fullscreen 1 -window-mode exclusive -screen-width 1920 -screen-height 1200 --fade-proof-out "' + $fadeDirectory + '" --quit-after-fade-proof'
+& ./tools/run.ps1 -NoTracker -PlayerArguments $fadeArguments
+# This rendering baseline does not certify webcam tracking; omit -NoTracker for an owned webcam run.
+```
+
+After a 30-second warmup and up to 30 additional seconds for pending loads, it captures `near-1.png`, `control-1.png`, `near-0.png` and `restored-1.png`. Each saved PNG is decoded before exact RGB hashes/differences are calculated. Throughout the four images, the only city-rendering change is the requested fade vector on active opaque Near renderer property blocks. Renderer/GameObject visibility, material references, imported assets, lighting, city transforms and physical calibration remain unchanged. Original complete property blocks, AA, each SSAO feature's original active state, tracking, input, streaming and UI states are restored; preferences are never saved.
+
+`fade-proof.json` records the actual build identity, output/render size, renderer/shader/frustum evidence, original/requested fade vectors, pose/calibration/material/light/pipeline/UI/geometry fingerprints, SSAO disable/restoration checks, RGB sample counts, hashes, changed pixel count, mean/max RGB difference and changed-pixel bounds. A pass requires visible Near evidence, settled city loading, stable repeated/restored opacity-1 images, an opacity-0 image with different RGB pixels, preserved invariants and restored states. No Near evidence, zero RGB difference or an unstable control remains **inconclusive**. Exit codes are 0 for pass, 2 for inconclusive and 1 for failure. Inspect the PNGs alongside the report: a pass proves the tested Near draws affected the standalone output, not all distances or performance targets.
+
+The live-GPU PlayMode test `OpaqueDistanceFadeChangesRenderedCoverage` checks a controlled white cube; batch/null graphics runs intentionally skip it. That test does not replace this standalone proof of retained build variants and real Near materials. Neither proof has passed merely because the runtime stored an MPB value; keep its status pending until a real GPU run produces qualifying output.
 
 ## Release reproducibility
 
@@ -110,6 +148,7 @@ As of 2026-10-10, reusable changes published in [technology commit `960d5de55037
 | Runtime-only consumer without URP or Unity Test Framework | Windows build succeeded; standalone package smoke exited 0 |
 | Parameterized shared launcher | 21 assertions passed |
 | Manhattan portable checks | 27/27 Python data tests and 8/8 PowerShell assertions passed |
+| Manhattan Unity tests after rendering fixes | 34/34 EditMode passed; PlayMode 8 passed, 1 GPU-only fade test skipped; zero failures/errors |
 
 Original package XML/build/smoke evidence remains in the technical checkout's ignored `Builds/ManhattanPackageValidation/`. The runtime-only smoke covers projection, frame/source ownership, collider removal, JSON calibration and feature round trips. These package checks do not establish the Manhattan player's visual quality or frame rate.
 
@@ -122,3 +161,15 @@ Hardware metadata capture independently reported a 2880×1800@60Hz prelaunch des
 An isolated Windows x64 Python 3.13.5 environment passed `pip check`, all ten tracker protocol/pose/lifetime tests, and a CPU Face Landmarker smoke test using the SHA-256-pinned model and a blank synthetic image. `tools/tracker-requirements.lock.txt` records this environment with MediaPipe 1.1.0, NumPy 2.5.3 and a single OpenCV contrib 5.0.0.93 provider. `tools/test_tracker.py` repeats its interpreter, every locked dependency version, provider/model checks and CPU inference without opening a webcam. The existing tracker environment was not changed. Webcam/head-movement acceptance remains separate.
 
 The full Manhattan standalone build/render, ten regional measurements, matched proxy comparison, 1200-second memory trace, comparison PNG review, manual webcam/head-motion checks and clean GitHub clone-to-build execution are **pending**. No Manhattan FPS, frame-time percentile, VRAM-budget result or 20-minute memory-stability result has been accepted yet. Record those actual outputs after the final implementation run; targets in this document are not measured performance.
+
+## Published source and initial fresh-clone record
+
+The [private viewer repository](https://github.com/lollipop190000/manhattan-headtracked-viewer) now contains initial `main` commit `030c241af832b7f96f6d7dda3e68bce05bb9c424` and its LFS fixture. Its private visibility and remote commit were checked after push. [GitHub Actions run 37970061969](https://github.com/lollipop190000/manhattan-headtracked-viewer/actions/runs/37970061969) completed successfully on that commit.
+
+[Source Release `city-source-v2`](https://github.com/lollipop190000/manhattan-headtracked-viewer/releases/tag/city-source-v2) is published on the same commit. All six original ZIPs plus `source-manifest.json`, the reviewed Release notice, MIT license and third-party credits are uploaded. Their ten server-reported SHA-256 digests and byte counts match the local canonical manifest/notices, and the published body matches the reviewed notice. Source version is `manhattan-2026-10-10-v2`; manifest SHA-256 is `82bc35bea819762e3832210187232cafa8e16bea9fd92ecf3cf8dc2f683f8bc7`. This source publication does not include a validated Windows viewer binary.
+
+An independent GitHub clone in ignored `.verification/clone-aad98656e9e24628803810ccdf2db6da` checked out that exact initial commit. Its LFS fixture was downloaded as the actual 383800-byte GLB, with SHA-256 `88873443df2dc51fa98ca4e8cccb9d7f8e30b4b4bc1b13c6710ba9dde9fa59e8`, and its 27 Python tests plus eight PowerShell assertions passed.
+
+That clone then ran `tools/setup.ps1 -SkipUnity` without an offline-source override: authenticated GitHub Release downloads supplied all six ZIPs, and extraction verified the hashes of all 370 files. The setup fetched technology commit `960d5de55037a3fe2739ed055c8de091b8c54aed` into its own tool checkout and prepared a new Python 3.13.5 tracker environment. Exact dependency-lock verification, `pip check`, ten tracker tests and the pinned model's CPU smoke test passed. No Unity Editor, city bake, player or webcam was launched during this preparation.
+
+Token-free local evidence is retained in ignored `.verification/publication-receipt.json`, `.verification/verification-030c241af832b7f96f6d7dda3e68bce05bb9c424.json` and `.verification/clone-setup-receipt-030c241.json`. This proves initial publication and fresh authenticated source/tracker preparation. The clone still needs the final tested viewer commit, Unity package resolution/import, city conversion, Unity tests, Windows build and actual webcam execution before the full clean-clone acceptance criterion can pass.

@@ -8,6 +8,7 @@ namespace Manhattan.Viewer
     public sealed class ManhattanBootstrap : MonoBehaviour
     {
         public CityCatalog catalog;
+        public Material windowFrameMaterial;
         public HeadTrackedDisplay Display { get; private set; }
         public ScreenWindowFrame Frame { get; private set; }
         public FreeFlightController Flight { get; private set; }
@@ -57,7 +58,9 @@ namespace Manhattan.Viewer
             Display = cameraObject.AddComponent<HeadTrackedDisplay>();
             ViewerPersistence.RestoreCalibration(Display.Calibration); Display.Configure(plane, source);
             Frame = gameObject.AddComponent<ScreenWindowFrame>();
-            frameMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "Physical Window Frame", hideFlags = HideFlags.DontSave };
+            var frameTemplate = windowFrameMaterial != null ? windowFrameMaterial : Resources.Load<Material>("WindowFrameMaterial");
+            if (frameTemplate == null) throw new InvalidOperationException("Window frame material is missing. Run Manhattan/Create viewer scene and render settings before building.");
+            frameMaterial = new Material(frameTemplate) { name = "Physical Window Frame", hideFlags = HideFlags.DontSave };
             frameMaterial.SetColor("_BaseColor", new Color(.13f, .16f, .19f)); frameMaterial.SetFloat("_Metallic", .4f); frameMaterial.SetFloat("_Smoothness", .65f);
             Frame.FrameMaterial = frameMaterial; Frame.Configure(Display);
             Surfaces = gameObject.AddComponent<SurfaceDetailComparison>();
@@ -76,6 +79,9 @@ namespace Manhattan.Viewer
             string comparisonPath = StringArgument("--comparison-captures-out");
             if (!string.IsNullOrEmpty(comparisonPath))
                 gameObject.AddComponent<ViewerComparisonCapture>().Begin(this, comparisonPath, HasArgument("--quit-after-comparison-captures"));
+            string fadeProofPath = StringArgument("--fade-proof-out");
+            if (!string.IsNullOrEmpty(fadeProofPath))
+                gameObject.AddComponent<RuntimeFadeProofCapture>().Begin(this, fadeProofPath, HasArgument("--quit-after-fade-proof"));
             if (HasArgument("--benchmark"))
             {
                 KeyboardInput.InputEnabled = false;
