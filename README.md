@@ -4,7 +4,24 @@
 
 Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~50m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
-현재 고정된 기술 커밋은 [`960d5de55037a3fe2739ed055c8de091b8c54aed`](https://github.com/lollipop190000/head-tracked-display/commit/960d5de55037a3fe2739ed055c8de091b8c54aed)입니다. 패키지 데모 39 EditMode·22 PlayMode, URP 없는 최소 소비 프로젝트 39 EditMode·11 PlayMode, Test Framework도 없는 런타임 소비 프로젝트의 Windows 빌드·smoke 종료 코드 0, 공용 런처 21개 검사를 통과했습니다. 이 저장소의 데이터 검사 27개와 PowerShell 검사 8개도 통과했습니다. **맨해튼 독립 실행 성능, 웹캠 수동 검증, GitHub 새 복제본 재현 검증은 아직 미완료**입니다.
+현재 고정된 기술 커밋은 [`960d5de55037a3fe2739ed055c8de091b8c54aed`](https://github.com/lollipop190000/head-tracked-display/commit/960d5de55037a3fe2739ed055c8de091b8c54aed)입니다. 패키지 데모와 URP 없는 최소 소비 프로젝트의 투영·보정·수명주기 검사, 런타임 전용 Windows smoke와 공용 런처 검사를 통과했습니다. 맨해튼 전체 도시 Windows 빌드와 실제 GPU의 비교·창문 디테일 검증도 실행했습니다. 첫 Midtown 50m/s 측정에서는 프레임 P95 16.683ms, P99 16.684ms, 50ms 이상 정지 0회를 기록했습니다. **전체 경로의 웹캠 성능 합격과 실제 머리 이동 확인은 아직 완료되지 않았습니다.** [검증 기록](docs/validation.md)은 실제 측정과 미확인 항목을 구분합니다.
+
+## Windows 배포본 실행
+
+배포 ZIP 전체를 압축 해제하면 Unity 설치 없이 실행할 수 있습니다. 실행 파일 폴더에서 웹캠 없이 탐색하려면 다음을 사용합니다.
+
+```powershell
+.\ManhattanViewer.exe --no-tracker
+```
+
+웹캠을 사용하려면 이 저장소를 복제한 폴더에서 Git·Python **3.13.5**로 추적기를 준비하고 배포 실행 파일의 절대 경로를 전달합니다. 도시 원본 다운로드·Unity 준비·빌드는 필요하지 않습니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
+```
+
+첫 실행에서 실제 화면 너비·높이·관찰 거리를 cm로 입력합니다. 보정을 별도 개인 폴더에 보관하려면 `run`에 `-CalibrationDirectory '<private calibration directory>'`를 전달합니다. [Windows 배포 실행 가이드](docs/windows-release.md)에 종료·상세 보정·배포 파일 목록과 라이선스 보존 절차가 있습니다. 빌드별 성능과 웹캠 수동 검증 상태는 [검증 기록](docs/validation.md)을 확인합니다.
 
 ## 복제 → 준비 → 빌드 → 실행
 

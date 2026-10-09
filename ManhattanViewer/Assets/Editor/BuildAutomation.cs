@@ -10,6 +10,7 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEditor.SceneManagement;
+using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Build;
 using UnityEngine;
@@ -87,17 +88,55 @@ namespace Manhattan.Editor
             var windowFrame = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/WindowFrameMaterial.mat");
             if(windowFrame==null){windowFrame=new Material(Shader.Find("Universal Render Pipeline/Lit"));AssetDatabase.CreateAsset(windowFrame,"Assets/Resources/WindowFrameMaterial.mat");}
             windowFrame.SetColor("_BaseColor",new Color(.13f,.16f,.19f));windowFrame.SetFloat("_Metallic",.4f);windowFrame.SetFloat("_Smoothness",.65f);EditorUtility.SetDirty(windowFrame);
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            const string scenePath = "Assets/Scenes/ManhattanViewer.unity";
+            Scene scene = PrepareViewerScene(scenePath, windowFrame);
             RenderSettings.skybox = sky; RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
-            var go = new GameObject("Manhattan Viewer"); var bootstrap = go.AddComponent<ManhattanBootstrap>();
-            bootstrap.catalog = AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset");
-            bootstrap.windowFrameMaterial = windowFrame;
-            ConfigureCityDetailMaterials(bootstrap.catalog);
-            EditorSceneManager.SaveScene(scene, "Assets/Scenes/ManhattanViewer.unity");
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/ManhattanViewer.unity", true) };
+            ConfigureCityDetailMaterials(AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset"));
+            EditorSceneManager.SaveScene(scene, scenePath);
+            if (!EditorBuildSettings.scenes.Any(s => s.path == scenePath))
+                EditorBuildSettings.scenes = EditorBuildSettings.scenes.Append(new EditorBuildSettingsScene(scenePath, true)).ToArray();
             AssetDatabase.SaveAssets();
         }
         private static void SetBool(SerializedObject obj,string name,bool value){var p=obj.FindProperty(name);if(p!=null)p.boolValue=value;}
+
+        // Keep authored objects and scene IDs stable across builds. The generated
+        // catalog has a clone-local GUID and is resolved from Resources at runtime.
+        public static Scene PrepareViewerScene(string scenePath, Material windowFrame)
+        {
+            Scene scene = SceneManager.GetSceneByPath(scenePath);
+            if (!scene.IsValid() || !scene.isLoaded)
+                scene = File.Exists(scenePath)
+                    ? EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single)
+                    : EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            SceneManager.SetActiveScene(scene);
+            var bootstrap = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<ManhattanBootstrap>(true)).FirstOrDefault();
+            if (bootstrap == null)
+            {
+                var go = new GameObject("Manhattan Viewer");
+                if (go.scene != scene) SceneManager.MoveGameObjectToScene(go, scene);
+                bootstrap = go.AddComponent<ManhattanBootstrap>();
+            }
+            // Assign even an unresolved, clone-local catalog reference to null.
+            bootstrap.catalog = null; bootstrap.windowFrameMaterial = windowFrame;
+            EditorUtility.SetDirty(bootstrap); EditorSceneManager.MarkSceneDirty(scene);
+            return scene;
+        }
+
+        public static AddressableAssetSettings RebindGeneratedAddressables()
+        {
+            const string defaultPath = AddressableAssetSettingsDefaultObject.kDefaultConfigFolder + "/DefaultObject.asset";
+            var defaultObject = AssetDatabase.LoadAssetAtPath<AddressableAssetSettingsDefaultObject>(defaultPath);
+            var settings = AssetDatabase.LoadAssetAtPath<AddressableAssetSettings>(AddressableAssetSettingsDefaultObject.DefaultAssetPath);
+            if (defaultObject == null || settings == null)
+                throw new InvalidOperationException("Generated Addressables settings are missing. Run CityBake.BuildAll first.");
+            // Rebind existing assets rather than creating new settings/groups. A
+            // clean clone regenerates their GUIDs while keeping its baked entries.
+            EditorBuildSettings.AddConfigObject(AddressableAssetSettingsDefaultObject.kDefaultConfigObjectName, defaultObject, true);
+            AddressableAssetSettingsDefaultObject.Settings = settings;
+            if (AddressableAssetSettingsDefaultObject.Settings != settings)
+                throw new InvalidOperationException("Generated Addressables settings could not be rebound.");
+            return settings;
+        }
 
         private static void ConfigureCityDetailMaterials(CityCatalog catalog)
         {
@@ -154,11 +193,12 @@ namespace Manhattan.Editor
         {
             if(AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset")==null)throw new InvalidOperationException("Run CityBake.BuildAll first.");
             WriteBuildIdentity();
+            var addressableSettings = RebindGeneratedAddressables();
             ConfigureProject();
             AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult addressableResult);
             if(!string.IsNullOrEmpty(addressableResult.Error))throw new InvalidOperationException(addressableResult.Error);
             // Content was built above; prevent the player preprocessor from building it a second time.
-            UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings.BuildAddressablesWithPlayerBuild = AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer;
+            addressableSettings.BuildAddressablesWithPlayerBuild = AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer;
             string output=Environment.GetEnvironmentVariable("MANHATTAN_BUILD_PATH");
             if(string.IsNullOrEmpty(output))output=Path.GetFullPath(Path.Combine(Application.dataPath,"../../Builds/ManhattanViewer/ManhattanViewer.exe"));
             Directory.CreateDirectory(Path.GetDirectoryName(output));

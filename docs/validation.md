@@ -4,7 +4,7 @@ The acceptance target is a webcam-enabled standalone Windows player on RTX 4070 
 
 ## Automated checks
 
-`tools/test.ps1 -DataOnly` runs 27 Python data tests using only the standard library, plus eight PowerShell assertions for GPU CSV and environment metadata. These cover source integrity/extraction, catalog/fixture/notice invariants and measured-report analysis. GitHub Actions also verifies technology/UPM revision agreement and prevents tracked downloads, personal calibration, build output or generated city files.
+`tools/test.ps1 -DataOnly` runs Python data tests using only the standard library, plus eight PowerShell assertions for GPU CSV and environment metadata. These cover source integrity/extraction, catalog/fixture/notice invariants, build preflight and measured-report analysis. GitHub Actions also verifies technology/UPM revision agreement and prevents tracked downloads, personal calibration, build output or generated city files.
 
 `tools/test.ps1` adds Unity EditMode and PlayMode suites and writes JUnit reports into ignored `TestResults/`. Preserve the head-tracking package's projection, calibration and lifecycle tests. Validate any package changes in a minimal project without URP, Manhattan or demo dependencies before publishing its pinned commit.
 
@@ -149,9 +149,10 @@ As of 2026-10-10, reusable changes published in [technology commit `960d5de55037
 | Minimal consumer without URP or demo | 39/39 EditMode and 11/11 PlayMode tests passed |
 | Runtime-only consumer without URP or Unity Test Framework | Windows build succeeded; standalone package smoke exited 0 |
 | Parameterized shared launcher | 21 assertions passed |
-| Manhattan portable checks | 30/30 Python data tests and 8/8 PowerShell assertions passed |
-| Manhattan Unity tests after rendering and telemetry fixes | 41/41 EditMode passed; PlayMode 9 passed, 1 GPU-only fade test skipped; zero failures/errors |
+| Manhattan portable checks | 42/42 Python data tests and 8/8 PowerShell assertions passed |
+| Manhattan Unity tests after scene portability and streaming fixes | 42/42 EditMode passed; PlayMode 13 passed, 1 GPU-only fade test skipped; zero failures/errors |
 | Custom Near shader live-GPU test | 1/1 passed on the actual GPU, zero skips; standalone city verification remains separate |
+| Deferred tile-release lifecycle | All 4 added PlayMode tests passed; the combined PlayMode suite has 13 passed and 1 GPU-only skip |
 
 Original package XML/build/smoke evidence remains in the technical checkout's ignored `Builds/ManhattanPackageValidation/`. The runtime-only smoke covers projection, frame/source ownership, collider removal, JSON calibration and feature round trips. These package checks do not establish the Manhattan player's visual quality or frame rate.
 
@@ -163,7 +164,11 @@ Hardware metadata capture independently reported a 2880×1800@60Hz prelaunch des
 
 An isolated Windows x64 Python 3.13.5 environment passed `pip check`, all ten tracker protocol/pose/lifetime tests, and a CPU Face Landmarker smoke test using the SHA-256-pinned model and a blank synthetic image. `tools/tracker-requirements.lock.txt` records this environment with MediaPipe 1.1.0, NumPy 2.5.3 and a single OpenCV contrib 5.0.0.93 provider. `tools/test_tracker.py` repeats its interpreter, every locked dependency version, provider/model checks and CPU inference without opening a webcam. The existing tracker environment was not changed. Webcam/head-movement acceptance remains separate.
 
-The full Manhattan standalone build/render, ten regional measurements, matched proxy comparison, 1200-second memory trace, comparison PNG review, manual webcam/head-motion checks and clean GitHub clone-to-build execution are **pending**. No Manhattan FPS, frame-time percentile, VRAM-budget result or 20-minute memory-stability result has been accepted yet. Record those actual outputs after the final implementation run; targets in this document are not measured performance.
+Full-city Windows builds have succeeded with 10,038 independently baked tiles, 68,693,368 triangles across all source/detail layers and 44,567 building records. Every generated tile's native dependencies were checked to exclude the original Core GLB. Standalone rendering and the eight comparison combinations plus their restoration were inspected on the actual RTX 4070 Laptop GPU. Near-detail opacity was also checked in a settled standalone view: opacity 1→0 changed 120,578 RGB pixels, and restoring 1 reproduced the first image exactly. That proof temporarily disabled TAA/SSAO only for deterministic capture and restored them; normal comparison switches retain rendering settings.
+
+The first two 180-second Midtown 50m/s measurements recorded two complete circuits each at an actual 1920×1200 render/output. Their frame P95 was 16.683ms, P99 16.684ms and maximum 33.337ms, with no ≥50ms frame and no tile-load failure. The second run recorded a 2.063GiB player working-set peak. Its streaming P95 was 2.319ms, above the initial 2ms streaming goal. These are limited baseline observations, not acceptance of all city routes. The webcam process was connected but fresh face observations were 0%; regional webcam qualification and physical head movement remain pending.
+
+A webcam startup run exited cleanly, released its owned tracker, and the camera could immediately be reopened to acquire a frame. No captured webcam image was retained. Ten regional measurements, matched proxy comparison, long memory stability and manual head-motion/TAA checks remain separate acceptance work.
 
 ## Published source and initial fresh-clone record
 
@@ -175,4 +180,6 @@ An independent GitHub clone in ignored `.verification/clone-aad98656e9e246288038
 
 That clone then ran `tools/setup.ps1 -SkipUnity` without an offline-source override: authenticated GitHub Release downloads supplied all six ZIPs, and extraction verified the hashes of all 370 files. The setup fetched technology commit `960d5de55037a3fe2739ed055c8de091b8c54aed` into its own tool checkout and prepared a new Python 3.13.5 tracker environment. Exact dependency-lock verification, `pip check`, ten tracker tests and the pinned model's CPU smoke test passed. No Unity Editor, city bake, player or webcam was launched during this preparation.
 
-Token-free local evidence is retained in ignored `.verification/publication-receipt.json`, `.verification/verification-030c241af832b7f96f6d7dda3e68bce05bb9c424.json` and `.verification/clone-setup-receipt-030c241.json`. This proves initial publication and fresh authenticated source/tracker preparation. The clone still needs the final tested viewer commit, Unity package resolution/import, city conversion, Unity tests, Windows build and actual webcam execution before the full clean-clone acceptance criterion can pass.
+The independent clone subsequently resolved Unity packages, imported and converted the complete city using its downloaded sources, and passed the then-current 41 EditMode tests plus 9 PlayMode tests (one GPU-only test skipped in headless mode). Its native tile/catalog counts match the original checkout; the generated catalog JSON is byte-identical with SHA-256 `78a9dbe7b69399e7cf7982ec73076123ddf5b81378f9775d399d91f9aee7f38b`. Neither generated assets nor the original checkout's Unity cache were copied into it.
+
+Token-free local evidence is retained under ignored `.verification/` and the clone's `Builds/verification/`. Final-commit Windows build and execution are recorded separately after the build portability fix. Only those actual results can complete the clone-to-build criterion.

@@ -27,13 +27,14 @@ namespace Manhattan.Viewer
         {
             public CityTileRecord tile;
             public AsyncOperationHandle<GameObject> handle;
-            public bool hasHandle, loading, wanted, visible;
+            public bool hasHandle, loading, wanted, visible, releaseQueued;
             public GameObject instance;
             public float retryAt, distance, priority;
             public Renderer[] renderers;
         }
         private readonly List<Residency> all = new List<Residency>();
         private readonly List<Residency> requests = new List<Residency>();
+        private readonly Queue<Residency> deferredReleases = new Queue<Residency>();
         private readonly Dictionary<string, int> replacementCounts = new Dictionary<string, int>();
         private readonly Stopwatch workTimer = new Stopwatch();
         private float nextEvaluation;
@@ -104,6 +105,7 @@ namespace Manhattan.Viewer
             {
                 Evaluate(); nextEvaluation = Time.unscaledTime + .15f;
             }
+            ProcessDeferredRelease();
             // Only one prefab is instantiated per frame; the baker enforces bounded chunk sizes.
             foreach (var r in all)
             {
@@ -113,9 +115,9 @@ namespace Manhattan.Viewer
                 {
                     Failures++; r.retryAt = Time.unscaledTime + 5f;
                     UnityEngine.Debug.LogWarning("City tile failed: " + r.tile.id + ". Keeping skyline fallback.");
-                    Release(r); continue;
+                    QueueRelease(r); continue;
                 }
-                if (!r.wanted) { Release(r); continue; }
+                if (!r.wanted) { QueueRelease(r); continue; }
                 if (workTimer.Elapsed.TotalMilliseconds >= workBudgetMilliseconds) { r.loading = true; PendingLoads++; break; }
                 r.instance = Instantiate(r.handle.Result, transform);
                 r.instance.name = r.tile.id;
@@ -158,7 +160,13 @@ namespace Manhattan.Viewer
                 r.visible = allowed && r.distance <= VisibleRadius(r.tile.layer);
                 r.priority = r.tile.layer == CityLayer.Skyline ? -100000f : Mathf.Min(r.distance, predictedDistance);
                 if (r.tile.layer == CityLayer.Core || r.tile.layer == CityLayer.Ground) r.priority -= 2000f;
-                if (!r.wanted && r.hasHandle && !r.loading) Release(r);
+                if (!r.wanted && r.hasHandle && !r.loading) QueueRelease(r);
+                // A completed load can become useful again before its queued release runs.
+                // Put it back through the existing one-instance-per-frame completion path.
+                if (r.wanted && r.hasHandle && !r.loading && r.instance == null && r.handle.Status == AsyncOperationStatus.Succeeded)
+                {
+                    r.loading = true; PendingLoads++;
+                }
                 if (r.wanted && !r.hasHandle) requests.Add(r);
             }
             requests.Sort((a, b) => a.priority.CompareTo(b.priority));
@@ -197,6 +205,22 @@ namespace Manhattan.Viewer
             t.gameObject.layer = layer;
             foreach (Transform child in t) SetLayer(child, layer);
         }
+        private void QueueRelease(Residency r)
+        {
+            if (r.releaseQueued) return;
+            r.releaseQueued = true; deferredReleases.Enqueue(r);
+        }
+        private void ProcessDeferredRelease()
+        {
+            while (deferredReleases.Count > 0 && workTimer.Elapsed.TotalMilliseconds < workBudgetMilliseconds)
+            {
+                var r = deferredReleases.Dequeue(); r.releaseQueued = false;
+                if (!r.hasHandle || r.loading) continue;
+                if (r.wanted && r.handle.Status == AsyncOperationStatus.Succeeded) continue;
+                Release(r);
+                break; // Spread tile destruction and Addressables releases across frames.
+            }
+        }
         private void Release(Residency r)
         {
             if (r.instance != null)
@@ -209,12 +233,13 @@ namespace Manhattan.Viewer
                 Addressables.Release(r.handle);
                 EstimatedResidentBytes -= Math.Max(1L, r.tile.residentBytes);
             }
-            r.hasHandle = r.loading = false; r.renderers = null;
+            r.hasHandle = r.loading = r.releaseQueued = false; r.renderers = null;
         }
         private void OnDestroy()
         {
             if (origin != null) origin.Rebased -= OnRebased;
             foreach (var r in all) Release(r);
+            deferredReleases.Clear();
         }
     }
 }

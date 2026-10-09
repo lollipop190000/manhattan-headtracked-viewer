@@ -32,7 +32,7 @@ if (-not $StaticOnly) {
     & (Join-Path $clone 'tools\setup.ps1') @setupParameters
     & (Join-Path $clone 'tools\bake.ps1') -PythonExe $PythonExe
     & (Join-Path $clone 'tools\test.ps1') -PythonExe $PythonExe
-    & (Join-Path $clone 'tools\build.ps1') -AllowDirty
+    & (Join-Path $clone 'tools\build.ps1') -PythonExe $PythonExe
     if ($Run) { & (Join-Path $clone 'tools\run.ps1') -Camera $Camera -NoTracker:$NoTracker }
 }
 $player = Join-Path $clone 'Builds\ManhattanViewer\ManhattanViewer.exe'

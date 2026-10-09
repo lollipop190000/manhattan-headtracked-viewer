@@ -1,6 +1,7 @@
 param([string]$OutputPath, [switch]$Bake, [switch]$AllowDirty, [string]$PythonExe = 'python')
 . (Join-Path $PSScriptRoot 'common.ps1')
 if ($Bake) { & (Join-Path $PSScriptRoot 'bake.ps1') -PythonExe $PythonExe }
+Invoke-Checked $PythonExe @((Join-Path $PSScriptRoot 'build_preflight.py'), '--repository-root', $ViewerRepository)
 if (-not $OutputPath) { $OutputPath = Join-Path $ViewerRepository 'Builds\ManhattanViewer\ManhattanViewer.exe' }
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out-Null
