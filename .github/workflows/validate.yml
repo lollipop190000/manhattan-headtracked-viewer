@@ -1,0 +1,28 @@
+name: Validate source and repository
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  portable-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.5'
+      - name: Validate exact source inputs and repository pins
+        run: python tools/check_repository.py
+      - name: Test archive integrity, extraction, and input invariants
+        run: python -m unittest discover -s tools/tests -p 'test_*.py' -v
+      - name: Check Python syntax
+        run: python -m compileall -q tools
+      - name: Check GPU sample CSV parsing
+        shell: pwsh
+        run: ./tools/test_gpu_sampling.ps1
+      - name: Check benchmark environment metadata parsing
+        shell: pwsh
+        run: ./tools/test_benchmark_environment.ps1

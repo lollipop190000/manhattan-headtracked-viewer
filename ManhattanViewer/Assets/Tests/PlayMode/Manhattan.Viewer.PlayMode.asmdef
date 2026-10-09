@@ -1,0 +1,5 @@
+{
+  "name": "Manhattan.Viewer.PlayMode",
+  "references": ["Manhattan.Viewer.Runtime", "HeadTracked.Display", "Unity.RenderPipelines.Universal.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

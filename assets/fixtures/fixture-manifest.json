@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sourceVersion": "manhattan-2026-10-10-v2",
+  "sourcePack": "Manhattan_Near_Downtown.zip",
+  "sourcePath": "NearTiles/Near_-03_-08.glb",
+  "sourceSha256": "2709fd3d603cebadfd575cabbad0fd1af8a8b7567019895fe3f27b52a1bc185e",
+  "sourceMeshIndex": 2,
+  "sourceMeshName": "Near -03_-08 / Glazing mullions",
+  "file": "NearestNearDetail.glb",
+  "bytes": 383800,
+  "sha256": "88873443df2dc51fa98ca4e8cccb9d7f8e30b4b4bc1b13c6710ba9dde9fa59e8",
+  "positions": 14172,
+  "triangles": 7086,
+  "gltfBounds": {
+    "min": [
+      -1512.4078369140625,
+      0.75,
+      3464.970458984375
+    ],
+    "max": [
+      -981.4185791015625,
+      3.25,
+      4012.184326171875
+    ]
+  },
+  "unityBounds": {
+    "min": [
+      981.4185791015625,
+      0.75,
+      3464.970458984375
+    ],
+    "max": [
+      1512.4078369140625,
+      3.25,
+      4012.184326171875
+    ]
+  },
+  "initialBlender": [
+    -1225.0,
+    -3585.0,
+    1.85
+  ],
+  "initialUnity": [
+    1225.0,
+    1.85,
+    3585.0
+  ],
+  "conversion": "Blender(east,north,up) -> glTF(east,up,-north) -> Unity(-east,up,-north)",
+  "subset": "Exact smallest independent material mesh from the nearest tile; vertex/index bytes and material retained; no recentering or scaling"
+}

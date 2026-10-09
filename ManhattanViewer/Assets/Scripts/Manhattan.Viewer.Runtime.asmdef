@@ -1,0 +1,6 @@
+{
+  "name": "Manhattan.Viewer.Runtime",
+  "rootNamespace": "Manhattan.Viewer",
+  "references": ["HeadTracked.Display", "Unity.InputSystem", "Unity.Addressables", "Unity.ResourceManager", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime", "Unity.ugui"],
+  "autoReferenced": true
+}

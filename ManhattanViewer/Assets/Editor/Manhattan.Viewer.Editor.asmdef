@@ -1,0 +1,7 @@
+{
+  "name": "Manhattan.Viewer.Editor",
+  "rootNamespace": "Manhattan.Editor",
+  "references": ["Manhattan.Viewer.Runtime", "Unity.Addressables.Editor", "Unity.Addressables", "Unity.ResourceManager", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime", "Unity.InputSystem", "HeadTracked.Display"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

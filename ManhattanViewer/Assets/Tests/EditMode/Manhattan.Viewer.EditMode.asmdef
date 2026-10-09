@@ -1,0 +1,6 @@
+{
+  "name": "Manhattan.Viewer.EditMode",
+  "references": ["Manhattan.Viewer.Runtime", "Manhattan.Viewer.Editor", "HeadTracked.Display"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

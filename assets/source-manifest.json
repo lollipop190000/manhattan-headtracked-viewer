@@ -1,0 +1,1918 @@
+{
+  "schemaVersion": 1,
+  "sourceVersion": "manhattan-2026-10-10-v2",
+  "releaseRepository": "lollipop190000/manhattan-headtracked-viewer",
+  "releaseTag": "city-source-v2",
+  "sourceCRS": "EPSG:32618",
+  "sourceOriginLongitudeLatitude": [
+    -73.97,
+    40.78
+  ],
+  "sourceAxes": "Blender X east Y north Z up; metres; GLB Y-up",
+  "packs": [
+    {
+      "asset": "Manhattan_Unity_Core_and_Ground.zip",
+      "directory": "Manhattan_Unity_Core_and_Ground",
+      "bytes": 170543999,
+      "sha256": "9ad691d02a6462ab8e7a97b826aa5c522e99fbe159a83593849271813e55c29f",
+      "expandedBytes": 485046731,
+      "files": [
+        {
+          "path": "Central_Park_Triangulation_Audit.json",
+          "bytes": 876,
+          "sha256": "99e46e589c0ebc96b7704849eb26e6f7f96d223d435a5ae0d179af0deef4c8fe"
+        },
+        {
+          "path": "Core_Roof_Coping_Triangulation_Audit.json",
+          "bytes": 11095,
+          "sha256": "a9e9ca932ac16a10accffeb17249aba254bd010e524c512bc06380512ad5701c"
+        },
+        {
+          "path": "Core_Surface_Replacement_Validation.json",
+          "bytes": 234638,
+          "sha256": "791704792933fbee785170dac3ef99b2ff168a4967d086b44f47523e3970f1f1"
+        },
+        {
+          "path": "Float32_Precision_Validation.json",
+          "bytes": 373,
+          "sha256": "3c998741edc4cf0698de6aeec6b2e01469a14ccce8e542e7c98747362f3c03d6"
+        },
+        {
+          "path": "Ground_Triangulation_Audit.json",
+          "bytes": 1500,
+          "sha256": "597f429f948453d0779a8d99fed50d4b5246394d69d8887c4e16569a3bca987b"
+        },
+        {
+          "path": "Load_Near_Tiles_in_Blender.py",
+          "bytes": 2181,
+          "sha256": "0bfda0c5771123ad266b013808e4fdbcb84fb860916605e4938142c24887dd3a"
+        },
+        {
+          "path": "Manhattan_Core.glb",
+          "bytes": 369010488,
+          "sha256": "e67b679d7fe72cd56316a200c88cc44c394bc6a4204261e506c959b41fb8849f"
+        },
+        {
+          "path": "Manhattan_Streets_Parks.glb",
+          "bytes": 115297380,
+          "sha256": "687af6e791be72ebd4985863c90258d5fc435b14dc1ca2d380786941cefcb002"
+        },
+        {
+          "path": "NYC_Open_Data_Terms.html",
+          "bytes": 287658,
+          "sha256": "43e4cdfdd993a918e633ed4aa6eb868c881efda5815497d93f7bd9700e1b8176"
+        },
+        {
+          "path": "PROVENANCE.md",
+          "bytes": 6882,
+          "sha256": "230752c33154f93b95c5a0cf4ad6a4308ab7477208ea9da692cd1e1a577ff711"
+        },
+        {
+          "path": "README_Manhattan.txt",
+          "bytes": 9431,
+          "sha256": "e2040e1a5b1a99525746bf9e9b1a51043e11a81dcc66f53bc5dffcf9327b9f94"
+        },
+        {
+          "path": "UnitySupport/Editor/ManhattanTileCatalogBuilder.cs",
+          "bytes": 3647,
+          "sha256": "cf174940e35ce6e41c56f55f67c993ed70a013f89aa2e08b5fcca962b68e687f"
+        },
+        {
+          "path": "UnitySupport/README.md",
+          "bytes": 7736,
+          "sha256": "dfff2e8f3c50a1c385322abf9d4c5222c8e90aabf1569fff1b3e8a092439d4a8"
+        },
+        {
+          "path": "UnitySupport/Runtime/ManhattanTileCatalog.cs",
+          "bytes": 619,
+          "sha256": "ba822d1e527324ef17d3d68a58878c75ef8ad1313793c858c6f906284d1a8b7b"
+        },
+        {
+          "path": "UnitySupport/Runtime/ManhattanTileLoader.cs",
+          "bytes": 6382,
+          "sha256": "037b3a02e3df26425bd88e9d643e9401d7fea4f39bef4ab650d4b5392ef02ba1"
+        },
+        {
+          "path": "UnitySupport/Tests/check_companion.py",
+          "bytes": 1774,
+          "sha256": "81b33b880cf7a5e618b081d3f8e8b5630af6afff5d9719155ce286548d1a0a4f"
+        },
+        {
+          "path": "V2_Core_Surface_Integration_Validation.json",
+          "bytes": 20917,
+          "sha256": "d0c983d2219fd717c042518c181a765fc7cf24891146a334a7615c8ddde7df7a"
+        },
+        {
+          "path": "V2_GLB_Validation.json",
+          "bytes": 655,
+          "sha256": "83a070d9fc657ef7229eb8036a440fc6fb18f71bbc2631216d760a2c0e714a64"
+        },
+        {
+          "path": "V2_Integration_Validation.json",
+          "bytes": 50589,
+          "sha256": "bb41ffbc15eec90c75d09f0e68ea6aef321eefb39b660b1cc868188cd93c8fcf"
+        },
+        {
+          "path": "V2_Native_Fresh_Open_Validation.json",
+          "bytes": 6568,
+          "sha256": "0732e27207a488926190d94e1ef48da2949450503d4e6fae66b152b7a3692a9f"
+        },
+        {
+          "path": "VERSION_2_NOTES.txt",
+          "bytes": 1055,
+          "sha256": "0700478d2e05a648b4d8b1dacab2026406530f1c2f0454e08fbf7fb2a783a9ff"
+        },
+        {
+          "path": "tile_manifest.json",
+          "bytes": 80683,
+          "sha256": "1c228315a3abd2e647c003ae6da7c795e426b1299f643578520f59cb4f39df6c"
+        },
+        {
+          "path": "먼저읽기_맨해튼.txt",
+          "bytes": 3604,
+          "sha256": "9b14dc9c22943ab36e9667ae196ac897839709ecfe15833d13112e7da6672baa"
+        }
+      ]
+    },
+    {
+      "asset": "Manhattan_Near_Downtown.zip",
+      "directory": "Manhattan_Near_Downtown",
+      "bytes": 197839827,
+      "sha256": "28a78ebd0df61d3679f03a585c927b7c20c5bb02a2d0773c5849cbb38e75def8",
+      "expandedBytes": 1061649166,
+      "files": [
+        {
+          "path": "NearTiles/Near_+00_-08.glb",
+          "bytes": 153004,
+          "sha256": "0216465d41baaf07da7212cad55e4a731f017bedcc4bbc7332b20f2f172f9b9a"
+        },
+        {
+          "path": "NearTiles/Near_-01_-08.glb",
+          "bytes": 10888520,
+          "sha256": "e147f12a889d7d5b1c2a6e026568e92dba5e0e986cba1bde93f99f6facabdae9"
+        },
+        {
+          "path": "NearTiles/Near_-01_-09.glb",
+          "bytes": 6763588,
+          "sha256": "3e0645b9e1b359bd8605463f68749b4a85e7e91fbeb38004cb3cdfd939df458f"
+        },
+        {
+          "path": "NearTiles/Near_-01_-10.glb",
+          "bytes": 4459736,
+          "sha256": "0b0a06153934196251f58e6b884c92a357372d865fc10b4624e6c88ad781e61d"
+        },
+        {
+          "path": "NearTiles/Near_-01_-11.glb",
+          "bytes": 3772000,
+          "sha256": "4de83b5a5d5402a18b2c3ca4960e5b0656002324202a2d2b7ebd3c63892ec4b7"
+        },
+        {
+          "path": "NearTiles/Near_-01_-12.glb",
+          "bytes": 4697432,
+          "sha256": "b193d6e02e14c48a33e67a29248ce7603dde4c16b8d85c9b5703494275556482"
+        },
+        {
+          "path": "NearTiles/Near_-01_-13.glb",
+          "bytes": 6517332,
+          "sha256": "67238dfa3dc6d3766717a6b758152aa06773b7eb1c45d3ef79f6c900848cd509"
+        },
+        {
+          "path": "NearTiles/Near_-01_-14.glb",
+          "bytes": 2799124,
+          "sha256": "d26daeb4db33084e3cb06ccbc213bb2741bae4f778a150bccd5282f84c4cbc2f"
+        },
+        {
+          "path": "NearTiles/Near_-01_-15.glb",
+          "bytes": 393964,
+          "sha256": "7f57fb329254c5ecc392bb548e3a713add380289c33a1f1a34c4f61cda7640a9"
+        },
+        {
+          "path": "NearTiles/Near_-02_-08.glb",
+          "bytes": 21175920,
+          "sha256": "fcbda7d5d5a898edc85f43d684827c5ca3fce06720c5e65db201fb5f1dd4129e"
+        },
+        {
+          "path": "NearTiles/Near_-02_-09.glb",
+          "bytes": 19555412,
+          "sha256": "60890936f961de8e150ffc2e3ed29b275bbc5b09ca152ab0f0ded084713a5c66"
+        },
+        {
+          "path": "NearTiles/Near_-02_-10.glb",
+          "bytes": 14795528,
+          "sha256": "8fdd8e38a93ebd2a8027b3030848e78bc43ce9e7dbaab7e793d64b472d239c0c"
+        },
+        {
+          "path": "NearTiles/Near_-02_-11.glb",
+          "bytes": 12687068,
+          "sha256": "26995747e763c11c899cd266e21b783cde7c4ea45e65f5705db0b70973a8c97b"
+        },
+        {
+          "path": "NearTiles/Near_-02_-12.glb",
+          "bytes": 17615012,
+          "sha256": "94f4acb5c59fb84482e7dae33bf657893c46117840c5439c4eb655513e616bd8"
+        },
+        {
+          "path": "NearTiles/Near_-02_-13.glb",
+          "bytes": 17338436,
+          "sha256": "24648060aa9f8cc7f2a509037f011d67e08473eb5c6965a56472ac6ff27f79ae"
+        },
+        {
+          "path": "NearTiles/Near_-02_-14.glb",
+          "bytes": 9910564,
+          "sha256": "395c489a9018c8622b4aa0929c477bc7c2f4587c43b2e0261f92c068ecc95e84"
+        },
+        {
+          "path": "NearTiles/Near_-02_-15.glb",
+          "bytes": 6875060,
+          "sha256": "ae3ea54660055116628d72a16beb9a4fa0323045df4c32bf519b0ba2fe861bf8"
+        },
+        {
+          "path": "NearTiles/Near_-02_-16.glb",
+          "bytes": 1417272,
+          "sha256": "9fc5c0629ed83b3f8c5de79749b2510a42e7fa9a335793bb850c0a1e80b37efc"
+        },
+        {
+          "path": "NearTiles/Near_-03_-08.glb",
+          "bytes": 26729716,
+          "sha256": "2709fd3d603cebadfd575cabbad0fd1af8a8b7567019895fe3f27b52a1bc185e"
+        },
+        {
+          "path": "NearTiles/Near_-03_-09.glb",
+          "bytes": 18633628,
+          "sha256": "ed73f929e079b2f0667b530601b57a3c328d2dc029172a488c849cea497d9e68"
+        },
+        {
+          "path": "NearTiles/Near_-03_-10.glb",
+          "bytes": 23180648,
+          "sha256": "4805a3437361dd94597f15d87093805bff1adf9faea4820833e2b8535ff17471"
+        },
+        {
+          "path": "NearTiles/Near_-03_-11.glb",
+          "bytes": 20342544,
+          "sha256": "b5e03377bad29bb35bed3f0a78f15a0698e22cb27a1634fed1672005e695ea9e"
+        },
+        {
+          "path": "NearTiles/Near_-03_-12.glb",
+          "bytes": 24086884,
+          "sha256": "2984dbac71c737acec68bb3ed666f4542ecd70ac4a45dea989f6ac94350b0fa9"
+        },
+        {
+          "path": "NearTiles/Near_-03_-13.glb",
+          "bytes": 17635924,
+          "sha256": "b9cf678c79a00d37919c547bd71d031c3684d4189ee009fb5f27bcf02366e20b"
+        },
+        {
+          "path": "NearTiles/Near_-03_-14.glb",
+          "bytes": 19188604,
+          "sha256": "b8df83037b1ef47a078b5c999ae30ada0f0011a52929d487db8fca3497c26dc3"
+        },
+        {
+          "path": "NearTiles/Near_-03_-15.glb",
+          "bytes": 8602076,
+          "sha256": "c3e8f74dde976db427a89edf7e660b57136d6cc373cb3745f516004b08f8321e"
+        },
+        {
+          "path": "NearTiles/Near_-03_-16.glb",
+          "bytes": 3521212,
+          "sha256": "3bd0d8a97d1b482642298dcf01fe1864fe6f95e246f9b1cd236d398f622bf953"
+        },
+        {
+          "path": "NearTiles/Near_-04_-08.glb",
+          "bytes": 28605028,
+          "sha256": "45a0d1f9efbb748cf62b9dae505e59239b3443ff4fd89fecd85ba37e036b18e1"
+        },
+        {
+          "path": "NearTiles/Near_-04_-09.glb",
+          "bytes": 25457004,
+          "sha256": "0c5485bb6b0931cb5ea178098ee2d3316606d9a87d64dcbb9e9209acd73b0aec"
+        },
+        {
+          "path": "NearTiles/Near_-04_-10.glb",
+          "bytes": 27411456,
+          "sha256": "8740d640af069e76303be7664e5e56df93b96213a06bc97d5028d06daa556648"
+        },
+        {
+          "path": "NearTiles/Near_-04_-11.glb",
+          "bytes": 22325640,
+          "sha256": "9e884fb4afdf5c472ff2def5c2be4ec41133e22e9bbd0c099665a3f45ab81a50"
+        },
+        {
+          "path": "NearTiles/Near_-04_-12.glb",
+          "bytes": 25281392,
+          "sha256": "329417678d2f9c610b2805447726059c4a19653b55e741d4f95677d8062c8ebd"
+        },
+        {
+          "path": "NearTiles/Near_-04_-13.glb",
+          "bytes": 20949816,
+          "sha256": "d4e99e68b957f90f7ab18a90c20dc51418f136e8f3bbf604536435820198e0a7"
+        },
+        {
+          "path": "NearTiles/Near_-04_-14.glb",
+          "bytes": 21146932,
+          "sha256": "63b5a1105143378d6947c612307e1aeec2b434088c3201644c210251d123e783"
+        },
+        {
+          "path": "NearTiles/Near_-04_-15.glb",
+          "bytes": 17889736,
+          "sha256": "8395a913da7af3f8513fa2b35d8bbfc633464f6a1c035fa021ef61e33fc75163"
+        },
+        {
+          "path": "NearTiles/Near_-04_-16.glb",
+          "bytes": 4308452,
+          "sha256": "4c92ed55f2893e976a9d5101aa28604ea1a50379e993f3fb235f0a22fb0362b2"
+        },
+        {
+          "path": "NearTiles/Near_-05_-08.glb",
+          "bytes": 16974636,
+          "sha256": "9dc832cdb155fcf937701244e838741dca8ca1790de3ac827f5b0d0fec682c9e"
+        },
+        {
+          "path": "NearTiles/Near_-05_-09.glb",
+          "bytes": 25492852,
+          "sha256": "623bcf7ef7e46c27bca01bbffe66ecb3b5afb69daad3907f57dc7847362d43b9"
+        },
+        {
+          "path": "NearTiles/Near_-05_-10.glb",
+          "bytes": 23967880,
+          "sha256": "9c6fd50030178c8ef7801c5b1948df9ffb04dc38e14e01890b0887879e88e59e"
+        },
+        {
+          "path": "NearTiles/Near_-05_-11.glb",
+          "bytes": 20433624,
+          "sha256": "b7bf33a14712367debe036bb16a46a36c4d8627841cf06cde380ba2bff72d724"
+        },
+        {
+          "path": "NearTiles/Near_-05_-12.glb",
+          "bytes": 17601504,
+          "sha256": "05c922018b54bbea66ea7dfdfbc270853a3c425e2a39488a378724182ec2e7d8"
+        },
+        {
+          "path": "NearTiles/Near_-05_-13.glb",
+          "bytes": 31847156,
+          "sha256": "9f7421099bb67abef7945513beb81f33e8e14fd7985d020688090a83943bebda"
+        },
+        {
+          "path": "NearTiles/Near_-05_-14.glb",
+          "bytes": 26930968,
+          "sha256": "53b68f7d9d617e69469e628cea5393d1cc52cab3b5db028d234b1fc8a3708c0b"
+        },
+        {
+          "path": "NearTiles/Near_-05_-15.glb",
+          "bytes": 19109472,
+          "sha256": "93481a88af3ba5cc0cf544cf0424eddea75d8da4ef7ee6c7feff741ca0b787af"
+        },
+        {
+          "path": "NearTiles/Near_-05_-16.glb",
+          "bytes": 9017200,
+          "sha256": "2df1b6ca0bbe0037c461b2572775e2f863310c801f05f13da3d170ab4e77c386"
+        },
+        {
+          "path": "NearTiles/Near_-05_-17.glb",
+          "bytes": 77604,
+          "sha256": "8962bab238431d998c42f9ecab475910357293e58b6d2ecfb837e54e189466b9"
+        },
+        {
+          "path": "NearTiles/Near_-06_-08.glb",
+          "bytes": 21031388,
+          "sha256": "1dee07b999638e6f28b23aa36813387531c3ca5534dc97bec294d87dc61f1ca1"
+        },
+        {
+          "path": "NearTiles/Near_-06_-09.glb",
+          "bytes": 18611980,
+          "sha256": "b010effba81acf72f425d80850c6e27c6cdd85c17b563f3b2946c26d49086edf"
+        },
+        {
+          "path": "NearTiles/Near_-06_-10.glb",
+          "bytes": 21623120,
+          "sha256": "00c02eb3784e0cd57faee4cb2040236574b07ea0dff9fdf077939cdce66e9730"
+        },
+        {
+          "path": "NearTiles/Near_-06_-11.glb",
+          "bytes": 23198156,
+          "sha256": "31db48b1ccbe74660224bfcc0675edc6d94bce47dabed0bfc70ec419c32ca932"
+        },
+        {
+          "path": "NearTiles/Near_-06_-12.glb",
+          "bytes": 20637376,
+          "sha256": "c53bf2da7c6e6f22f91198cd04889b7c1f0595f83f7e2bfd6efd6a33df5f2ec7"
+        },
+        {
+          "path": "NearTiles/Near_-06_-13.glb",
+          "bytes": 23390476,
+          "sha256": "6406c8e72afe0a2b361f14dd1201eebf6271980007bcb8aba8c5ea326dbcb327"
+        },
+        {
+          "path": "NearTiles/Near_-06_-14.glb",
+          "bytes": 32407296,
+          "sha256": "067fc4b3a29b1d66af3f749c1dea079dcd697e8058c78279bf0fd459ac760230"
+        },
+        {
+          "path": "NearTiles/Near_-06_-15.glb",
+          "bytes": 11565132,
+          "sha256": "21381e4ce3c12f4f5d953090ffbf6ff98eff29b85532d078b396c4e3b9b39ad3"
+        },
+        {
+          "path": "NearTiles/Near_-06_-16.glb",
+          "bytes": 10060940,
+          "sha256": "2d7307294a7457781b510b986baa5cb11252d6b2d8d9d66f90ebf670f2b016e0"
+        },
+        {
+          "path": "NearTiles/Near_-06_-17.glb",
+          "bytes": 8138060,
+          "sha256": "7cec18aa333f689ff07d267097c440cbd5e9c08c146c14b3d4d2cf25fd32a894"
+        },
+        {
+          "path": "NearTiles/Near_-07_-08.glb",
+          "bytes": 6889628,
+          "sha256": "e1d04b91ef2def5c7ce3440d9042c11344ea70d42c6fc0238f4f073c722807fd"
+        },
+        {
+          "path": "NearTiles/Near_-07_-09.glb",
+          "bytes": 6515864,
+          "sha256": "9a92f58bc64907846559fb34c66bcba052c169aba7e12e46b46dff302fe5f088"
+        },
+        {
+          "path": "NearTiles/Near_-07_-10.glb",
+          "bytes": 11240560,
+          "sha256": "b80f04518260c7427195545ec54eed0d32e2dfdb57e98dad08df818bbac7c035"
+        },
+        {
+          "path": "NearTiles/Near_-07_-11.glb",
+          "bytes": 11554668,
+          "sha256": "7e58e19981849a1e7cfde21bc5ebce33ba004ebb09c46151c187eca9aff0dec0"
+        },
+        {
+          "path": "NearTiles/Near_-07_-12.glb",
+          "bytes": 8830232,
+          "sha256": "174ecbb6696845ccbae684023ff036f21622d30aa8cf3b21bd5f7c41f812aa4e"
+        },
+        {
+          "path": "NearTiles/Near_-07_-13.glb",
+          "bytes": 16430944,
+          "sha256": "d3f6ff1274b95ff6cc7c9ed9825c2c9a888e00a68809214e8e03b8471fefcc1d"
+        },
+        {
+          "path": "NearTiles/Near_-07_-14.glb",
+          "bytes": 18578140,
+          "sha256": "51b8a80d2e03e3e718a09ee74edf6e184bb726eb9791e52a57a8b33ec6e7c196"
+        },
+        {
+          "path": "NearTiles/Near_-07_-15.glb",
+          "bytes": 23387212,
+          "sha256": "d32396bb90e52017b0d38b13d60cbf31c6107d99f22b7750fef187da406827c0"
+        },
+        {
+          "path": "NearTiles/Near_-07_-16.glb",
+          "bytes": 15614016,
+          "sha256": "db6887f6abaf4af43d17430f9a7c904ff4e696b2916e2e592df0e956f0949f16"
+        },
+        {
+          "path": "NearTiles/Near_-07_-17.glb",
+          "bytes": 16993416,
+          "sha256": "d1c11fae7da7918cb56b89780d50b4d96187f30e9fabf6433f14bb73b9e2ae41"
+        },
+        {
+          "path": "NearTiles/Near_-07_-18.glb",
+          "bytes": 2636852,
+          "sha256": "0588766ded1a95d9abc2c15922b17ce20b013b2855ae1ca81c54890f516ad17e"
+        },
+        {
+          "path": "NearTiles/Near_-08_-12.glb",
+          "bytes": 580912,
+          "sha256": "c983fe30fa55abf1769d48318f7dd94ec961b9dc5692deca7917700c1ca59133"
+        },
+        {
+          "path": "NearTiles/Near_-08_-14.glb",
+          "bytes": 848252,
+          "sha256": "6c83981a0e5989369f553d5708529530f6b05cc96f7d71f76dd4eb15977c3371"
+        },
+        {
+          "path": "NearTiles/Near_-08_-15.glb",
+          "bytes": 4186300,
+          "sha256": "ba86b71fc48dd8ec54e7e486c3551055336dc634225eb753a16f3ff1337b71bb"
+        },
+        {
+          "path": "NearTiles/Near_-08_-16.glb",
+          "bytes": 7870236,
+          "sha256": "0bc4764812bd65f53cb06f8b7ca7cb000ca5d71bbee30469deb8c5b9cd2b3f82"
+        },
+        {
+          "path": "NearTiles/Near_-08_-17.glb",
+          "bytes": 8605380,
+          "sha256": "c2fd861874d88a0e60e7110bed6a3cc620653e658282a0ac26bf676f5b1a87cd"
+        },
+        {
+          "path": "NearTiles/Near_-08_-18.glb",
+          "bytes": 1332424,
+          "sha256": "657586adacee9b7b2045e7f0037e56b212b55dfe23f6e72361d2e766bb701629"
+        },
+        {
+          "path": "NearTiles/Near_-09_-17.glb",
+          "bytes": 325372,
+          "sha256": "7ed4309f1cffa3f61750bfd40bb63ffbf7682479afe40693fc2039b975836c59"
+        },
+        {
+          "path": "NearTiles/README_Downtown.txt",
+          "bytes": 274,
+          "sha256": "6e14491e91a81dafd55456007cca259ad7691fffd3f035f9c568071b1f7814cc"
+        }
+      ]
+    },
+    {
+      "asset": "Manhattan_Near_Midtown.zip",
+      "directory": "Manhattan_Near_Midtown",
+      "bytes": 156933850,
+      "sha256": "77429eb571ec2e9e5f4e01d9ce27c041095b2bd19dc2ada98c7db7d6663597d1",
+      "expandedBytes": 847719981,
+      "files": [
+        {
+          "path": "NearTiles/Near_+00_-02.glb",
+          "bytes": 11750744,
+          "sha256": "5c00af53d8f1cf2afe09cc70100777cfeed4554d29cc5941a8d0141facc45e09"
+        },
+        {
+          "path": "NearTiles/Near_+00_-03.glb",
+          "bytes": 25571120,
+          "sha256": "1f90b7ed7d85b68789aa8314059f97253a3b006cbbdb9b68df7cde20715ad653"
+        },
+        {
+          "path": "NearTiles/Near_+00_-04.glb",
+          "bytes": 24754940,
+          "sha256": "de92d5b15b584680c6e8e67caf053aae8cf0f5235fe0a77955f9e86d9e4617c4"
+        },
+        {
+          "path": "NearTiles/Near_+00_-05.glb",
+          "bytes": 18930712,
+          "sha256": "35639f9e23bd9bae069a864f9b8030bf7cefbd78c4ce0e786241d3823128f883"
+        },
+        {
+          "path": "NearTiles/Near_+00_-06.glb",
+          "bytes": 21943356,
+          "sha256": "aad377e979c90db77c5ce059245243f06d9c595bcf571856503032828f88478a"
+        },
+        {
+          "path": "NearTiles/Near_+00_-07.glb",
+          "bytes": 6816840,
+          "sha256": "ad4602a689dfa57b3973ac4eff8d0b5ae4b39356ebcae5760d33cba526f88b41"
+        },
+        {
+          "path": "NearTiles/Near_+01_-01.glb",
+          "bytes": 24713208,
+          "sha256": "a5e6b8e26d9f9a6ab816cc60b6273b43baeeda30907cb29ee5655230e3fa58dc"
+        },
+        {
+          "path": "NearTiles/Near_+01_-02.glb",
+          "bytes": 25633768,
+          "sha256": "7f1bdd3080babc3ec474f27e09bec7dc9f44c41e9be62df287d424b80264ac57"
+        },
+        {
+          "path": "NearTiles/Near_+01_-03.glb",
+          "bytes": 21618284,
+          "sha256": "01ac1acc64d49addb4d9368de0236b10fb5ad74741638f07e993f4e915a4064c"
+        },
+        {
+          "path": "NearTiles/Near_+01_-04.glb",
+          "bytes": 18342828,
+          "sha256": "a3d78b14235d861409922c4e7c6f1d07edccf7bf68c4fc21b4be6601696a44e6"
+        },
+        {
+          "path": "NearTiles/Near_+01_-05.glb",
+          "bytes": 15962792,
+          "sha256": "73164a4a44763f844d25c9ead7a29a0f5be66dae98c0cf194772001707014c60"
+        },
+        {
+          "path": "NearTiles/Near_+01_-06.glb",
+          "bytes": 6449700,
+          "sha256": "bdc27b13ed0764419236112fef2afadfc2b0023d67fff650d9f0b2f24204f58d"
+        },
+        {
+          "path": "NearTiles/Near_+02_-01.glb",
+          "bytes": 23514592,
+          "sha256": "5737bc9e2930629a39219d1f359dfca6b4e39f311c25b153de277bd444faeb3d"
+        },
+        {
+          "path": "NearTiles/Near_+02_-02.glb",
+          "bytes": 24443892,
+          "sha256": "7f25b80cbfd13515b907afd556ecb09a6dc4331f1cd824da1c19f93afa240623"
+        },
+        {
+          "path": "NearTiles/Near_+02_-03.glb",
+          "bytes": 21026624,
+          "sha256": "1ed4ff8d5e323a9350c5fe24a0db0d93029f447e37c8ca12089ee5474519a94c"
+        },
+        {
+          "path": "NearTiles/Near_+02_-04.glb",
+          "bytes": 12235140,
+          "sha256": "9e4f8cbfdbc013641cc9a5ccff4a52ff8853bb5b3053cf83e7edda6d426d9c59"
+        },
+        {
+          "path": "NearTiles/Near_+02_-05.glb",
+          "bytes": 1687224,
+          "sha256": "9d3ace59970f6eff600932261fd04c308fc12ea80a1eb9ef0fb4123ed45713c9"
+        },
+        {
+          "path": "NearTiles/Near_+03_-01.glb",
+          "bytes": 20425284,
+          "sha256": "924fef6c2dbb6b2f9fc7f3ffdc64eb1db5d343d686ec4704c4b88ab506c8df6f"
+        },
+        {
+          "path": "NearTiles/Near_+03_-02.glb",
+          "bytes": 21149168,
+          "sha256": "0fe239e0d6589206f15f388f001fd4889169d72057d9b668aefe88076e527b89"
+        },
+        {
+          "path": "NearTiles/Near_+03_-03.glb",
+          "bytes": 7855872,
+          "sha256": "9b7c828b6ddf824320321fd1406dc8cfaf8b22784ee9fa226cbc15cb54aa8904"
+        },
+        {
+          "path": "NearTiles/Near_+03_-04.glb",
+          "bytes": 767480,
+          "sha256": "4fec99d7468ff77aecb19d5ad89c0481cbb661e3d8dd00350753fd3a3a454e0d"
+        },
+        {
+          "path": "NearTiles/Near_+04_-01.glb",
+          "bytes": 7365972,
+          "sha256": "d9d4f8d40386d82df3d3b144f06600759b6bb42e6864a94b03e33f8d6903aa16"
+        },
+        {
+          "path": "NearTiles/Near_+04_-02.glb",
+          "bytes": 3246760,
+          "sha256": "52339e09df93c42edff6b034e09e99ac5d4f30b89162f263c5e5b90b2bafa8ec"
+        },
+        {
+          "path": "NearTiles/Near_-01_-01.glb",
+          "bytes": 5255884,
+          "sha256": "fdc751fdd833fb9031d0cb70f610f8420ce6853984433a71c8b95ca181aaf16b"
+        },
+        {
+          "path": "NearTiles/Near_-01_-02.glb",
+          "bytes": 32672,
+          "sha256": "bce82c832fd0603622265daadaf0facfeff88c8279e617594ca15076873909dd"
+        },
+        {
+          "path": "NearTiles/Near_-01_-03.glb",
+          "bytes": 1247608,
+          "sha256": "866bab2d3a8aa89ab451e5e798e701c17ed4fc6a7d9cd9a5685a3be01fc91afb"
+        },
+        {
+          "path": "NearTiles/Near_-01_-04.glb",
+          "bytes": 15456644,
+          "sha256": "b9f6038571f3f633d6d73b661955bb710c7e2eab1f003b2b26301b44e8751afd"
+        },
+        {
+          "path": "NearTiles/Near_-01_-05.glb",
+          "bytes": 17353480,
+          "sha256": "206431e5754f400c9a4ad58f2fea16687d1da07a838166e780d23e3f43210132"
+        },
+        {
+          "path": "NearTiles/Near_-01_-06.glb",
+          "bytes": 13999212,
+          "sha256": "2be643faa5e8842aeef4cb2fab72a3e7c617d1aaaa250dfc6a084dd99cb453cf"
+        },
+        {
+          "path": "NearTiles/Near_-01_-07.glb",
+          "bytes": 14485096,
+          "sha256": "897bea21090c0ec27863edd08829d06d1b559e59c0640b5ddfd78500b0223e3d"
+        },
+        {
+          "path": "NearTiles/Near_-02_-01.glb",
+          "bytes": 32046780,
+          "sha256": "98ebfeab2e635d8b263deade9be2689d79aebcda3de7357532e6768de770a36c"
+        },
+        {
+          "path": "NearTiles/Near_-02_-02.glb",
+          "bytes": 16714872,
+          "sha256": "d97ae64b90b4f989b82ab076d83755197674c7f388b7aa7fdd0cf6173d699e37"
+        },
+        {
+          "path": "NearTiles/Near_-02_-03.glb",
+          "bytes": 2569484,
+          "sha256": "72cb1c94f9c6b41ac71d6e97bc7da69f7276fab7197ce2a43d4ebd79de94f89a"
+        },
+        {
+          "path": "NearTiles/Near_-02_-04.glb",
+          "bytes": 19592580,
+          "sha256": "81e4947f808d1c44e6fdf215655a520a2f6709e6e64d06b9fc7049df26807e24"
+        },
+        {
+          "path": "NearTiles/Near_-02_-05.glb",
+          "bytes": 13092088,
+          "sha256": "3b6ce8695e3d012b9bc256b0d1f7d6803b2dc6fdb9ea5d040fec861f7448d348"
+        },
+        {
+          "path": "NearTiles/Near_-02_-06.glb",
+          "bytes": 22222588,
+          "sha256": "ece77f0821363579e5f7a141ceca975842a14988413fa01e244452cd8d482467"
+        },
+        {
+          "path": "NearTiles/Near_-02_-07.glb",
+          "bytes": 22318132,
+          "sha256": "176ff9cf4534e1f2ca77993f42010f75d8ba3ce93b385a497b7b00d83e827cdc"
+        },
+        {
+          "path": "NearTiles/Near_-03_-01.glb",
+          "bytes": 14004508,
+          "sha256": "1252320024b30f007a8d9972eea6b126b0d3d9a775a274be4f3b0b268e17c415"
+        },
+        {
+          "path": "NearTiles/Near_-03_-02.glb",
+          "bytes": 8942780,
+          "sha256": "dbba26c29d877b76bae6ccf553aedbc50081ba33c77001fcab4009c07f4dd604"
+        },
+        {
+          "path": "NearTiles/Near_-03_-03.glb",
+          "bytes": 14453028,
+          "sha256": "8cd4a0834ee8a942fbc5a5003cd31b1139cefc2533a313fcca61c1e9ea5ccd41"
+        },
+        {
+          "path": "NearTiles/Near_-03_-04.glb",
+          "bytes": 19381436,
+          "sha256": "49002ef1c144f386347b9a3278eac0fd8400548111af77ba0059702fadcb5097"
+        },
+        {
+          "path": "NearTiles/Near_-03_-05.glb",
+          "bytes": 17020160,
+          "sha256": "e2116d1fc9e0c41b95172a7f62381ffc6ec943704d115dee1112dc4e5b51998f"
+        },
+        {
+          "path": "NearTiles/Near_-03_-06.glb",
+          "bytes": 14484640,
+          "sha256": "76c4233d3319ca0ce568632ad5ee86592d61fc8b1360706cd16d2ebedd0fc62a"
+        },
+        {
+          "path": "NearTiles/Near_-03_-07.glb",
+          "bytes": 24231028,
+          "sha256": "c088ec65ab9df139df10c7c4878f7b7c566d2391a8987c585e2b303cd5fd0d31"
+        },
+        {
+          "path": "NearTiles/Near_-04_-01.glb",
+          "bytes": 1154896,
+          "sha256": "7a25d4357e2401e1ec0a2a32bf1f568b02dd6fca62b59681667fd370d9b9559f"
+        },
+        {
+          "path": "NearTiles/Near_-04_-02.glb",
+          "bytes": 7052436,
+          "sha256": "69ddc486d4c01c17d3e8a6b604baa2764a1e3a63569ca491629b78adc9331bf7"
+        },
+        {
+          "path": "NearTiles/Near_-04_-03.glb",
+          "bytes": 12581848,
+          "sha256": "06b95ae4c1eafdb379a848e9fba5bf9e04d18fad69d7315515170ce066a6654a"
+        },
+        {
+          "path": "NearTiles/Near_-04_-04.glb",
+          "bytes": 20559788,
+          "sha256": "a6393c7272cdcf418bca44a7f1e5f81751a1857f9105c6c5d44f67777bbe9a50"
+        },
+        {
+          "path": "NearTiles/Near_-04_-05.glb",
+          "bytes": 22785812,
+          "sha256": "8ea66cd136ec247e21d2585031006caea524a51aa7ea78c6553598e88f749a1a"
+        },
+        {
+          "path": "NearTiles/Near_-04_-06.glb",
+          "bytes": 21948116,
+          "sha256": "657cc878a44cafbe07342c5d880f338128f1d00ef5c100e9294759e7df50f774"
+        },
+        {
+          "path": "NearTiles/Near_-04_-07.glb",
+          "bytes": 16581776,
+          "sha256": "c45ba6bdd30ec3d3f2190f0b3d1b8eda4be55aa0803104f4b9efb4a539a98132"
+        },
+        {
+          "path": "NearTiles/Near_-05_-02.glb",
+          "bytes": 557152,
+          "sha256": "d66eab40c648126385e31a16078241c7133bb7277effaf98cd39f0f92c239fe5"
+        },
+        {
+          "path": "NearTiles/Near_-05_-03.glb",
+          "bytes": 3205440,
+          "sha256": "1cb2179cea9e7f837e146008261318f563720eca3a2ca59a7a06ac78cea6a507"
+        },
+        {
+          "path": "NearTiles/Near_-05_-04.glb",
+          "bytes": 9566820,
+          "sha256": "be004b3dfb6318527e842c6a4e0b29274837fa13a159eb3d3e5e30cdbd90bfac"
+        },
+        {
+          "path": "NearTiles/Near_-05_-05.glb",
+          "bytes": 11025604,
+          "sha256": "96865ac68b24e433ff896a354f0aa8db29b945eb35ab9e59d31c4e62d182802c"
+        },
+        {
+          "path": "NearTiles/Near_-05_-06.glb",
+          "bytes": 10800060,
+          "sha256": "56ac51102e71550edbb386e09daa6a52a84c1f273d1a07646b6821008d2d43e4"
+        },
+        {
+          "path": "NearTiles/Near_-05_-07.glb",
+          "bytes": 12560456,
+          "sha256": "f5aeb6f2958cb9a460faf0b06bff4dc634c56941e9dec2c05fb54630e462b829"
+        },
+        {
+          "path": "NearTiles/Near_-06_-04.glb",
+          "bytes": 733188,
+          "sha256": "68487947ae9127dd0a58520d1c258a88a1034f80aa6f9562e64b3bdab66b0532"
+        },
+        {
+          "path": "NearTiles/Near_-06_-05.glb",
+          "bytes": 4569972,
+          "sha256": "131e3f1da8063fe75240eb78f741f4c6f58d57241a6cbe273648e1a66940fae3"
+        },
+        {
+          "path": "NearTiles/Near_-06_-06.glb",
+          "bytes": 2103984,
+          "sha256": "3dc82149615196480ea700f5f32d4c8472c2d566ba68c5c5509b3df5d662228a"
+        },
+        {
+          "path": "NearTiles/Near_-06_-07.glb",
+          "bytes": 11734716,
+          "sha256": "3bc0f55248124b70457892893ba805b195ab992894048d127d01ff82fb3c8d06"
+        },
+        {
+          "path": "NearTiles/Near_-07_-07.glb",
+          "bytes": 3086644,
+          "sha256": "deee2e12bf4897ea8303c4d52ebbd485181c54023224139fe88be86809615a7f"
+        },
+        {
+          "path": "NearTiles/README_Midtown.txt",
+          "bytes": 273,
+          "sha256": "aa81b14be162aea9b7db8b0f2f988b597788f8acb9b2985e4e3beee5945f9d66"
+        }
+      ]
+    },
+    {
+      "asset": "Manhattan_Near_Uptown.zip",
+      "directory": "Manhattan_Near_Uptown",
+      "bytes": 199054492,
+      "sha256": "ec606f35d8e4d77b9d18bf6b4382df1bbf604fc538fd12b33fa909cf29a88ad3",
+      "expandedBytes": 1064612972,
+      "files": [
+        {
+          "path": "NearTiles/Near_+00_+01.glb",
+          "bytes": 8507224,
+          "sha256": "77c93fd0860fb620b724f56d947fcf684377d77878fa709fd19188a52589bf5c"
+        },
+        {
+          "path": "NearTiles/Near_+00_+02.glb",
+          "bytes": 14119996,
+          "sha256": "199d35579d4b83d205ec06f9cc56d79cf14e8bff917a6e4d1a684e1c1bef2fc2"
+        },
+        {
+          "path": "NearTiles/Near_+00_+03.glb",
+          "bytes": 9357692,
+          "sha256": "d62fe858f5154e72b76303830e79be5e6584b85a171789311e62d86c199f2736"
+        },
+        {
+          "path": "NearTiles/Near_+00_+04.glb",
+          "bytes": 19312388,
+          "sha256": "1099383f55f818edb2ce9e0f61712978ff50c4ca1c26ffc4d85fdfdae2cdc120"
+        },
+        {
+          "path": "NearTiles/Near_+00_+05.glb",
+          "bytes": 17899804,
+          "sha256": "83b99b51e77dec37152c9a888ec01f83886951ae602e2e2962a8897b592d724d"
+        },
+        {
+          "path": "NearTiles/Near_+00_+06.glb",
+          "bytes": 6840808,
+          "sha256": "0354c77bb67ed36d9559b05f07e52edc25bed25510bb839a0cc3dd12b248ec53"
+        },
+        {
+          "path": "NearTiles/Near_+01_+00.glb",
+          "bytes": 7551452,
+          "sha256": "0fe4b1a3fe647415a79d0d9d368f63234a1e9b98d8c48c2a6f5ac5945f2b852a"
+        },
+        {
+          "path": "NearTiles/Near_+01_+01.glb",
+          "bytes": 17344,
+          "sha256": "cb7d6849cc00e6ac752689f25d3d8ba0b6d87189e7e82ce10074002c96609d46"
+        },
+        {
+          "path": "NearTiles/Near_+01_+03.glb",
+          "bytes": 6158524,
+          "sha256": "9f74da10d48d705f71d97aa6980e58c0477f11d58bc70a9d0ffe51ac0592af85"
+        },
+        {
+          "path": "NearTiles/Near_+01_+04.glb",
+          "bytes": 15453280,
+          "sha256": "e83e345543b219f91855148995f91a82c955621ec739e9aed70aec328a3aa3c4"
+        },
+        {
+          "path": "NearTiles/Near_+01_+05.glb",
+          "bytes": 10473704,
+          "sha256": "eb5c99efece12f95ece6ffcb3acd25be9bc6a5d019647bad8c4c722aa692053b"
+        },
+        {
+          "path": "NearTiles/Near_+01_+06.glb",
+          "bytes": 14009424,
+          "sha256": "e5d6bb95870efa699b109933e396f337b0c8108e8e00bea657d67a4739e0cff2"
+        },
+        {
+          "path": "NearTiles/Near_+01_+07.glb",
+          "bytes": 8880592,
+          "sha256": "34ddf62fe2768dc4b2781f5293ff3cd0b72e98e8d9970006511ca2824500747d"
+        },
+        {
+          "path": "NearTiles/Near_+01_+08.glb",
+          "bytes": 3765468,
+          "sha256": "cc07a7472a732f3e16536c2740a20792491bebb5f2b6c43b6702601e3182e91e"
+        },
+        {
+          "path": "NearTiles/Near_+01_+09.glb",
+          "bytes": 562332,
+          "sha256": "54e604666b07cd4b739ce1caedf52a2e89663926d6704c5ea5a2e27397f1fe7f"
+        },
+        {
+          "path": "NearTiles/Near_+01_+10.glb",
+          "bytes": 116476,
+          "sha256": "0f823153ce1c5c678f6883f0cdc29a2f5cc792877e25185bd707220b45d1754b"
+        },
+        {
+          "path": "NearTiles/Near_+02_+00.glb",
+          "bytes": 23132236,
+          "sha256": "41d940bf8c4b9874ba2e4b9c6dbefbcfc1d67a8799d8456fc26e63b884bab1a5"
+        },
+        {
+          "path": "NearTiles/Near_+02_+01.glb",
+          "bytes": 17538056,
+          "sha256": "a9037b5d4f51d16a685f48f27dd8851869ae45376197a30da436a68390f9af3d"
+        },
+        {
+          "path": "NearTiles/Near_+02_+02.glb",
+          "bytes": 3958516,
+          "sha256": "2a556a0d10e78f1cb3d7ed796155d30f39e33a3bc23afe6efee4948e74e5d152"
+        },
+        {
+          "path": "NearTiles/Near_+02_+04.glb",
+          "bytes": 14883244,
+          "sha256": "9a2ebe3f284f4575494c947630e16adeb5435027d89752fe8d6e897e6e2ede24"
+        },
+        {
+          "path": "NearTiles/Near_+02_+05.glb",
+          "bytes": 21131684,
+          "sha256": "225911f13076952f24033f3455175c37e14fbece233295ee8d516e9537877e5b"
+        },
+        {
+          "path": "NearTiles/Near_+02_+06.glb",
+          "bytes": 13227848,
+          "sha256": "5d32aef094fb3ff37bcb56de4582da69f31011ab8f4deb1e3d88e672521607dc"
+        },
+        {
+          "path": "NearTiles/Near_+02_+07.glb",
+          "bytes": 12564944,
+          "sha256": "b8f49960711a6011595774599b1c3056170c4470e9482a5d5d360163a7e0c438"
+        },
+        {
+          "path": "NearTiles/Near_+02_+08.glb",
+          "bytes": 10008704,
+          "sha256": "7b36ff4d0e1df0c26cff3e191944a688471dd5a7bfb9331551c2446a49a6e6fe"
+        },
+        {
+          "path": "NearTiles/Near_+02_+09.glb",
+          "bytes": 11707076,
+          "sha256": "b745e3618490795ce62404f16337791274137308714da832b552f8739caa75a5"
+        },
+        {
+          "path": "NearTiles/Near_+02_+10.glb",
+          "bytes": 4819312,
+          "sha256": "ed1c64c69840df30dc90b76d3bde3d224d157ec4159afd7533f3ed613f50173f"
+        },
+        {
+          "path": "NearTiles/Near_+03_+00.glb",
+          "bytes": 18316696,
+          "sha256": "17e2d6d89de6722c002e331af8897bb296154bb8c9ec1b2ca659bb0afafd2107"
+        },
+        {
+          "path": "NearTiles/Near_+03_+01.glb",
+          "bytes": 12386596,
+          "sha256": "32f58e59f3360ffb29c99e6339d747c97cb28c6dc52490e3cbef2d446f82752d"
+        },
+        {
+          "path": "NearTiles/Near_+03_+02.glb",
+          "bytes": 12156868,
+          "sha256": "a60ed66a8bab256a65b9ac1a0f453290d37f181fd317ac7253c1eb7af8c194e9"
+        },
+        {
+          "path": "NearTiles/Near_+03_+03.glb",
+          "bytes": 10485572,
+          "sha256": "0429abbe89eac4626b2290a8263c225ae52a743a52e5ccc17fc8cbcf793ff824"
+        },
+        {
+          "path": "NearTiles/Near_+03_+04.glb",
+          "bytes": 10823304,
+          "sha256": "99acf5e32b2edd9eba34ebae6a3a9a1c54f9c0c7a854a4bb28a8a638a3506fe3"
+        },
+        {
+          "path": "NearTiles/Near_+03_+05.glb",
+          "bytes": 19086704,
+          "sha256": "1c7b02e2ac759743dbb2d201a2e0aa20813a22b40a20c7567922de965a79b435"
+        },
+        {
+          "path": "NearTiles/Near_+03_+06.glb",
+          "bytes": 16621120,
+          "sha256": "607ff9624b06c20ba21b87b851bbe2c833968ea8de40e2271eeebd5e7b9a89aa"
+        },
+        {
+          "path": "NearTiles/Near_+03_+07.glb",
+          "bytes": 11994164,
+          "sha256": "0727e5a8c50125493e7d3f62fa1fa8aab4e92c5001fb265c4eaf0a45a7422947"
+        },
+        {
+          "path": "NearTiles/Near_+03_+08.glb",
+          "bytes": 6791224,
+          "sha256": "e7bd982711d29ac442fb7c3db865dde1fbef12090bd8b414ad7467b775d3e8d4"
+        },
+        {
+          "path": "NearTiles/Near_+03_+09.glb",
+          "bytes": 17059292,
+          "sha256": "cd6bcd04353dcda7bf15a78eadb98874165f6cda7f60102de80485c3ffbafc29"
+        },
+        {
+          "path": "NearTiles/Near_+03_+10.glb",
+          "bytes": 17804708,
+          "sha256": "157c278d91ccd7802506b9808abfc52a2e0a4ba667c1e2afa70667dcd70b9a47"
+        },
+        {
+          "path": "NearTiles/Near_+03_+11.glb",
+          "bytes": 8139032,
+          "sha256": "6021f8a6e8b3d2b8063e2792b9f388d9ecf12ad44bf6a4a9df9e51c605638c9c"
+        },
+        {
+          "path": "NearTiles/Near_+03_+12.glb",
+          "bytes": 7251908,
+          "sha256": "2f77fa8c554070e6d1ea834e39aa18de4561dae95f64e610e19b70cbd31e72a3"
+        },
+        {
+          "path": "NearTiles/Near_+03_+13.glb",
+          "bytes": 158404,
+          "sha256": "bbee275fbd2de97d086304bd3c7572f630bd1cc6113225bb544dca7b63010e17"
+        },
+        {
+          "path": "NearTiles/Near_+04_+00.glb",
+          "bytes": 2495828,
+          "sha256": "098b17fc010d4730a5b327d5e964d7d1425c0e021eaffe2db2b31b44c5b629a1"
+        },
+        {
+          "path": "NearTiles/Near_+04_+01.glb",
+          "bytes": 10475492,
+          "sha256": "4e3d50eabe1b002a4c8976bb45db5e917d374d5467fd8f792a3d291f055221a5"
+        },
+        {
+          "path": "NearTiles/Near_+04_+02.glb",
+          "bytes": 13611512,
+          "sha256": "3972b0ea81781fcedb229f248a35ec95b75b83949ac07ac0aa0930ce5e001b3e"
+        },
+        {
+          "path": "NearTiles/Near_+04_+03.glb",
+          "bytes": 12110664,
+          "sha256": "383c18ab574c2f6e2d9254b80de0e1c92e342c78610bcd0ed06d488a4fef6f5b"
+        },
+        {
+          "path": "NearTiles/Near_+04_+04.glb",
+          "bytes": 13490172,
+          "sha256": "f8e9757e11f8937772088b8768ec8cc3c5decd5c594d49c15ffd5fe7da22a546"
+        },
+        {
+          "path": "NearTiles/Near_+04_+05.glb",
+          "bytes": 9474788,
+          "sha256": "0adbd2e5e2f816101e84ea1df989c1442d5431fc2a68ec0539b9436840ec4010"
+        },
+        {
+          "path": "NearTiles/Near_+04_+06.glb",
+          "bytes": 20404408,
+          "sha256": "efe1d9018c2d9f05ca6716e630e514042d58d9736152248e0e022180634e84a3"
+        },
+        {
+          "path": "NearTiles/Near_+04_+07.glb",
+          "bytes": 15319052,
+          "sha256": "c593173d16be1333059188725755e883a228f5d547807f0275b8fb87571acc9f"
+        },
+        {
+          "path": "NearTiles/Near_+04_+08.glb",
+          "bytes": 19683656,
+          "sha256": "c019f73775c6252a0b0a7a393544abf2abdcae7832c0d0bbd9fa59d49b469e01"
+        },
+        {
+          "path": "NearTiles/Near_+04_+09.glb",
+          "bytes": 13949932,
+          "sha256": "d97ed54537752e8e4288b083cd63d47ad7937d20971cbdfd6d83703997257cc1"
+        },
+        {
+          "path": "NearTiles/Near_+04_+10.glb",
+          "bytes": 15292548,
+          "sha256": "b131d6abb39771ea256e062b800f716437587c3b3558170eb39f4f5147de02e5"
+        },
+        {
+          "path": "NearTiles/Near_+04_+11.glb",
+          "bytes": 13292284,
+          "sha256": "de9a767fa70399864e600c0783ace9ed0668efde3ad63ed7b4c986ff78c1015d"
+        },
+        {
+          "path": "NearTiles/Near_+04_+12.glb",
+          "bytes": 17154724,
+          "sha256": "0ceea01438bdc727c01dff9347b4c17b24b02c5a23a4c58f1b3d162dcebbdf76"
+        },
+        {
+          "path": "NearTiles/Near_+04_+13.glb",
+          "bytes": 11551792,
+          "sha256": "bad39d18240ba305ca7c4ffb529a51b56efcf67db2f77694ccff705a9cbf8e4d"
+        },
+        {
+          "path": "NearTiles/Near_+04_+14.glb",
+          "bytes": 9423768,
+          "sha256": "84bd369a4f6d648026943ec183b1f3c2ac17a60e4c25185c412564034923f774"
+        },
+        {
+          "path": "NearTiles/Near_+04_+15.glb",
+          "bytes": 6373000,
+          "sha256": "7be124c2d4cbd06f66079181e6ba4c9e95dc09005d7cead8773ee7fddea5a634"
+        },
+        {
+          "path": "NearTiles/Near_+04_+16.glb",
+          "bytes": 1305484,
+          "sha256": "fd75f3e0b56d6b9cb91c195e475d61a40e60e929ef02f702f1a123af57732db7"
+        },
+        {
+          "path": "NearTiles/Near_+05_+01.glb",
+          "bytes": 1189932,
+          "sha256": "ab4b3a1db4b2e9e62a0e49c7da9485c3d06e3a8c1931c2ad174b010efec5e166"
+        },
+        {
+          "path": "NearTiles/Near_+05_+02.glb",
+          "bytes": 4150424,
+          "sha256": "4735b0ab4c24339dcd4f6d37b3ae00c0ab9677a0bdc3790ec17beaf318f19fbe"
+        },
+        {
+          "path": "NearTiles/Near_+05_+03.glb",
+          "bytes": 12940604,
+          "sha256": "ac0180ae743a3dac1507ce0955700348d76f0b11176bcfffad03fe3774085fad"
+        },
+        {
+          "path": "NearTiles/Near_+05_+04.glb",
+          "bytes": 15082044,
+          "sha256": "825881dfbaf60b4d01b3492d0bf2eb8f9a51eca819ece1c01a9b77c5d422a591"
+        },
+        {
+          "path": "NearTiles/Near_+05_+05.glb",
+          "bytes": 9947592,
+          "sha256": "712421cf385fcbc16219a6d9dae87579ccf89b0276061ee0ca5a10e396be1acb"
+        },
+        {
+          "path": "NearTiles/Near_+05_+06.glb",
+          "bytes": 9949140,
+          "sha256": "5ddd93806d13094e76098ee082a4378f4cada5feec81048929ce035bcc02c5d8"
+        },
+        {
+          "path": "NearTiles/Near_+05_+07.glb",
+          "bytes": 7946408,
+          "sha256": "a3b8bc701ca4f1112001e4daad02bad2a705086ef0d587cbeacf5086176482db"
+        },
+        {
+          "path": "NearTiles/Near_+05_+08.glb",
+          "bytes": 9531896,
+          "sha256": "6f6f8f3eca2ce1aee338c148678d8d2aeb71b0669011ff12928c015587147685"
+        },
+        {
+          "path": "NearTiles/Near_+05_+09.glb",
+          "bytes": 9530116,
+          "sha256": "d2eea46040ea6abcce7bcef34cb7d3f1b99dd471ab9f3a20a41878cd916a4ee8"
+        },
+        {
+          "path": "NearTiles/Near_+05_+10.glb",
+          "bytes": 8215908,
+          "sha256": "b2540799eecd33cfb7c0365bb9f074199d23cdaa7a1284f4b9b211de89141dd7"
+        },
+        {
+          "path": "NearTiles/Near_+05_+11.glb",
+          "bytes": 2253784,
+          "sha256": "72a2edc228834509c8a2249d750293f0be06273d66c28e85439adbdf688ee996"
+        },
+        {
+          "path": "NearTiles/Near_+05_+12.glb",
+          "bytes": 5794404,
+          "sha256": "47e8361b55c353c9cdc85c528028ed6611da27f0263ec298272d7955992ef40b"
+        },
+        {
+          "path": "NearTiles/Near_+05_+13.glb",
+          "bytes": 8830508,
+          "sha256": "0c28dce9835abf1d6b76791927d4773495de7147e1eaaf6872c254999f3b4486"
+        },
+        {
+          "path": "NearTiles/Near_+05_+14.glb",
+          "bytes": 15321904,
+          "sha256": "12a4a71ed9cde0f82f0b0aade77b4a4598cf969eb1aa4dfd7b23a5e00526502e"
+        },
+        {
+          "path": "NearTiles/Near_+05_+15.glb",
+          "bytes": 14298572,
+          "sha256": "4474ea75be3bf241a48b482c3d18cec72d0760d2cc282d8da187148e15cb24d6"
+        },
+        {
+          "path": "NearTiles/Near_+05_+16.glb",
+          "bytes": 11520536,
+          "sha256": "d8d6958e592a2c5387f094093847ba404faf6e62393fb3c9281fa72917834f17"
+        },
+        {
+          "path": "NearTiles/Near_+05_+17.glb",
+          "bytes": 3503224,
+          "sha256": "c918493474fd0330829068bb1dec30d83024a1007f0e0d483ebcf24c61fa8ec0"
+        },
+        {
+          "path": "NearTiles/Near_+06_+03.glb",
+          "bytes": 8609584,
+          "sha256": "0e2ff90ce6cc902e77c5d3a5ee9ca03d52dcea3cb454227600a19c83827deb95"
+        },
+        {
+          "path": "NearTiles/Near_+06_+04.glb",
+          "bytes": 4317804,
+          "sha256": "430358d74005ebd1632e3d5eabb62dcff482169ed5e0355e6e4567612aa084b5"
+        },
+        {
+          "path": "NearTiles/Near_+06_+05.glb",
+          "bytes": 1001460,
+          "sha256": "490c20d06dadf956e90cdd0e4a1127195f868d2be6338e471e8218a2b8f3f885"
+        },
+        {
+          "path": "NearTiles/Near_+06_+13.glb",
+          "bytes": 24468,
+          "sha256": "b3959698fc745f080dd357f68897f477edb2ff7467beaf38f8d96038abe597cf"
+        },
+        {
+          "path": "NearTiles/Near_+06_+14.glb",
+          "bytes": 1035804,
+          "sha256": "1a55041670d1a7c01a24a8a04cf1468c1ec09861b4a90762299c693bcd5472a5"
+        },
+        {
+          "path": "NearTiles/Near_+06_+15.glb",
+          "bytes": 9743184,
+          "sha256": "c4e76be472342751d823b1e57e8d704d741b7d80b3f3238b559557cdad796fc1"
+        },
+        {
+          "path": "NearTiles/Near_+06_+16.glb",
+          "bytes": 15239988,
+          "sha256": "be09d8df6fdfa707a2ba456bf7321456b36a78d35beeb5536c12e921e33e880f"
+        },
+        {
+          "path": "NearTiles/Near_+06_+17.glb",
+          "bytes": 10112208,
+          "sha256": "9e670ddcaab6723882bc64e6428774eab587eca04015b9e949b014d3830f25c4"
+        },
+        {
+          "path": "NearTiles/Near_+06_+18.glb",
+          "bytes": 7567920,
+          "sha256": "17efdae0f88e1a126c6a1114b7d00bd177332244e8e6d299f823826f365fccf0"
+        },
+        {
+          "path": "NearTiles/Near_+06_+19.glb",
+          "bytes": 2291276,
+          "sha256": "2923ada3e2450922c590a24edb5186008ae3741bd44b9df1acceed28807ff87a"
+        },
+        {
+          "path": "NearTiles/Near_+07_+16.glb",
+          "bytes": 1437136,
+          "sha256": "d46d83473812f7602f26181e8bb8725678c9d765fa2353b5ba2c6bfd014f22a3"
+        },
+        {
+          "path": "NearTiles/Near_+07_+17.glb",
+          "bytes": 1446528,
+          "sha256": "edf5659be2b1f18841234e35c769bafdf62b942751c4650791272ed7a38bbb2b"
+        },
+        {
+          "path": "NearTiles/Near_+07_+18.glb",
+          "bytes": 12233616,
+          "sha256": "db992962f52705d704f774a0e1002ff769e91f343510da355d3723bd8fdc8e83"
+        },
+        {
+          "path": "NearTiles/Near_+07_+19.glb",
+          "bytes": 12542340,
+          "sha256": "16b3d08c2b78f310c1c2aa34238bfbc54be6bdd28226697e9e26abbbe42eb6b2"
+        },
+        {
+          "path": "NearTiles/Near_+07_+21.glb",
+          "bytes": 12152,
+          "sha256": "7feef4ff11787b708c8634b97041a17ddfbcda09867d3ec5de2c407e9ddf8fbc"
+        },
+        {
+          "path": "NearTiles/Near_+08_+17.glb",
+          "bytes": 158608,
+          "sha256": "57f55a15fab885d34044cca97cc90fe4ea5242e9a0b7f94d2fb024011d456cd6"
+        },
+        {
+          "path": "NearTiles/Near_+08_+18.glb",
+          "bytes": 4731276,
+          "sha256": "f803f18c62cd38a7238f4c2278166d663ad6beb453a7821416695559aecbca37"
+        },
+        {
+          "path": "NearTiles/Near_+08_+19.glb",
+          "bytes": 8572452,
+          "sha256": "f8f258d1f33695d64d4d4dc4fb5fd35fe13cdbb502a774a537bc8d373b60fada"
+        },
+        {
+          "path": "NearTiles/Near_+08_+20.glb",
+          "bytes": 5451032,
+          "sha256": "b1d0c7adcd72915d99ea5a0be4e2d7d0373536f8a6bf3ddeb9f8701aef13498e"
+        },
+        {
+          "path": "NearTiles/Near_+09_+19.glb",
+          "bytes": 534244,
+          "sha256": "366f30ca0a8dd03cbeb1256130c58b06e617c2f2ff5582c74a5b57aa60c1af05"
+        },
+        {
+          "path": "NearTiles/Near_+09_+20.glb",
+          "bytes": 1620092,
+          "sha256": "761d34a75228b746e12d99cf6bc73944a338ba433b6fc699ca058a752ffad4f4"
+        },
+        {
+          "path": "NearTiles/Near_-01_+00.glb",
+          "bytes": 13057276,
+          "sha256": "788ebffd5dd2637e609d74f3a9732aabef516bcabdef67ce1f09a4d319ff9da6"
+        },
+        {
+          "path": "NearTiles/Near_-01_+01.glb",
+          "bytes": 24825568,
+          "sha256": "e2e4d503cbea8786a49841694587d5a7e34dc2c422f690831de8da581246cea5"
+        },
+        {
+          "path": "NearTiles/Near_-01_+02.glb",
+          "bytes": 19228616,
+          "sha256": "b37cceaa5cd7be48a184732e569da1018f3ec13be12ab3a3df2f5fea6f9ecc8f"
+        },
+        {
+          "path": "NearTiles/Near_-01_+03.glb",
+          "bytes": 16379312,
+          "sha256": "2c04fab912422002f50706a6b29e02ebcac5a639b60ca086e2846426067edc79"
+        },
+        {
+          "path": "NearTiles/Near_-01_+04.glb",
+          "bytes": 9480028,
+          "sha256": "eff6567ec31826a1817abd6a4451e2a21c3fc89b7ced95e93ca8bd9379762e3c"
+        },
+        {
+          "path": "NearTiles/Near_-01_+05.glb",
+          "bytes": 14096,
+          "sha256": "db09f562156e156de01be8828b2493ebd62bb025c51b91e05c5da17332f870fa"
+        },
+        {
+          "path": "NearTiles/Near_-02_+00.glb",
+          "bytes": 23445624,
+          "sha256": "fe3818890f1a6758d4d353386ad1f36e756e274eb7fdf5a7fe0f9156c96f7e98"
+        },
+        {
+          "path": "NearTiles/Near_-02_+01.glb",
+          "bytes": 21264168,
+          "sha256": "3582dd2d99d3d014805d242943bfcfe6da70c7eb634d28f1e0f232d753bfd2bf"
+        },
+        {
+          "path": "NearTiles/Near_-02_+02.glb",
+          "bytes": 13752296,
+          "sha256": "57c1aaf6d3a001b20aa0d91753f035a5fbaa2b8bcf2e020d5d789730a1032eac"
+        },
+        {
+          "path": "NearTiles/Near_-02_+03.glb",
+          "bytes": 869764,
+          "sha256": "86d5a4eb983be49b62538699c438aa4da0a169ca81059269c49bc9e17050e940"
+        },
+        {
+          "path": "NearTiles/Near_-03_+00.glb",
+          "bytes": 12669048,
+          "sha256": "d745fec00951609f961a0b9c2f58ed385d5eb97c41cd6bee486d96d3667786fd"
+        },
+        {
+          "path": "NearTiles/Near_-03_+01.glb",
+          "bytes": 453912,
+          "sha256": "72073347d60f2178437d1443bae4094b6edeb32c6997f374233728f0adf9e24f"
+        },
+        {
+          "path": "NearTiles/README_Uptown.txt",
+          "bytes": 272,
+          "sha256": "bdbc57bf15e7b35726dddea2b7822ca0b05e0e270731e587584e91b9f7a82a6a"
+        }
+      ]
+    },
+    {
+      "asset": "Manhattan_Optional_Vegetation.zip",
+      "directory": "Manhattan_Optional_Vegetation",
+      "bytes": 177288650,
+      "sha256": "d8ecd32f435b2162b2fcf9e4b85975c387e4db9225d6edaa84f3a4a45c2cb8a4",
+      "expandedBytes": 287695120,
+      "files": [
+        {
+          "path": "GLB_Validation.json",
+          "bytes": 1932,
+          "sha256": "db69501447406b2f8e82e405c1213817179b7b32fcbf4441d467058b903dfc2c"
+        },
+        {
+          "path": "Manhattan_Vegetation_Downtown.glb",
+          "bytes": 67640240,
+          "sha256": "ea0ad0288f494476e11ed9eec8ce4769d47f589dfbfeff2958ba9ef9e6af3669"
+        },
+        {
+          "path": "Manhattan_Vegetation_Midtown.glb",
+          "bytes": 57683240,
+          "sha256": "911528c37b22338543577793425dfc76815c20fd851e65ea77cc6d09454a5962"
+        },
+        {
+          "path": "Manhattan_Vegetation_Uptown.glb",
+          "bytes": 162363868,
+          "sha256": "06d62c1bd99c660119e5a404668f083b620579577bd313bd932bb090e26ef1cf"
+        },
+        {
+          "path": "Material_Portability_Validation.json",
+          "bytes": 5156,
+          "sha256": "887f786074793cc4c73b2884d67beb40be4fd25c490980aa4ede19bea9a49485"
+        },
+        {
+          "path": "README_VEGETATION.txt",
+          "bytes": 412,
+          "sha256": "b5e8e8a82c8debf810d5fdc9a6c38ad44e5f9dcdbb1d2bba9f34adf26684a896"
+        },
+        {
+          "path": "vegetation_module_stats.json",
+          "bytes": 272,
+          "sha256": "7e54bbe51c76354879c8cc6b45db65e079e6a12d880bd7f0fac663dc80404a4f"
+        }
+      ]
+    },
+    {
+      "asset": "Manhattan_Source_and_Materials.zip",
+      "directory": "Manhattan_Source_and_Materials",
+      "bytes": 81434566,
+      "sha256": "9d703c29ec6dc1192249a26e1d3577b1ca06beffddb61f12e43db1ded86f47b0",
+      "expandedBytes": 171218471,
+      "files": [
+        {
+          "path": "SOURCE_README.txt",
+          "bytes": 1326,
+          "sha256": "a9cc9879dfc4de3eb3340f7daefe16c904d987eaad92140e883b6d634858e1b6"
+        },
+        {
+          "path": "VERSION_2_NOTES.txt",
+          "bytes": 1055,
+          "sha256": "0700478d2e05a648b4d8b1dacab2026406530f1c2f0454e08fbf7fb2a783a9ff"
+        },
+        {
+          "path": "build_city.py",
+          "bytes": 12384,
+          "sha256": "7ded92fd3b19cb60b82366753de6cfd535d0ae54312eba068a4ac6388e74431a"
+        },
+        {
+          "path": "build_near_tiles.py",
+          "bytes": 5120,
+          "sha256": "7f4d268749d64d471ec7a2676404f934f5f797b398cf5693340234c4fce187ef"
+        },
+        {
+          "path": "build_storefronts.py",
+          "bytes": 5826,
+          "sha256": "3dd2c58d27ae993b3359957c869f59d216e288cdef4e62039a33e896d5495fc0"
+        },
+        {
+          "path": "data/PROVENANCE.md",
+          "bytes": 6882,
+          "sha256": "230752c33154f93b95c5a0cf4ad6a4308ab7477208ea9da692cd1e1a577ff711"
+        },
+        {
+          "path": "data/boroughs_raw.json",
+          "bytes": 3167385,
+          "sha256": "361ac589847bee86f45179afddef98304ca05f7b04650924873b58d09f8be39f"
+        },
+        {
+          "path": "data/buildings_metadata.md",
+          "bytes": 12973,
+          "sha256": "520c8ef5bb687ea75945db749f061febd075965f2ca338945b6a392dd62afd27"
+        },
+        {
+          "path": "data/buildings_metric.json",
+          "bytes": 19186837,
+          "sha256": "9bd3a981f30e6efcc783325389211219a47d47730bfb50d3d83469ebd548d091"
+        },
+        {
+          "path": "data/buildings_raw.json",
+          "bytes": 42311650,
+          "sha256": "424cc4d8e37d5690dd6b2f738b9826e86c42bdcfc06efb1f7bd89e92d33e2efb"
+        },
+        {
+          "path": "data/geometry_qa.json",
+          "bytes": 671,
+          "sha256": "b3c8353dfc425a81dd502c65d83088706a6af73694eee0c0f07c43ed7fa662ce"
+        },
+        {
+          "path": "data/ground_elevation_metric.json",
+          "bytes": 925058,
+          "sha256": "dd516e2b2f0f8e6e054aec3811fdf499bf7a6431257caaa5b4e28700d4ab8040"
+        },
+        {
+          "path": "data/landmark_candidates.json",
+          "bytes": 14700,
+          "sha256": "60a14368b76680ba42d0c9b3e92f53d415ccc78afb8d8576a02ebe854b501242"
+        },
+        {
+          "path": "data/main_island_metric.json",
+          "bytes": 189152,
+          "sha256": "c5d2b5a08bd1b1ddafce8d3dcf9ff5e0a1e47dc34849565807ce353e0f44c0f9"
+        },
+        {
+          "path": "data/nyc_terms.html",
+          "bytes": 287658,
+          "sha256": "43e4cdfdd993a918e633ed4aa6eb868c881efda5815497d93f7bd9700e1b8176"
+        },
+        {
+          "path": "data/parks_metric.geojson",
+          "bytes": 1027842,
+          "sha256": "49963402b42a2132b358a104110c343a9ef55120ce163df797d862a69a65bd03"
+        },
+        {
+          "path": "data/parks_raw.json",
+          "bytes": 1377354,
+          "sha256": "869b63ced59f9a8f227885f9ad56b0c6d89d4a6bd7618d8de1cd6b27e1486f34"
+        },
+        {
+          "path": "data/roadbeds_metric.geojson",
+          "bytes": 11069858,
+          "sha256": "295429fce80996e3946a41865fedb8a50eb668dd9b9b3cc3f4096215b04c5f3e"
+        },
+        {
+          "path": "data/roads_metric.geojson",
+          "bytes": 12903685,
+          "sha256": "2fcf8ecf6ab72d374cd3b6fc378ee70b4ab9d445ef6eb4d6dece9c897ffb9bf1"
+        },
+        {
+          "path": "data/roads_raw.json",
+          "bytes": 14010608,
+          "sha256": "0872b08061e6ab99b73c78b704523da43e90985d305156925defcd0dbbe8470d"
+        },
+        {
+          "path": "data/sidewalks_metric.geojson",
+          "bytes": 13534277,
+          "sha256": "42431b8750065589f825f5e31226e3522ebe9608a96805d6891eeffd99cf23f5"
+        },
+        {
+          "path": "data/water_metric.geojson",
+          "bytes": 564003,
+          "sha256": "cf57bcca94560f12ff9f04118e67bafc24ab6416ec9ce3a98c388619f0a51ba9"
+        },
+        {
+          "path": "data/water_raw.json",
+          "bytes": 1944135,
+          "sha256": "7089f0f210dc915f4b18c99da2650b00687d545eeed2b0308d34a2c02aca0d5e"
+        },
+        {
+          "path": "detail_roofs_camera.py",
+          "bytes": 5374,
+          "sha256": "97a91aa4a7edff7248f22dbbbeecaac69c85594f3e8ab6eb689cd070ba410795"
+        },
+        {
+          "path": "detail_streets_parks.py",
+          "bytes": 13661,
+          "sha256": "9333dc894baf987f47655f79261f853c873f495a04e4ae056181b51d0aead445"
+        },
+        {
+          "path": "export_v2_modules.py",
+          "bytes": 1735,
+          "sha256": "c4f3dd0f4e9e83870b90ace3b8a662dd179c58944056dbe6c2ee98654e547332"
+        },
+        {
+          "path": "export_vegetation_regions.py",
+          "bytes": 1188,
+          "sha256": "342b91f28ee8501c5a3683d9f5f6a9291408b12413a1162febe034e4ee41ef41"
+        },
+        {
+          "path": "finalize_native.py",
+          "bytes": 2256,
+          "sha256": "4d06b0f58b644edc404ed09b75e33f92a7d0351ff3da7a3d6568fefab317d5a3"
+        },
+        {
+          "path": "fix_sp_portability.py",
+          "bytes": 1975,
+          "sha256": "92a8e4f77b1038f34ff0843c2dab27c316800d9ff1f78d7309a0bbb8e041df20"
+        },
+        {
+          "path": "ground_repair/Central_Park_Triangulation_Audit.json",
+          "bytes": 876,
+          "sha256": "99e46e589c0ebc96b7704849eb26e6f7f96d223d435a5ae0d179af0deef4c8fe"
+        },
+        {
+          "path": "ground_repair/Core_Roof_Coping_Triangulation_Audit.json",
+          "bytes": 11095,
+          "sha256": "a9e9ca932ac16a10accffeb17249aba254bd010e524c512bc06380512ad5701c"
+        },
+        {
+          "path": "ground_repair/Core_Surface_Replacement_Validation.json",
+          "bytes": 234638,
+          "sha256": "791704792933fbee785170dac3ef99b2ff168a4967d086b44f47523e3970f1f1"
+        },
+        {
+          "path": "ground_repair/Float32_Precision_Validation.json",
+          "bytes": 373,
+          "sha256": "3c998741edc4cf0698de6aeec6b2e01469a14ccce8e542e7c98747362f3c03d6"
+        },
+        {
+          "path": "ground_repair/Ground_Triangulation_Audit.json",
+          "bytes": 1500,
+          "sha256": "597f429f948453d0779a8d99fed50d4b5246394d69d8887c4e16569a3bca987b"
+        },
+        {
+          "path": "ground_repair/audit_triangulation.py",
+          "bytes": 2037,
+          "sha256": "10cbcbd79594e347667fd328cb6c6e51146b8800f1df18c3081054e9cb4ffb8d"
+        },
+        {
+          "path": "ground_repair/build_core_surface_module.py",
+          "bytes": 4270,
+          "sha256": "8151af901ff8a00d20031b317ae8a76e1b69605f48a64c99b7c990bc4ca9f79e"
+        },
+        {
+          "path": "ground_repair/build_corrected_module.py",
+          "bytes": 1965,
+          "sha256": "ed9c493338d559f79fc0bb5bfed5ac24324541b3f08cdb0f0a2e6814b57a01e1"
+        },
+        {
+          "path": "ground_repair/finalize_ground_arrays.py",
+          "bytes": 1409,
+          "sha256": "74c60405b36039d40b970ae7bff56c1ee07ecfb72ce2545018415c5fb81b8426"
+        },
+        {
+          "path": "ground_repair/prepare_core_surface_repair.py",
+          "bytes": 4721,
+          "sha256": "e66f9de38546767fd1c16b4e6b5ff5e8ee6a3657e83f3443a229dc2a5a54dc46"
+        },
+        {
+          "path": "ground_repair/prepare_corrected_ground.py",
+          "bytes": 3986,
+          "sha256": "ac71ed44bb768f07f559e67b8a92598810062c482c4e1371390ff3cc54fd9a74"
+        },
+        {
+          "path": "integrate_core_surfaces_v2.py",
+          "bytes": 2772,
+          "sha256": "117ed1821ba90b968b185f446c7732f453c6a098424873c2b5d6fca0f93943b6"
+        },
+        {
+          "path": "integrate_ground_v2.py",
+          "bytes": 4079,
+          "sha256": "70e1daeaab0880bea986d20737a0d19d60b2505163cfae88f2c180365a036cd7"
+        },
+        {
+          "path": "make_facade_materials_v2.py",
+          "bytes": 7421,
+          "sha256": "f4d136d36649143fc0497e6253c0700b10748a65ca530ff0db1d2e15cddafe10"
+        },
+        {
+          "path": "make_pbr.py",
+          "bytes": 1164,
+          "sha256": "69114577aa6ed900f5ef022acb8bb53551f348468dac711dcf92f22093bd49ae"
+        },
+        {
+          "path": "make_store_signs.py",
+          "bytes": 644,
+          "sha256": "913de11de13677f4eea4c91eaab58ff39b0741b9b3b1660891ad62cd17e710d2"
+        },
+        {
+          "path": "make_textures.py",
+          "bytes": 2060,
+          "sha256": "12ff414f99f92e0417bddc1cdd0992b2355ea6a3b0685fd3b2211d95b07a91ec"
+        },
+        {
+          "path": "merge_final.py",
+          "bytes": 3905,
+          "sha256": "53bef97c3d4aaa003e32e01bca36bcdc8f84ac469a027e4ab4115f4088173925"
+        },
+        {
+          "path": "polish_city.py",
+          "bytes": 5071,
+          "sha256": "4b92f36db453721bcc48f95d53e0ad85d6d0749e0747b6387129235e440fb48e"
+        },
+        {
+          "path": "regenerate_street_textures.py",
+          "bytes": 1087,
+          "sha256": "c786db6a46aace6502add89d783fd51a275e124ad1466758304a79b70835163c"
+        },
+        {
+          "path": "streets_parks/finalize.py",
+          "bytes": 2735,
+          "sha256": "329e8280231469d99853befa73563a2ff5507f915447151796efae4d400a4c63"
+        },
+        {
+          "path": "streets_parks/make_refined_textures.py",
+          "bytes": 2306,
+          "sha256": "7f66a79de56e80dde1e904e4ae2a965d1a15a4dfa6b4d5d5aa22d5f889908ece"
+        },
+        {
+          "path": "streets_parks/optimize.py",
+          "bytes": 2089,
+          "sha256": "aafcd9decda7e7fa0d70a420701050e56b4f34b6f4d27dc0bd2a254878a56fc4"
+        },
+        {
+          "path": "streets_parks/refine_street_trees.py",
+          "bytes": 8354,
+          "sha256": "8d6f58c36b94035ee70f46e8889f7b97df44f8d866d3380e8e8d3f930a9a24a7"
+        },
+        {
+          "path": "textures/storefront_signs.png",
+          "bytes": 33876,
+          "sha256": "57f6a07bee5dd9ee640298696a4b98ba8eac4878ef0368e36d0d743aa9f6c35f"
+        },
+        {
+          "path": "textures_streets/SP_Asphalt_fine_aggregate_original_texture.png",
+          "bytes": 390365,
+          "sha256": "9b3b89938518ad5106761a9383b798e14938eb347114c9ef621ca9c5db4061e6"
+        },
+        {
+          "path": "textures_streets/SP_Centerline_worn_yellow_original_texture.png",
+          "bytes": 600709,
+          "sha256": "6364b73846af3db7ad1dc6819b3e1a8ae3867c11b8130990d5da25af2f3a55fb"
+        },
+        {
+          "path": "textures_streets/SP_Crosswalk_white_thermoplastic_original_texture.png",
+          "bytes": 684789,
+          "sha256": "e95d6b344a9e259af6033459c8e6bbe096a3014e1e23c9fecd7b44e718497184"
+        },
+        {
+          "path": "textures_streets/SP_Granite_curb_original_texture.png",
+          "bytes": 605953,
+          "sha256": "2217668524f42409f22772f2591dd99a92199b7d1ad9496bb5d967a5f3219338"
+        },
+        {
+          "path": "textures_streets/SP_London_plane_bark_original_texture.png",
+          "bytes": 463129,
+          "sha256": "dd50c0860d7e3e9fd0eb0707cb7d83d6568a79245e8d1844467b041f3ba84d8b"
+        },
+        {
+          "path": "textures_streets/SP_Meadow_and_park_lawns_original_texture.png",
+          "bytes": 426506,
+          "sha256": "721631c80c782ee551fa2c469f7e0b981b694901e3c82b693fb3cb27af7038e6"
+        },
+        {
+          "path": "textures_streets/SP_Park_pond_water_original_texture.png",
+          "bytes": 387585,
+          "sha256": "7cecf01481e5de35dd8b7074b6e06994c3616a8510a177811f8b1dc6a79156e1"
+        },
+        {
+          "path": "textures_streets/SP_Sidewalk_concrete_original_texture.png",
+          "bytes": 585851,
+          "sha256": "003318df46d33e1d669334f6203cb98f38fccc1e88d76025bfc87f92cea06393"
+        },
+        {
+          "path": "textures_streets/SP_Tree_canopy_0_original_texture.png",
+          "bytes": 382098,
+          "sha256": "b6eddbfc179bd34f9727d035f832be40415320e3796cae17126bee6134fa56e5"
+        },
+        {
+          "path": "textures_streets/SP_Tree_canopy_1_original_texture.png",
+          "bytes": 424878,
+          "sha256": "ff62bff9307f9b5fe3cc8994bb82e051515d40a9d13a12afe0661fe328b2c8a5"
+        },
+        {
+          "path": "textures_streets/SP_Tree_canopy_2_original_texture.png",
+          "bytes": 389086,
+          "sha256": "3f7daaeb1698378f38bcb716e03d7cc5812283321f66f87dcc6c849c66030802"
+        },
+        {
+          "path": "textures_streets/SP_Tree_canopy_3_original_texture.png",
+          "bytes": 453368,
+          "sha256": "7efcc9749f5befc97cfab213c574be48a7686b0e11d76976574798d92010a5ba"
+        },
+        {
+          "path": "textures_streets/SP_Tree_canopy_4_original_texture.png",
+          "bytes": 407349,
+          "sha256": "27ccda7273cf57552980bdcb255097461534bc240ce5ec3408b66015a71a1455"
+        },
+        {
+          "path": "textures_streets/SP_Tree_canopy_5_original_texture.png",
+          "bytes": 479472,
+          "sha256": "431333addb693a60228a2e3d04f4cc6c3d2d04c9bb93267141b68b51c61c52bb"
+        },
+        {
+          "path": "textures_streets/SP_Tree_pit_soil_original_texture.png",
+          "bytes": 351468,
+          "sha256": "58b3b68c6d43921874512fa591082ad4741abb41f0d9c8ce6fac673c1fe22faf"
+        },
+        {
+          "path": "textures_v2/brownstone_basecolor.png",
+          "bytes": 2194779,
+          "sha256": "bcda99ca77fa3a63132219ef75347d9c3dc165946a48cdc73b0566631d37a4fb"
+        },
+        {
+          "path": "textures_v2/brownstone_normal.png",
+          "bytes": 2959481,
+          "sha256": "83dd91e75e78c00a94b35b7df3529f90e76d02a4fbfbd1825dec4a6fd5f3c81e"
+        },
+        {
+          "path": "textures_v2/brownstone_roughness.png",
+          "bytes": 2380512,
+          "sha256": "65f8a0e586c4c3156eecef154914ff696a54696c610f551cec5ce28bc54a034c"
+        },
+        {
+          "path": "textures_v2/dark_modern_basecolor.png",
+          "bytes": 280201,
+          "sha256": "ae2d5ff0a6ba8ad8fb1f74b5d3abf479d40860a91a6d158945e37be67e50807b"
+        },
+        {
+          "path": "textures_v2/dark_modern_normal.png",
+          "bytes": 39707,
+          "sha256": "409dfd2d4e31d0425af127df894a6214b6f453975c9ed067bc7f6051d81f7171"
+        },
+        {
+          "path": "textures_v2/dark_modern_roughness.png",
+          "bytes": 494046,
+          "sha256": "a6351bef85c19da22449ada1f59832e893dc365616c92baf72da9c01119b035d"
+        },
+        {
+          "path": "textures_v2/glass_blue_basecolor.png",
+          "bytes": 280415,
+          "sha256": "48c4cdacae929316eeea554b16f4318307ab3707d440f8c55b555818af609fd8"
+        },
+        {
+          "path": "textures_v2/glass_blue_normal.png",
+          "bytes": 39707,
+          "sha256": "409dfd2d4e31d0425af127df894a6214b6f453975c9ed067bc7f6051d81f7171"
+        },
+        {
+          "path": "textures_v2/glass_blue_roughness.png",
+          "bytes": 487233,
+          "sha256": "1f8db6dc08cd5fd3b04a720244aea928d2b294bf375ff653859670baa00b8dcf"
+        },
+        {
+          "path": "textures_v2/glass_silver_basecolor.png",
+          "bytes": 284780,
+          "sha256": "a49a9ae83274bf28e23ef9e3a63045976bcab973d5ecd7696ea2aa37ff9a58fb"
+        },
+        {
+          "path": "textures_v2/glass_silver_normal.png",
+          "bytes": 39707,
+          "sha256": "409dfd2d4e31d0425af127df894a6214b6f453975c9ed067bc7f6051d81f7171"
+        },
+        {
+          "path": "textures_v2/glass_silver_roughness.png",
+          "bytes": 487463,
+          "sha256": "db6c671f7fb76ab5a55df116107b3e468b7baedd90caa0a3827dac4cddc3eefb"
+        },
+        {
+          "path": "textures_v2/limestone_basecolor.png",
+          "bytes": 2189518,
+          "sha256": "b3d2b03e8fc331dcba8da0460e1fcebb9d9a044720ce5030f4fab60165c766ac"
+        },
+        {
+          "path": "textures_v2/limestone_normal.png",
+          "bytes": 2896671,
+          "sha256": "091a7fd956011f83166ebd48ce7c812609f5ab9604203e96b5dd7e8964c9b424"
+        },
+        {
+          "path": "textures_v2/limestone_roughness.png",
+          "bytes": 2372643,
+          "sha256": "dc5388e49a89f6daabc2121271f78d2fb61a17cce7ed39e992760a1e48e37cdc"
+        },
+        {
+          "path": "textures_v2/pale_stone_basecolor.png",
+          "bytes": 2203307,
+          "sha256": "63cd9a4fab0cb7a67371fed20b10f9c429000bcdb05f902897b1e5cffb874cf8"
+        },
+        {
+          "path": "textures_v2/pale_stone_normal.png",
+          "bytes": 2896210,
+          "sha256": "49dd7815d81c4349f69eb923951ffe45a70f1dcdefef0c1a6b321f82439ae752"
+        },
+        {
+          "path": "textures_v2/pale_stone_roughness.png",
+          "bytes": 2378008,
+          "sha256": "882fae254f0a3a7b1ecd89a6abf3f15922cfb5ea0a03d71435a433e52c7a9df6"
+        },
+        {
+          "path": "textures_v2/red_brick_basecolor.png",
+          "bytes": 2342467,
+          "sha256": "96de050c4dae4e36a3b02988cfbd5fb752190df95ba50646fe9ac9d6ca8e09bc"
+        },
+        {
+          "path": "textures_v2/red_brick_normal.png",
+          "bytes": 3313829,
+          "sha256": "370dd3f618ea37eeec92b5e0599b5475f61e52fcb692cf501e0c97bcdaf7ab44"
+        },
+        {
+          "path": "textures_v2/red_brick_roughness.png",
+          "bytes": 2530921,
+          "sha256": "220c313b62c5a33a636fe3c4e40ced0d49cbd3cb1aecf8b4c0ee4dd64136a037"
+        },
+        {
+          "path": "textures_v2/warm_brick_basecolor.png",
+          "bytes": 2314807,
+          "sha256": "f98e789c30ba4280a0976031e4773e30101c6c7a8036ae8d84129fe638754c54"
+        },
+        {
+          "path": "textures_v2/warm_brick_normal.png",
+          "bytes": 3315488,
+          "sha256": "ea8b1bb934af9232cf820d76c21639a9509819c7f2c25f98e54204e2ad514b82"
+        },
+        {
+          "path": "textures_v2/warm_brick_roughness.png",
+          "bytes": 2530834,
+          "sha256": "b75fa0cc0cd4f1e6917553e13b7611a1c407607cc3d84216484033d9aef47eba"
+        },
+        {
+          "path": "verify_v2_native.py",
+          "bytes": 2070,
+          "sha256": "ea5e6b77e98c19e53b9ff8182dc5ecc6d489e024aa8ab375623830ca4e46f8b5"
+        }
+      ]
+    }
+  ]
+}
