@@ -1,8 +1,9 @@
-"""Restore only a regenerated Addressables GUID before the CLI's dirty check.
+"""Restore known generated serialization differences before the CLI's dirty check.
 
 Generated Addressables assets are ignored and receive new GUIDs in clean clones.
-BuildAutomation rebinds them after recording build identity. All authored changes
-remain visible to Git and the Unity CLI; this does not bypass the dirty check.
+BuildAutomation rebinds them after recording build identity. Unity also appends
+spaces to two generated material keys. Each repair requires every other byte to
+match HEAD. Authored changes remain visible to Git and the Unity CLI.
 """
 
 import argparse
@@ -18,6 +19,15 @@ GUID_LINE = re.compile(
     rb"\{fileID: 11400000, guid: (?P<guid>[0-9a-fA-F]{32}), type: 2\}"
     rb"[ \t]*(?:\r?\n|$)"
 )
+MATERIAL_SPACE_LINES = {
+    "ManhattanViewer/Assets/Resources/CityDetailMaterial.mat": (
+        re.compile(rb"(?m)^  m_LockedProperties:(?P<spaces> *)(?=\r?$)"),
+    ),
+    "ManhattanViewer/Assets/Resources/WindowFrameMaterial.mat": (
+        re.compile(rb"(?m)^  m_LockedProperties:(?P<spaces> *)(?=\r?$)"),
+        re.compile(rb"(?m)^  m_Name: WindowFrameMaterial(?P<spaces> *)(?=\r?$)"),
+    ),
+}
 
 
 def canonical_text(data: bytes) -> bytes:
@@ -46,6 +56,24 @@ def generated_guid_replacement(committed: bytes, working: bytes) -> bytes | None
     return replacement
 
 
+def material_space_replacement(relative_path: str, committed: bytes, working: bytes) -> bytes | None:
+    """Remove only known serializer spaces when the whole result matches HEAD."""
+    patterns = MATERIAL_SPACE_LINES.get(relative_path)
+    if patterns is None:
+        return None
+    replacement = working
+    for pattern in patterns:
+        expected = list(pattern.finditer(committed))
+        current = list(pattern.finditer(replacement))
+        if len(expected) != 1 or len(current) != 1 or expected[0].group("spaces"):
+            return None
+        match = current[0]
+        replacement = replacement[:match.start("spaces")] + replacement[match.end("spaces"):]
+    if replacement == working or canonical_text(replacement) != canonical_text(committed):
+        return None
+    return replacement
+
+
 def run_preflight(repository: Path) -> bool:
     result = subprocess.run(
         ["git", "-C", str(repository), "show", "HEAD:" + BUILD_SETTINGS],
@@ -56,12 +84,33 @@ def run_preflight(repository: Path) -> bool:
         raise ValueError("Build settings must be a regular project file.")
     working = path.read_bytes()
     replacement = generated_guid_replacement(result.stdout, working)
-    if replacement is None:
-        print("Build preflight: no eligible GUID-only change; Unity CLI dirty check remains enabled.")
-        return False
-    path.write_bytes(replacement)
-    print("Build preflight: restored only the generated Addressables GUID to HEAD.")
-    return True
+    changed = replacement is not None
+    if replacement is not None:
+        path.write_bytes(replacement)
+        print("Build preflight: restored only the generated Addressables GUID to HEAD.")
+    for relative_path in MATERIAL_SPACE_LINES:
+        path = repository / relative_path
+        if path.is_symlink():
+            raise ValueError("Generated material must be a regular project file.")
+        if not path.is_file():
+            continue
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(repository), "show", "HEAD:" + relative_path],
+                check=True, capture_output=True,
+            )
+        except subprocess.CalledProcessError:
+            # An untracked/generated-only material has no committed canonical
+            # bytes. Leave it untouched rather than inventing a baseline.
+            continue
+        replacement = material_space_replacement(relative_path, result.stdout, path.read_bytes())
+        if replacement is not None:
+            path.write_bytes(replacement)
+            changed = True
+            print("Build preflight: restored only known serializer spaces in " + relative_path + ".")
+    if not changed:
+        print("Build preflight: no eligible generated-only change; Unity CLI dirty check remains enabled.")
+    return changed
 
 
 def main() -> None:

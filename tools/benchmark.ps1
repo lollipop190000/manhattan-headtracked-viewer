@@ -14,6 +14,44 @@ param(
 . (Join-Path $PSScriptRoot 'gpu_sampling.ps1')
 . (Join-Path $PSScriptRoot 'benchmark_environment.ps1')
 . (Join-Path $PSScriptRoot 'measure_process.ps1')
+function Stop-OwnedBenchmarkCollector {
+    [CmdletBinding()]
+    param($Collector, [string]$StopFile, [string]$Name, [string]$ErrorLog, [int]$WaitMilliseconds = 2500)
+    $forcedCleanup = $false
+    $exitCode = $null
+    $hasExited = $false
+    try {
+        [System.IO.File]::WriteAllText($StopFile, '')
+        $Collector.Refresh()
+        if (-not $Collector.HasExited -and -not $Collector.WaitForExit($WaitMilliseconds)) {
+            $forcedCleanup = $true
+            Stop-Process -Id $Collector.Id -ErrorAction SilentlyContinue
+            if (-not $Collector.WaitForExit($WaitMilliseconds)) {
+                Write-Warning "Owned $Name collector did not exit after termination; inspect its PID and collector log."
+            }
+        }
+        $Collector.Refresh()
+        $hasExited = $Collector.HasExited
+        if ($hasExited) { $exitCode = $Collector.ExitCode }
+        if ($forcedCleanup) {
+            Write-Warning "$Name collector required a forced termination request; inspect $ErrorLog."
+        }
+        elseif (-not $hasExited) {
+            Write-Warning "$Name collector exit is unconfirmed; inspect $ErrorLog."
+        }
+        elseif ($null -eq $exitCode) {
+            Write-Warning "$Name collector exited, but its exit code is unavailable; inspect $ErrorLog."
+        }
+        elseif ($exitCode -ne 0) {
+            Write-Warning "$Name collector failed (exit code $exitCode); inspect $ErrorLog."
+        }
+        [pscustomobject]@{ forcedCleanup = $forcedCleanup; hasExited = $hasExited; exitCode = $exitCode }
+    }
+    finally {
+        Remove-Item -LiteralPath $StopFile -ErrorAction SilentlyContinue
+        $Collector.Dispose()
+    }
+}
 $expectedPlayerPath = [System.IO.Path]::GetFullPath((Join-Path $ViewerRepository 'Builds\ManhattanViewer\ManhattanViewer.exe'))
 $trackerExe = Join-Path $ViewerRepository '.tools\head-tracked-display\python_tracker\.venv\Scripts\python.exe'
 Assert-NoExistingTrackedProcess -ExpectedPlayerPath $expectedPlayerPath
@@ -52,6 +90,8 @@ try {
         '-OutputPath', ('"' + (Join-Path $OutputDirectory 'process.csv') + '"'), '-StopFile', ('"' + $processStopFile + '"')) `
         -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $OutputDirectory 'process-collector.log') `
         -RedirectStandardError (Join-Path $OutputDirectory 'process-collector-error.log')
+    # Windows PowerShell 5.1 needs a retained native handle to keep exit-code access after exit.
+    [void]$processCollector.Handle
     if (-not $NoTracker) {
         $trackerCollector = Start-Process -FilePath $shell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass',
             '-File', ('"' + (Join-Path $PSScriptRoot 'measure_process.ps1') + '"'), '-ExpectedPlayerPath', ('"' + $trackerExe + '"'),
@@ -59,6 +99,7 @@ try {
             '-OutputPath', ('"' + (Join-Path $OutputDirectory 'tracker-process.csv') + '"'), '-StopFile', ('"' + $trackerStopFile + '"')) `
             -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $OutputDirectory 'tracker-process-collector.log') `
             -RedirectStandardError (Join-Path $OutputDirectory 'tracker-process-collector-error.log')
+        [void]$trackerCollector.Handle
     }
     if (-not $SkipGpuLog) {
         if (Get-Command 'nvidia-smi' -ErrorAction SilentlyContinue) {
@@ -69,6 +110,7 @@ try {
                 '-OutputPath', ('"' + (Join-Path $OutputDirectory 'gpu.csv') + '"'), '-StopFile', ('"' + $stopFile + '"')) `
                 -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $OutputDirectory 'gpu-collector.log') `
                 -RedirectStandardError (Join-Path $OutputDirectory 'gpu-collector-error.log')
+            [void]$gpuCollector.Handle
         }
         else { Write-Warning 'nvidia-smi is unavailable; this benchmark has no driver memory samples.' }
     }
@@ -78,37 +120,13 @@ try {
 }
 finally {
     if ($trackerCollector) {
-        [System.IO.File]::WriteAllText($trackerStopFile, '')
-        $trackerCollector.Refresh()
-        if (-not $trackerCollector.HasExited -and -not $trackerCollector.WaitForExit(2500)) {
-            Stop-Process -Id $trackerCollector.Id -ErrorAction SilentlyContinue
-            if (-not $trackerCollector.WaitForExit(2500)) { Write-Warning 'Owned tracker collector did not exit after termination; inspect its PID and collector log.' }
-        }
-        $trackerCollector.Refresh()
-        if ($trackerCollector.HasExited -and $trackerCollector.ExitCode -ne 0) { Write-Warning 'Tracker collector failed or required forced cleanup; inspect tracker-process-collector-error.log.' }
-        Remove-Item -LiteralPath $trackerStopFile -ErrorAction SilentlyContinue
+        Stop-OwnedBenchmarkCollector -Collector $trackerCollector -StopFile $trackerStopFile -Name 'Tracker' -ErrorLog 'tracker-process-collector-error.log' | Out-Null
     }
     if ($processCollector) {
-        [System.IO.File]::WriteAllText($processStopFile, '')
-        $processCollector.Refresh()
-        if (-not $processCollector.HasExited -and -not $processCollector.WaitForExit(2500)) {
-            Stop-Process -Id $processCollector.Id -ErrorAction SilentlyContinue
-            if (-not $processCollector.WaitForExit(2500)) { Write-Warning 'Owned process collector did not exit after termination; inspect its PID and collector log.' }
-        }
-        $processCollector.Refresh()
-        if ($processCollector.HasExited -and $processCollector.ExitCode -ne 0) { Write-Warning 'Process collector failed or required forced cleanup; inspect process-collector-error.log.' }
-        Remove-Item -LiteralPath $processStopFile -ErrorAction SilentlyContinue
+        Stop-OwnedBenchmarkCollector -Collector $processCollector -StopFile $processStopFile -Name 'Process' -ErrorLog 'process-collector-error.log' | Out-Null
     }
     if ($gpuCollector) {
-        [System.IO.File]::WriteAllText($stopFile, '')
-        $gpuCollector.Refresh()
-        if (-not $gpuCollector.HasExited -and -not $gpuCollector.WaitForExit(2500)) {
-            Stop-Process -Id $gpuCollector.Id -ErrorAction SilentlyContinue
-            if (-not $gpuCollector.WaitForExit(2500)) { Write-Warning 'Owned GPU collector did not exit after termination; inspect its PID and collector log.' }
-        }
-        $gpuCollector.Refresh()
-        if ($gpuCollector.HasExited -and $gpuCollector.ExitCode -ne 0) { Write-Warning 'GPU collector failed or required forced cleanup; inspect gpu-collector-error.log.' }
-        Remove-Item -LiteralPath $stopFile -ErrorAction SilentlyContinue
+        Stop-OwnedBenchmarkCollector -Collector $gpuCollector -StopFile $stopFile -Name 'GPU' -ErrorLog 'gpu-collector-error.log' | Out-Null
     }
 }
 Write-Host "Benchmark output: $OutputDirectory"

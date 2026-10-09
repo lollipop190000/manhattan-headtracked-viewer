@@ -137,7 +137,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_clone.ps1 -Revi
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_clone.ps1 -Revision <full Git commit> -StaticOnly
 ```
 
-The command keeps the independent clone in ignored `.verification/` and records its exact commit, source version and Windows player SHA-256. `-SourceArchiveDirectory` permits an explicitly labeled offline-source variant; omit it when verifying authenticated private-release download. `-NoTracker` is a baseline variant and is not webcam acceptance. The isolated build uses the normal clean-source gate. A preflight normalizes only a generated Addressables GUID difference after verifying that all remaining tracked settings bytes match the committed file. Authored scene/settings changes remain subject to the dirty-source gate.
+The command keeps the independent clone in ignored `.verification/` and records its exact commit, source version and Windows player SHA-256. `-SourceArchiveDirectory` permits an explicitly labeled offline-source variant; omit it when verifying authenticated private-release download. `-NoTracker` is a baseline variant and is not webcam acceptance. The isolated build uses the normal clean-source gate. A preflight normalizes only a generated Addressables GUID difference and Unity serializer trailing spaces on `m_LockedProperties` in `Resources/CityDetailMaterial.mat` and `Resources/WindowFrameMaterial.mat`, plus `m_Name` in the latter, after verifying that every other byte matches HEAD. Authored scene/settings/material changes remain subject to the dirty-source gate.
 
 The verification record reads source version/release and technology revision from the **cloned revision**, and fingerprints its source manifest and tracker lock. A static-only run records that no sources were downloaded and no player was launched. Setup requires the committed, tested tracker lock; it cannot silently fall back to a different dependency set.
 
@@ -151,7 +151,7 @@ As of 2026-10-10, reusable changes published in [technology commit `960d5de55037
 | Minimal consumer without URP or demo | 39/39 EditMode and 11/11 PlayMode tests passed |
 | Runtime-only consumer without URP or Unity Test Framework | Windows build succeeded; standalone package smoke exited 0 |
 | Parameterized shared launcher | 21 assertions passed |
-| Manhattan portable checks | 58/58 Python data tests and 8/8 PowerShell assertions passed |
+| Manhattan portable checks | 68/68 Python data tests and 8/8 PowerShell assertions passed |
 | Manhattan Unity tests after scene portability and streaming fixes | 42/42 EditMode passed; PlayMode 15 passed, 1 GPU-only fade test skipped; zero failures/errors |
 | Custom Near shader live-GPU test | 1/1 passed on the actual GPU, zero skips; standalone city verification remains separate |
 | Deferred tile-release lifecycle | All 5 added PlayMode tests passed; the combined PlayMode suite has 15 passed and 1 GPU-only skip |
