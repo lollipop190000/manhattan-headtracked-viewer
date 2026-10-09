@@ -25,7 +25,7 @@ MATERIAL_SPACE_LINES = {
     ),
     "ManhattanViewer/Assets/Resources/WindowFrameMaterial.mat": (
         re.compile(rb"(?m)^  m_LockedProperties:(?P<spaces> *)(?=\r?$)"),
-        re.compile(rb"(?m)^  m_Name: WindowFrameMaterial(?P<spaces> *)(?=\r?$)"),
+        re.compile(rb"(?m)^  m_Name:(?P<spaces> *)(?=\r?$)"),
     ),
 }
 

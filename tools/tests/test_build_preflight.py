@@ -27,13 +27,17 @@ MATERIAL = (
     b"  m_CustomRenderQueue: -1\n  m_LockedProperties:\n"
     b"  m_SavedProperties:\n    m_Colors:\n    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}\n"
 )
-WINDOW = MATERIAL.replace(b"CityDetailMaterial", b"WindowFrameMaterial")
+WINDOW = MATERIAL.replace(b"CityDetailMaterial", b"WindowFrameMaterial") + (
+    b"--- !u!114 &7948293123860345799\nMonoBehaviour:\n  m_Name:\n"
+    b"  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion\n"
+    b"  version: 10\n"
+)
 
 
 def serializer_spaces(material: bytes, *, name: bool = False) -> bytes:
     result = material.replace(b"m_LockedProperties:\n", b"m_LockedProperties: \n")
     if name:
-        result = result.replace(b"m_Name: WindowFrameMaterial\n", b"m_Name: WindowFrameMaterial \n")
+        result = result.replace(b"  m_Name:\n", b"  m_Name: \n")
     return result
 
 
@@ -104,7 +108,7 @@ class BuildPreflightTests(unittest.TestCase):
             (CITY_MATERIAL, MATERIAL, serializer_spaces(MATERIAL)),
             (WINDOW_MATERIAL, WINDOW, serializer_spaces(WINDOW)),
             (WINDOW_MATERIAL, WINDOW, serializer_spaces(WINDOW, name=True)),
-            (WINDOW_MATERIAL, WINDOW, WINDOW.replace(b"WindowFrameMaterial\n", b"WindowFrameMaterial \n")),
+            (WINDOW_MATERIAL, WINDOW, WINDOW.replace(b"  m_Name:\n", b"  m_Name: \n")),
         ):
             with self.subTest(path=relative_path, working=working):
                 replacement = build_preflight.material_space_replacement(relative_path, committed, working)
@@ -140,13 +144,17 @@ class BuildPreflightTests(unittest.TestCase):
         ):
             with self.subTest(working=working):
                 self.assertIsNone(build_preflight.material_space_replacement(CITY_MATERIAL, MATERIAL, working))
+        named_key_space = serializer_spaces(WINDOW, name=True).replace(
+            b"m_Name: WindowFrameMaterial\n", b"m_Name: WindowFrameMaterial \n")
+        self.assertIsNone(build_preflight.material_space_replacement(WINDOW_MATERIAL, WINDOW, named_key_space))
 
     def test_ambiguous_material_keys_or_noncanonical_head_are_not_normalized(self):
         working = serializer_spaces(WINDOW, name=True)
         for edited in (
             working + b"  m_LockedProperties: \n",
             working.replace(b"  m_LockedProperties: \n", b""),
-            working.replace(b"  m_Name: WindowFrameMaterial \n", b""),
+            working.replace(b"  m_Name: \n", b""),
+            working + b"  m_Name: \n",
         ):
             with self.subTest(working=edited):
                 self.assertIsNone(build_preflight.material_space_replacement(WINDOW_MATERIAL, WINDOW, edited))
@@ -199,6 +207,46 @@ class BuildPreflightTests(unittest.TestCase):
             with mock.patch.object(build_preflight.subprocess, "run", side_effect=[SimpleNamespace(stdout=COMMITTED), missing_head]):
                 self.assertFalse(build_preflight.run_preflight(root))
             self.assertEqual(working, city.read_bytes())
+
+    def test_actual_head_materials_repair_real_unity_drift_and_preserve_named_key_edits(self):
+        # Use the committed full Unity files, including WindowFrameMaterial's
+        # additional AssetVersion MonoBehaviour with an EMPTY m_Name. A minimal
+        # material-only fixture missed that second serialized document.
+        head = {
+            relative_path: subprocess.run(
+                ["git", "-C", str(build_preflight.ROOT), "show", "HEAD:" + relative_path],
+                check=True, capture_output=True,
+            ).stdout
+            for relative_path in (build_preflight.BUILD_SETTINGS, CITY_MATERIAL, WINDOW_MATERIAL)
+        }
+        self.assertIn(b"  m_Name: WindowFrameMaterial\n", head[WINDOW_MATERIAL])
+        self.assertIn(b"  m_Name:\n", head[WINDOW_MATERIAL])
+        temporary_root = build_preflight.ROOT / ".cache/tests"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as temporary:
+            root = Path(temporary)
+            for relative_path, committed in head.items():
+                target = root / relative_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                working = serializer_spaces(committed, name=relative_path == WINDOW_MATERIAL)
+                target.write_bytes(working.replace(b"\n", b"\r\n"))
+
+            def git_show(arguments, **options):
+                return SimpleNamespace(stdout=head[arguments[-1].removeprefix("HEAD:")])
+
+            with mock.patch.object(build_preflight.subprocess, "run", side_effect=git_show):
+                self.assertTrue(build_preflight.run_preflight(root))
+                for relative_path, committed in head.items():
+                    self.assertEqual(committed.replace(b"\n", b"\r\n"), (root / relative_path).read_bytes())
+                self.assertFalse(build_preflight.run_preflight(root), "Repairing actual files must be idempotent.")
+                for relative_path in (CITY_MATERIAL, WINDOW_MATERIAL):
+                    committed = head[relative_path]
+                    name = Path(relative_path).stem.encode("ascii")
+                    authored = serializer_spaces(committed, name=relative_path == WINDOW_MATERIAL).replace(
+                        b"  m_Name: " + name + b"\n", b"  m_Name: TeamAuthoredMaterial\n")
+                    (root / relative_path).write_bytes(authored)
+                    self.assertFalse(build_preflight.run_preflight(root))
+                    self.assertEqual(authored, (root / relative_path).read_bytes(), "Real named-key edits remain dirty.")
 
 
 if __name__ == "__main__":

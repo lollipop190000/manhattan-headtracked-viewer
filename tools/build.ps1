@@ -1,7 +1,24 @@
 param([string]$OutputPath, [switch]$Bake, [switch]$AllowDirty, [string]$PythonExe = 'python')
 . (Join-Path $PSScriptRoot 'common.ps1')
+function Assert-CleanBuildSource {
+    param([Parameter(Mandatory)][string]$RepositoryRoot, [switch]$AllowDirty)
+    Get-Command git -ErrorAction Stop | Out-Null
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        # PowerShell 5.1 treats native stderr as an error; inspect Git's actual exit code below.
+        $ErrorActionPreference = 'Continue'
+        $sourceChanges = @(& git -C $RepositoryRoot status --porcelain=v1 --untracked-files=normal 2>$null)
+        $statusExitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $previousErrorAction }
+    if ($statusExitCode -ne 0) { throw "Git source-status check failed (exit code $statusExitCode); a build requires a valid Git checkout." }
+    if ($sourceChanges.Count -gt 0 -and -not $AllowDirty) {
+        throw 'The build source has tracked or untracked changes. Commit or remove them, or pass -AllowDirty for a deliberately dirty development build.'
+    }
+}
 if ($Bake) { & (Join-Path $PSScriptRoot 'bake.ps1') -PythonExe $PythonExe }
 Invoke-Checked $PythonExe @((Join-Path $PSScriptRoot 'build_preflight.py'), '--repository-root', $ViewerRepository)
+Assert-CleanBuildSource -RepositoryRoot $ViewerRepository -AllowDirty:$AllowDirty
 if (-not $OutputPath) { $OutputPath = Join-Path $ViewerRepository 'Builds\ManhattanViewer\ManhattanViewer.exe' }
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out-Null
