@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -91,11 +92,63 @@ namespace Manhattan.Editor
             var go = new GameObject("Manhattan Viewer"); var bootstrap = go.AddComponent<ManhattanBootstrap>();
             bootstrap.catalog = AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset");
             bootstrap.windowFrameMaterial = windowFrame;
+            ConfigureCityDetailMaterials(bootstrap.catalog);
             EditorSceneManager.SaveScene(scene, "Assets/Scenes/ManhattanViewer.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/ManhattanViewer.unity", true) };
             AssetDatabase.SaveAssets();
         }
         private static void SetBool(SerializedObject obj,string name,bool value){var p=obj.FindProperty(name);if(p!=null)p.boolValue=value;}
+
+        private static void ConfigureCityDetailMaterials(CityCatalog catalog)
+        {
+            const string shaderName = "Manhattan/CityDetailLit";
+            const string materialPath = "Assets/Resources/CityDetailMaterial.mat";
+            const string variantsPath = "Assets/Resources/CityDetailVariants";
+            Shader shader = Shader.Find(shaderName);
+            if (shader == null || ShaderUtil.ShaderHasError(shader)) throw new InvalidOperationException("City detail shader is missing or has compile errors: " + shaderName);
+            var template = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            if (template == null) { template = new Material(shader); AssetDatabase.CreateAsset(template, materialPath); }
+            template.shader = shader; template.SetFloat(SurfaceDetailComparison.DistanceFadeProperty, 1f); EditorUtility.SetDirty(template);
+            // Runtime shader switches need the same local keyword variants as the
+            // imported detail materials. Keep both comparison states in the build
+            // without making Resources reference all native city textures/meshes.
+            Directory.CreateDirectory(variantsPath); AssetDatabase.Refresh();
+            var sources = new Dictionary<string, (Material source, string[] keywords)>(StringComparer.Ordinal);
+            string[] flattened = { "_NORMALMAP", "_PARALLAXMAP", "_DETAIL_MULX2", "_DETAIL_SCALED", "_METALLICSPECGLOSSMAP", "_OCCLUSIONMAP", "_EMISSION" };
+            if (catalog != null)
+            {
+                string[] paths = catalog.tiles.Where(t => t.layer == CityLayer.Near).Select(t => "Assets/Generated/City/Tiles/" + t.id + ".prefab").ToArray();
+                foreach (string dependency in AssetDatabase.GetDependencies(paths, true))
+                {
+                    if (!dependency.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)) continue;
+                    Material source = AssetDatabase.LoadAssetAtPath<Material>(dependency); if (source == null) continue;
+                    foreach (string[] keywords in new[] { source.shaderKeywords, source.shaderKeywords.Where(k => !flattened.Contains(k)).ToArray() })
+                    {
+                        string[] sorted = keywords.OrderBy(k => k, StringComparer.Ordinal).ToArray(); string key = string.Join("|", sorted);
+                        if (!sources.ContainsKey(key)) sources.Add(key, (source, sorted));
+                    }
+                }
+            }
+            var retained = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pair in sources)
+            {
+                string digest; using (var hash = SHA256.Create()) digest = BitConverter.ToString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(pair.Key))).Replace("-", "").Substring(0, 16).ToLowerInvariant();
+                string path = variantsPath + "/Keywords_" + digest + ".mat"; retained.Add(path);
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null) { material = new Material(shader); AssetDatabase.CreateAsset(material, path); }
+                material.shader = shader; material.CopyPropertiesFromMaterial(pair.Value.source);
+                foreach (string property in material.GetTexturePropertyNames()) material.SetTexture(property, property.Contains("Bump") || property.Contains("Normal") ? Texture2D.normalTexture : Texture2D.whiteTexture);
+                material.shaderKeywords = pair.Value.keywords; material.SetFloat(SurfaceDetailComparison.DistanceFadeProperty, 1f); EditorUtility.SetDirty(material);
+            }
+            foreach (string guid in AssetDatabase.FindAssets("t:Material", new[] { variantsPath }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid); if (!retained.Contains(path)) AssetDatabase.DeleteAsset(path);
+            }
+            foreach (string dependency in AssetDatabase.GetDependencies(retained.Append(materialPath).ToArray(), true))
+                if (dependency.StartsWith("Assets/Generated/City/", StringComparison.Ordinal) || dependency.StartsWith("Assets/CitySource/", StringComparison.Ordinal))
+                    throw new InvalidDataException("City detail shader retention must not force city data into Resources: " + dependency);
+            Debug.Log("CITY_DETAIL_SHADER_VARIANTS " + sources.Count + " keyword combinations retained without native city dependencies.");
+        }
 
         public static void BuildWindows()
         {

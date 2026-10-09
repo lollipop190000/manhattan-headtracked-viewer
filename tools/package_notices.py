@@ -8,6 +8,7 @@ import subprocess
 import source_assets
 
 ROOT = Path(__file__).resolve().parents[1]
+CITY_DETAIL_NOTICES = ("LICENSE-Unity-URP.md", "NOTICE.md")
 
 
 def copy_notice(source, destination, expected=None):
@@ -18,6 +19,8 @@ def copy_notice(source, destination, expected=None):
         raise ValueError(f"Original notice SHA-256/size changed: {source.name}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
+    if destination.stat().st_size != source.stat().st_size or source_assets.sha256_file(destination) != digest:
+        raise ValueError(f"Copied notice SHA-256/size differs from original: {source.name}")
     return dict(path=destination.name, bytes=source.stat().st_size, sha256=digest)
 
 
@@ -40,6 +43,8 @@ def package_notices(build_directory, source_root, technology_root, package_cache
 
     add(ROOT / "LICENSE", Path("Viewer/LICENSE"))
     add(ROOT / "THIRD_PARTY.md", Path("Viewer/THIRD_PARTY.md"))
+    for name in CITY_DETAIL_NOTICES:
+        add(ROOT / "ManhattanViewer/Assets/Shaders" / name, Path("CityDetailRenderer") / name)
     add(source_assets.MANIFEST, Path("source-manifest.json"))
     add(ROOT / "tools/technology-version.json", Path("technology-version.json"))
     for pack in manifest["packs"]:
@@ -66,9 +71,10 @@ def package_notices(build_directory, source_root, technology_root, package_cache
     (output / "manifest.json").write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     (output / "README.txt").write_text(
         "The MIT license covers viewer/tracking code only. Original NYC source data, city derivatives, "
-        "Unity packages and optional models retain their separate notices and terms.\n"
+        "Unity packages, adapted shader sources and optional models retain their separate notices and terms.\n"
         "City/ preserves SHA-256-verified original provenance and NYC Open Data Terms. "
         "Viewer/THIRD_PARTY.md records credits and procedural-source limitations.\n"
+        "CityDetailRenderer/ preserves the adapted URP shader's Unity license and source notice.\n"
         "Keep this Notices directory with redistributed Windows builds. The downloaded Face Landmarker "
         "task model is not bundled by this notice command.\n", encoding="utf-8")
     return index

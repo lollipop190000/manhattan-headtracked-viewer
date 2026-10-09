@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,6 +7,7 @@ namespace Manhattan.Viewer
     /// <summary>Imported materials remain untouched. Runtime variants can be restored for every resident or new tile.</summary>
     public sealed class SurfaceDetailComparison : MonoBehaviour
     {
+        public const string DistanceFadeProperty = "_CityDetailOpacity";
         private sealed class Binding
         {
             public Renderer renderer;
@@ -38,14 +40,15 @@ namespace Manhattan.Viewer
             {
                 if (!binding.fades || binding.renderer == null || !binding.renderer.enabled || !binding.renderer.gameObject.activeInHierarchy) continue;
                 binding.renderer.GetPropertyBlock(block);
-                float opacity = block.GetVector(LodFade).x;
+                float opacity = block.GetFloat(DistanceFade);
                 minimum = Mathf.Min(minimum, opacity); maximum = Mathf.Max(maximum, opacity); renderers++;
                 if (binding.renderer.isVisible) visibleRenderers++;
             }
             if (renderers == 0) minimum = maximum = -1f;
         }
         private MaterialPropertyBlock block;
-        private static readonly int LodFade = Shader.PropertyToID("unity_LODFade");
+        private static readonly int DistanceFade = Shader.PropertyToID(DistanceFadeProperty);
+        private Shader distanceFadeShader;
         private bool enabledDetails = true;
         private void Awake() => block = new MaterialPropertyBlock();
         public bool EnabledDetails
@@ -75,9 +78,15 @@ namespace Manhattan.Viewer
                     var cache = fades ? fadeVariants : regularVariants;
                     if (!cache.TryGetValue(source, out var variants))
                     {
+                        var fadeShader = fades ? GetDistanceFadeShader() : null;
                         var detailed = fades ? new Material(source) : source;
-                        var flat = new Material(source) { name = source.name + " (surface off)", hideFlags = HideFlags.DontSave };
-                        if (fades) { detailed.name += " (distance fade)"; detailed.hideFlags = HideFlags.DontSave; }
+                        if (fades)
+                        {
+                            // The template is a strong build reference; matching Lit properties retain PBR maps, UV transforms and alpha state.
+                            detailed.shader = fadeShader; detailed.CopyPropertiesFromMaterial(source);
+                            detailed.SetFloat(DistanceFade, 1f); detailed.name += " (distance fade)"; detailed.hideFlags = HideFlags.DontSave;
+                        }
+                        var flat = new Material(detailed) { name = source.name + " (surface off)", hideFlags = HideFlags.DontSave };
                         foreach (string keyword in new[] { "_NORMALMAP", "_PARALLAXMAP", "_DETAIL_MULX2", "_DETAIL_SCALED", "_METALLICSPECGLOSSMAP", "_OCCLUSIONMAP", "_EMISSION" }) flat.DisableKeyword(keyword);
                         foreach (string map in new[] { "_BaseMap", "_MainTex", "_BumpMap", "_MetallicGlossMap", "_SpecGlossMap", "_OcclusionMap", "_ParallaxMap", "_DetailMask", "_DetailAlbedoMap", "_DetailNormalMap", "_EmissionMap" })
                         {
@@ -91,7 +100,6 @@ namespace Manhattan.Viewer
                         if (flat.HasProperty("_Smoothness")) flat.SetFloat("_Smoothness", .15f);
                         if (flat.HasProperty("_SpecColor")) flat.SetColor("_SpecColor", new Color(.04f, .04f, .04f));
                         if (flat.HasProperty("_EmissionColor")) flat.SetColor("_EmissionColor", Color.black);
-                        if (fades) { detailed.EnableKeyword("LOD_FADE_CROSSFADE"); flat.EnableKeyword("LOD_FADE_CROSSFADE"); }
                         variants = new Variant { source = source, detailed = detailed, flat = flat, fades = fades }; cache.Add(source, variants);
                     }
                     variants.references++;
@@ -107,6 +115,14 @@ namespace Manhattan.Viewer
         {
             if (binding.renderer != null) binding.renderer.sharedMaterials = enabledDetails ? binding.detailed : binding.flat;
         }
+        private Shader GetDistanceFadeShader()
+        {
+            if (distanceFadeShader != null) return distanceFadeShader;
+            var template = Resources.Load<Material>("CityDetailMaterial");
+            if (template == null || template.shader == null || !template.HasProperty(DistanceFade))
+                throw new InvalidOperationException("City detail material is missing or does not support " + DistanceFadeProperty + ". Recreate viewer scene and render settings before building.");
+            distanceFadeShader = template.shader; return distanceFadeShader;
+        }
         public void SetOpacity(GameObject root, float opacity)
         {
             if (!tiles.TryGetValue(root, out var bindings)) return;
@@ -115,7 +131,7 @@ namespace Manhattan.Viewer
             {
                 if (!b.fades || b.renderer == null) continue;
                 b.renderer.GetPropertyBlock(block);
-                block.SetVector(LodFade, new Vector4(Mathf.Clamp01(opacity), opacity, 0f, 0f));
+                block.SetFloat(DistanceFade, Mathf.Clamp01(opacity));
                 b.renderer.SetPropertyBlock(block);
             }
         }

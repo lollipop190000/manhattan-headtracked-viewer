@@ -29,10 +29,11 @@ namespace Manhattan.Viewer
         public string utcTime, reportKind = "measured-comparison-captures", unityVersion, sourceVersion, error;
         public int width, height, renderWidth, renderHeight;
         public string fullscreenMode;
+        public string distanceFadeProperty = SurfaceDetailComparison.DistanceFadeProperty;
         public bool streamingSettled, allImagesWritten, allInvariantsMatch, preferencesUnchanged, originalStatesRestored;
         public ViewerBuildIdentity buildIdentity;
         public ComparisonCaptureSample[] samples;
-        public string limitation = "Near fade values are requested MaterialPropertyBlock values, not proof of rasterized opaque coverage. Source-material fingerprints compare this process only. Head observations continue and the camera eye may move while tracking is on; only the movement rig and physical screen remain fixed. Streaming residency is held during the capture series.";
+        public string limitation = "Near fade values are requested _CityDetailOpacity MaterialPropertyBlock floats, not proof of rasterized opaque coverage. Source-material fingerprints compare this process only. Head observations continue and the camera eye may move while tracking is on; only the movement rig and physical screen remain fixed. Streaming residency is held during the capture series.";
     }
 
     /// <summary>Explicit standalone QA mode. Comparisons use their APIs without changing or saving preferences.</summary>

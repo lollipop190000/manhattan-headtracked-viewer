@@ -78,21 +78,34 @@ public sealed class ViewerCompositionTests
         if (Application.isBatchMode || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) Assert.Ignore("Rendered dither verification requires a live GPU Game View; pure lifecycle tests still run headlessly.");
         var host = new GameObject("rendered fade"); var surfaces = host.AddComponent<SurfaceDetailComparison>();
         var cube = GameObject.CreatePrimitive(PrimitiveType.Cube); cube.transform.SetParent(host.transform); cube.layer = 29;
-        var source = new Material(Shader.Find("Universal Render Pipeline/Unlit")); source.SetColor("_BaseColor", Color.white);
-        cube.GetComponent<Renderer>().sharedMaterial = source; surfaces.Register(cube, true);
+        var source = new Material(Shader.Find("Universal Render Pipeline/Lit")); source.SetColor("_BaseColor", Color.white);
+        source.SetColor("_EmissionColor", Color.white); source.EnableKeyword("_EMISSION");
+        cube.GetComponent<Renderer>().sharedMaterial = source;
         var camera = new GameObject("fade camera").AddComponent<Camera>(); camera.transform.SetParent(host.transform); camera.transform.position = new Vector3(0, 0, -2);
         camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.cullingMask = 1 << 29;
         camera.GetUniversalAdditionalCameraData().antialiasing = AntialiasingMode.None;
         var target = new RenderTexture(64, 64, 24); target.Create(); camera.targetTexture = target;
         var pixels = new Texture2D(64, 64, TextureFormat.RGB24, false);
-        surfaces.SetOpacity(cube, 1); yield return new WaitForEndOfFrame();
-        RenderTexture previous = RenderTexture.active; RenderTexture.active = target; pixels.ReadPixels(new Rect(0, 0, 64, 64), 0, 0); pixels.Apply();
-        float visible = pixels.GetPixel(32, 32).grayscale;
-        surfaces.SetOpacity(cube, 0); yield return new WaitForEndOfFrame();
-        RenderTexture.active = target; pixels.ReadPixels(new Rect(0, 0, 64, 64), 0, 0); pixels.Apply();
-        float hidden = pixels.GetPixel(32, 32).grayscale; RenderTexture.active = previous;
-        Assert.That(visible, Is.GreaterThan(.5f)); Assert.That(hidden, Is.LessThan(.05f), "The built-in LOD fade must affect opaque shader coverage, not only the stored property block.");
-        camera.targetTexture = null; target.Release(); Object.Destroy(target); Object.Destroy(pixels); Object.Destroy(source); Object.Destroy(host); yield return null;
+        RenderTexture previous = RenderTexture.active;
+        try
+        {
+            surfaces.Register(cube, true);
+            Assert.That(cube.GetComponent<Renderer>().sharedMaterial.shader.name, Is.EqualTo("Manhattan/CityDetailLit"));
+            Assert.That(cube.GetComponent<Renderer>().sharedMaterial.HasProperty(SurfaceDetailComparison.DistanceFadeProperty), Is.True);
+            surfaces.SetOpacity(cube, 1); yield return new WaitForEndOfFrame();
+            RenderTexture.active = target; pixels.ReadPixels(new Rect(0, 0, 64, 64), 0, 0); pixels.Apply();
+            float visible = pixels.GetPixel(32, 32).grayscale;
+            surfaces.SetOpacity(cube, 0); yield return new WaitForEndOfFrame();
+            RenderTexture.active = target; pixels.ReadPixels(new Rect(0, 0, 64, 64), 0, 0); pixels.Apply();
+            float hidden = pixels.GetPixel(32, 32).grayscale;
+            Assert.That(visible, Is.GreaterThan(.5f)); Assert.That(hidden, Is.LessThan(.05f), "The custom material opacity must affect opaque shader coverage, not only the stored property block.");
+        }
+        finally
+        {
+            RenderTexture.active = previous; camera.targetTexture = null; target.Release();
+            Object.Destroy(target); Object.Destroy(pixels); Object.Destroy(source); Object.Destroy(host);
+        }
+        yield return null;
     }
     [UnityTest]
     public IEnumerator TrackingOffRetainsEyeOffsetWhileRigTranslationContinues()
@@ -156,6 +169,36 @@ public sealed class ViewerCompositionTests
         surfaces.Unregister(tile); Assert.That(renderer.sharedMaterial, Is.SameAs(source));
         Assert.That(surfaces.RuntimeVariantCount, Is.Zero);
         Object.Destroy(host); Object.Destroy(tile); Object.Destroy(source); Object.Destroy(texture); yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator NearFadeVariantsPreservePbrAlphaAndUvAndRestoreImportedSource()
+    {
+        var host = new GameObject("near PBR contract"); var surfaces = host.AddComponent<SurfaceDetailComparison>();
+        var tile = GameObject.CreatePrimitive(PrimitiveType.Cube); var renderer = tile.GetComponent<Renderer>();
+        var source = new Material(Shader.Find("Universal Render Pipeline/Lit")); var texture = new Texture2D(2, 2);
+        source.SetTexture("_BaseMap", texture); source.SetTexture("_BumpMap", texture); source.SetTexture("_MetallicGlossMap", texture);
+        source.SetTextureScale("_BaseMap", new Vector2(2.5f, 3)); source.SetTextureOffset("_BaseMap", new Vector2(.2f, .3f));
+        source.SetFloat("_Metallic", .7f); source.SetFloat("_Smoothness", .8f); source.SetFloat("_AlphaClip", 1); source.SetFloat("_Cutoff", .37f);
+        source.EnableKeyword("_ALPHATEST_ON"); source.EnableKeyword("_NORMALMAP"); source.renderQueue = 2450;
+        renderer.sharedMaterial = source; surfaces.Register(tile, true); Material detail = renderer.sharedMaterial;
+        Assert.That(detail.shader.name, Is.EqualTo("Manhattan/CityDetailLit")); Assert.That(detail.HasProperty(SurfaceDetailComparison.DistanceFadeProperty), Is.True);
+        Assert.That(detail.GetTexture("_BaseMap"), Is.SameAs(texture)); Assert.That(detail.GetTexture("_BumpMap"), Is.SameAs(texture));
+        Assert.That(detail.GetTexture("_MetallicGlossMap"), Is.SameAs(texture)); Assert.That(detail.GetFloat("_Metallic"), Is.EqualTo(.7f));
+        Assert.That(detail.GetFloat("_Smoothness"), Is.EqualTo(.8f)); Assert.That(detail.GetFloat("_Cutoff"), Is.EqualTo(.37f));
+        Assert.That(detail.GetTextureScale("_BaseMap"), Is.EqualTo(new Vector2(2.5f, 3))); Assert.That(detail.GetTextureOffset("_BaseMap"), Is.EqualTo(new Vector2(.2f, .3f)));
+        Assert.That(detail.renderQueue, Is.EqualTo(2450)); Assert.That(detail.IsKeywordEnabled("_ALPHATEST_ON"), Is.True);
+        surfaces.SetOpacity(tile, .42f); var block = new MaterialPropertyBlock(); renderer.GetPropertyBlock(block);
+        Assert.That(block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty), Is.EqualTo(.42f));
+        surfaces.EnabledDetails = false;
+        Assert.That(renderer.sharedMaterial.shader, Is.SameAs(detail.shader)); Assert.That(renderer.sharedMaterial.GetTexture("_BaseMap"), Is.SameAs(texture), "Alpha-masked silhouette must remain during surface comparison.");
+        Assert.That(renderer.sharedMaterial.GetTexture("_BumpMap"), Is.Null); Assert.That(renderer.sharedMaterial.GetFloat("_Smoothness"), Is.EqualTo(.15f));
+        surfaces.EnabledDetails = true; Assert.That(renderer.sharedMaterial, Is.SameAs(detail));
+        surfaces.Unregister(tile); Assert.That(renderer.sharedMaterial, Is.SameAs(source)); Assert.That(surfaces.RuntimeVariantCount, Is.Zero);
+        Assert.That(source.shader.name, Is.EqualTo("Universal Render Pipeline/Lit")); Assert.That(source.GetTexture("_BumpMap"), Is.SameAs(texture));
+        Assert.That(source.GetFloat("_Smoothness"), Is.EqualTo(.8f)); Assert.That(source.renderQueue, Is.EqualTo(2450));
+        Object.Destroy(host); Object.Destroy(tile); Object.Destroy(source); Object.Destroy(texture); yield return null;
+        Assert.That(detail == null, Is.True, "Owned Near material must be released after its last tile leaves.");
     }
 
     [UnityTest]

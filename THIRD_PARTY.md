@@ -24,5 +24,6 @@ Original NYC sources retain [NYC Open Data Terms of Use](https://data.cityofnewy
 - The unmodified [MediaPipe canonical face model](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj) in the technology repository retains its Apache 2.0 notice.
 - Filtering follows the published [One Euro filter](https://gery.casiez.net/1euro/); the implementation belongs to the MIT tracking package.
 - Unity URP, Input System, Addressables, glTFast and Unity Test Framework retain their package licenses and notices. The generated city uses original source PBR maps and UVs; importing does not transfer their ownership to this code license.
+- `ManhattanViewer/Assets/Shaders/CityDetailLit.shader` and `CityDetailLitInput.hlsl` adapt the pinned URP 17.3.0 Lit renderer and retain the Unity Companion License. Original license bytes and upstream source hashes are in that folder's `LICENSE-Unity-URP.md` and `NOTICE.md`; Windows builds carry both under `Notices/CityDetailRenderer/`.
 
 No example vase, furniture or studio HDRI from the separate technical demo is required by the city viewer. If team-authored content imports additional external assets, add source, author, license and file fingerprint here before merging it.

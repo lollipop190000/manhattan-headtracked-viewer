@@ -45,8 +45,8 @@ namespace Manhattan.Viewer
         public string tile, renderer, shader;
         public int materialSlots;
         public Bounds bounds;
-        public bool visible, intersectsMainCameraFrustum, allMaterialsOpaque, allMaterialsHaveCrossFade;
-        public Vector4 originalFade;
+        public bool visible, intersectsMainCameraFrustum, allMaterialsOpaque, allMaterialsHaveOpacityProperty;
+        public float originalOpacity;
     }
     [Serializable]
     public sealed class FadeProofReport
@@ -54,6 +54,7 @@ namespace Manhattan.Viewer
         public string reportKind = "measured-standalone-opaque-fade-proof", utcTime, unityVersion, sourceVersion, gpu, error, status, antialiasingBefore;
         public int outputWidth, outputHeight, renderWidth, renderHeight;
         public string fullscreenMode;
+        public string distanceFadeProperty = SurfaceDetailComparison.DistanceFadeProperty;
         public bool streamingSettled, allInvariantsMatch, preferencesUnchanged, originalStatesRestored, ssaoDisabledForProof, ssaoStatesRestored;
         public int ssaoFeatureCount, ssaoPreviouslyActiveCount;
         public ViewerBuildIdentity buildIdentity;
@@ -142,7 +143,7 @@ namespace Manhattan.Viewer
             foreach (var target in targets) if (target.renderer != null)
             {
                 target.renderer.GetPropertyBlock(scratch);
-                report.originalStatesRestored &= scratch.GetVector("unity_LODFade") == target.evidence.originalFade;
+                report.originalStatesRestored &= scratch.GetFloat(SurfaceDetailComparison.DistanceFadeProperty) == target.evidence.originalOpacity;
             }
             report.utcTime = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             report.images = pixels.ConvertAll(p => p.image).ToArray(); report.renderers = targets.ConvertAll(t => t.evidence).ToArray();
@@ -179,7 +180,7 @@ namespace Manhattan.Viewer
             {
                 foreach (var target in targets)
                 {
-                    target.renderer.GetPropertyBlock(scratch); scratch.SetVector("unity_LODFade", new Vector4(values[i], values[i], 0f, 0f)); target.renderer.SetPropertyBlock(scratch);
+                    target.renderer.GetPropertyBlock(scratch); scratch.SetFloat(SurfaceDetailComparison.DistanceFadeProperty, values[i]); target.renderer.SetPropertyBlock(scratch);
                 }
                 yield return new WaitForSecondsRealtime(2f);
                 yield return new WaitForEndOfFrame();
@@ -209,17 +210,17 @@ namespace Manhattan.Viewer
                 {
                     if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                     var evidence = new FadeProofRenderer { tile = tile.name, renderer = renderer.name, bounds = renderer.bounds, visible = renderer.isVisible,
-                        intersectsMainCameraFrustum = GeometryUtility.TestPlanesAABB(planes, renderer.bounds), allMaterialsOpaque = true, allMaterialsHaveCrossFade = true };
+                        intersectsMainCameraFrustum = GeometryUtility.TestPlanesAABB(planes, renderer.bounds), allMaterialsOpaque = true, allMaterialsHaveOpacityProperty = true };
                     var shaders = new StringBuilder(); var materials = renderer.sharedMaterials; evidence.materialSlots = materials.Length;
                     foreach (var material in materials)
                     {
                         evidence.allMaterialsOpaque &= material != null && material.renderQueue < 3000 && (!material.HasProperty("_Surface") || material.GetFloat("_Surface") < .5f);
-                        evidence.allMaterialsHaveCrossFade &= material != null && material.IsKeywordEnabled("LOD_FADE_CROSSFADE");
+                        evidence.allMaterialsHaveOpacityProperty &= material != null && material.HasProperty(SurfaceDetailComparison.DistanceFadeProperty);
                         shaders.Append(material != null ? material.shader.name : "null").Append('|');
                     }
-                    if (materials.Length == 0 || !evidence.allMaterialsOpaque || !evidence.allMaterialsHaveCrossFade) continue;
+                    if (materials.Length == 0 || !evidence.allMaterialsOpaque || !evidence.allMaterialsHaveOpacityProperty) continue;
                     evidence.shader = shaders.ToString();
-                    var original = new MaterialPropertyBlock(); renderer.GetPropertyBlock(original); evidence.originalFade = original.GetVector("unity_LODFade");
+                    var original = new MaterialPropertyBlock(); renderer.GetPropertyBlock(original); evidence.originalOpacity = original.GetFloat(SurfaceDetailComparison.DistanceFadeProperty);
                     targets.Add(new Target { renderer = renderer, originalBlock = original, evidence = evidence });
                 }
             }
@@ -293,7 +294,7 @@ namespace Manhattan.Viewer
             var planes = GeometryUtility.CalculateFrustumPlanes(app.Rendering.targetCamera);
             foreach (var target in targets)
             {
-                target.renderer.GetPropertyBlock(scratch); float fade = scratch.GetVector("unity_LODFade").x;
+                target.renderer.GetPropertyBlock(scratch); float fade = scratch.GetFloat(SurfaceDetailComparison.DistanceFadeProperty);
                 snapshot.requestedMinimum = Mathf.Min(snapshot.requestedMinimum, fade); snapshot.requestedMaximum = Mathf.Max(snapshot.requestedMaximum, fade);
                 if (target.renderer.isVisible && GeometryUtility.TestPlanesAABB(planes, target.renderer.bounds)) snapshot.visibleNearRenderers++;
             }
