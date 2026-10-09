@@ -202,6 +202,39 @@ public sealed class ViewerCompositionTests
     }
 
     [UnityTest]
+    public IEnumerator CachedOpacityRetainsEndpointsAcrossSurfaceSwitchesAndFreshBindings()
+    {
+        var host = new GameObject("cached opacity lifecycle"); var surfaces = host.AddComponent<SurfaceDetailComparison>();
+        var first = GameObject.CreatePrimitive(PrimitiveType.Cube); first.transform.SetParent(host.transform);
+        var second = GameObject.CreatePrimitive(PrimitiveType.Cube); second.transform.SetParent(host.transform);
+        var source = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        var firstRenderer = first.GetComponent<Renderer>(); var secondRenderer = second.GetComponent<Renderer>();
+        firstRenderer.sharedMaterial = secondRenderer.sharedMaterial = source;
+        var block = new MaterialPropertyBlock(); int unrelated = Shader.PropertyToID("_UnrelatedOpacityTest");
+        block.SetFloat(unrelated, 7); firstRenderer.SetPropertyBlock(block);
+        surfaces.Register(first, true); surfaces.SetOpacity(first, 0); surfaces.SetOpacity(first, -1);
+        surfaces.EnabledDetails = false; surfaces.SetOpacity(first, 0);
+        firstRenderer.GetPropertyBlock(block);
+        Assert.That(block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty), Is.Zero);
+        Assert.That(block.GetFloat(unrelated), Is.EqualTo(7), "Updating opacity must preserve other per-renderer data.");
+        block.Clear(); block.SetFloat(SurfaceDetailComparison.DistanceFadeProperty, .25f); secondRenderer.SetPropertyBlock(block);
+        surfaces.Register(second, true); surfaces.SetOpacity(second, 2); secondRenderer.GetPropertyBlock(block);
+        Assert.That(block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty), Is.EqualTo(1), "A new binding must initialize full coverage even while the shared surface variant is off.");
+        Assert.That(secondRenderer.sharedMaterial.shader.name, Is.EqualTo("Manhattan/CityDetailLit"));
+        surfaces.EnabledDetails = true; surfaces.SetOpacity(first, 0); firstRenderer.GetPropertyBlock(block);
+        Assert.That(block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty), Is.Zero, "Changing the material variant must retain the cached zero-coverage property block.");
+        surfaces.SetOpacity(first, 1); surfaces.SetOpacity(first, 1); firstRenderer.GetPropertyBlock(block);
+        Assert.That(block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty), Is.EqualTo(1));
+        Assert.That(block.GetFloat(unrelated), Is.EqualTo(7));
+        surfaces.SetOpacity(first, 0); surfaces.Unregister(first); surfaces.Register(first, true); firstRenderer.GetPropertyBlock(block);
+        Assert.That(block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty), Is.EqualTo(1), "A fresh binding must not inherit the old binding's cached zero.");
+        surfaces.Unregister(first); surfaces.Unregister(second);
+        Assert.That(surfaces.RuntimeVariantCount, Is.Zero);
+        Assert.That(firstRenderer.sharedMaterial, Is.SameAs(source)); Assert.That(secondRenderer.sharedMaterial, Is.SameAs(source));
+        Object.Destroy(host); Object.Destroy(source); yield return null;
+    }
+
+    [UnityTest]
     public IEnumerator SharedRuntimeMaterialsReleaseOnlyWhenLastTileLeaves()
     {
         var host = new GameObject("shared material lifetime"); var surfaces = host.AddComponent<SurfaceDetailComparison>();

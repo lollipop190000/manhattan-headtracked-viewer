@@ -14,6 +14,7 @@ namespace Manhattan.Viewer
             public Material[] original, detailed, flat;
             public bool fades;
             public Variant[] variants;
+            public float appliedOpacity = float.NaN;
         }
         private sealed class Variant
         {
@@ -126,13 +127,15 @@ namespace Manhattan.Viewer
         public void SetOpacity(GameObject root, float opacity)
         {
             if (!tiles.TryGetValue(root, out var bindings)) return;
+            opacity = Mathf.Clamp01(opacity);
             if (block == null) block = new MaterialPropertyBlock();
             foreach (var b in bindings)
             {
-                if (!b.fades || b.renderer == null) continue;
+                if (!b.fades || b.renderer == null || b.appliedOpacity == opacity) continue;
                 b.renderer.GetPropertyBlock(block);
-                block.SetFloat(DistanceFade, Mathf.Clamp01(opacity));
+                block.SetFloat(DistanceFade, opacity);
                 b.renderer.SetPropertyBlock(block);
+                b.appliedOpacity = opacity;
             }
         }
         public void Unregister(GameObject root)

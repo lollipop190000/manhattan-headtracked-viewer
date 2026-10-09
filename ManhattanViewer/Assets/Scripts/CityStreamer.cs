@@ -31,8 +31,10 @@ namespace Manhattan.Viewer
             public GameObject instance;
             public float retryAt, distance, priority;
             public Renderer[] renderers;
+            public int residentIndex = -1;
         }
         private readonly List<Residency> all = new List<Residency>();
+        private readonly List<Residency> residents = new List<Residency>();
         private readonly List<Residency> requests = new List<Residency>();
         private readonly Queue<Residency> deferredReleases = new Queue<Residency>();
         private readonly Dictionary<string, int> replacementCounts = new Dictionary<string, int>();
@@ -107,7 +109,7 @@ namespace Manhattan.Viewer
             }
             ProcessDeferredRelease();
             // Only one prefab is instantiated per frame; the baker enforces bounded chunk sizes.
-            foreach (var r in all)
+            foreach (var r in residents)
             {
                 if (!r.loading || !r.handle.IsDone) continue;
                 r.loading = false; PendingLoads--;
@@ -140,6 +142,7 @@ namespace Manhattan.Viewer
                 if (r.tile.layer != CityLayer.Skyline && EstimatedResidentBytes + cost > residencyBudgetBytes) continue;
                 r.handle = Addressables.LoadAssetAsync<GameObject>(r.tile.address);
                 r.hasHandle = r.loading = true;
+                r.residentIndex = residents.Count; residents.Add(r);
                 EstimatedResidentBytes += cost; PendingLoads++; ongoing++;
             }
             FrameWorkMilliseconds = (float)workTimer.Elapsed.TotalMilliseconds;
@@ -176,7 +179,7 @@ namespace Manhattan.Viewer
         private void UpdateVisibility()
         {
             replacementCounts.Clear();
-            foreach (var r in all)
+            foreach (var r in residents)
             {
                 if (r.instance == null || !r.visible || r.tile.layer != CityLayer.Core || r.tile.replaces == null) continue;
                 foreach (string id in r.tile.replaces)
@@ -185,7 +188,7 @@ namespace Manhattan.Viewer
                     replacementCounts.TryGetValue(id, out int count); replacementCounts[id] = count + 1;
                 }
             }
-            foreach (var r in all)
+            foreach (var r in residents)
             {
                 if (r.instance == null) continue;
                 replacementCounts.TryGetValue(r.tile.id, out int visibleCoreReplacementCount);
@@ -198,7 +201,7 @@ namespace Manhattan.Viewer
 
         private void OnRebased(Vector3 shift)
         {
-            foreach (var r in all) if (r.instance != null) r.instance.transform.position = r.tile.cityOrigin - origin.Offset;
+            foreach (var r in residents) if (r.instance != null) r.instance.transform.position = r.tile.cityOrigin - origin.Offset;
         }
         private static void SetLayer(Transform t, int layer)
         {
@@ -232,13 +235,17 @@ namespace Manhattan.Viewer
             {
                 Addressables.Release(r.handle);
                 EstimatedResidentBytes -= Math.Max(1L, r.tile.residentBytes);
+                int lastIndex = residents.Count - 1;
+                var moved = residents[lastIndex];
+                residents[r.residentIndex] = moved; moved.residentIndex = r.residentIndex;
+                residents.RemoveAt(lastIndex); r.residentIndex = -1;
             }
             r.hasHandle = r.loading = r.releaseQueued = false; r.renderers = null;
         }
         private void OnDestroy()
         {
             if (origin != null) origin.Rebased -= OnRebased;
-            foreach (var r in all) Release(r);
+            while (residents.Count > 0) Release(residents[residents.Count - 1]);
             deferredReleases.Clear();
         }
     }

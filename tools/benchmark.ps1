@@ -20,12 +20,12 @@ if (-not $OutputDirectory) {
 $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
 if ($OutputDirectory.Contains('"')) { throw 'Output directory cannot contain a double quote.' }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-foreach ($existingResult in @('benchmark.json', 'gpu.csv', 'benchmark-environment.json')) {
+foreach ($existingResult in @('benchmark.json', 'gpu.csv', 'process.csv', 'tracker-process.csv', 'benchmark-environment.json')) {
     if (Test-Path -LiteralPath (Join-Path $OutputDirectory $existingResult)) { throw 'Benchmark results already exist. Choose a new output directory.' }
 }
 $environment = Get-BenchmarkEnvironment
 $environment['benchmarkOptions'] = [ordered]@{ region = $Region; speedMetresPerSecond = $Speed; durationSeconds = $Duration;
-    collisionProxies = [bool]$CollisionProxies; trackerRequested = (-not [bool]$NoTracker); gpuSamplingIntervalMs = $GpuIntervalMs; gpuLogRequested = (-not [bool]$SkipGpuLog) }
+    collisionProxies = [bool]$CollisionProxies; trackerRequested = (-not [bool]$NoTracker); gpuSamplingIntervalMs = $GpuIntervalMs; gpuLogRequested = (-not [bool]$SkipGpuLog); processSamplingIntervalMs = 1000; processLogRequested = $true; trackerProcessLogRequested = (-not [bool]$NoTracker); trackerProcessScope = 'exact virtualenv root plus verified descendants; ancestry refresh every 10 seconds' }
 $environment['sourceVersion'] = (Get-Content -LiteralPath (Join-Path $ViewerRepository 'assets/source-manifest.json') -Raw | ConvertFrom-Json).sourceVersion
 $environment['technologyRevision'] = (Get-TechnologyVersion).revision
 $environment | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'benchmark-environment.json') -Encoding UTF8
@@ -34,8 +34,29 @@ $playerArguments = '-screen-fullscreen 1 -window-mode exclusive -screen-width 19
 if ($CollisionProxies) { $playerArguments += ' --collision-proxies' }
 if ($NoTracker) { $playerArguments += ' --no-tracker' }
 $gpuCollector = $null
+$processCollector = $null
+$trackerCollector = $null
+$expectedPlayerPath = [System.IO.Path]::GetFullPath((Join-Path $ViewerRepository 'Builds\ManhattanViewer\ManhattanViewer.exe'))
 $stopFile = Join-Path $OutputDirectory ('.gpu-stop-' + [guid]::NewGuid().ToString('N'))
+$processStopFile = Join-Path $OutputDirectory ('.process-stop-' + [guid]::NewGuid().ToString('N'))
+$trackerStopFile = Join-Path $OutputDirectory ('.tracker-process-stop-' + [guid]::NewGuid().ToString('N'))
 try {
+    $shell = (Get-Command 'powershell.exe' -ErrorAction Stop).Source
+    $processCollector = Start-Process -FilePath $shell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', ('"' + (Join-Path $PSScriptRoot 'measure_process.ps1') + '"'),
+        '-ExpectedPlayerPath', ('"' + $expectedPlayerPath + '"'), '-DurationSec', [string]($Duration + 300), '-IntervalMs', '1000',
+        '-OutputPath', ('"' + (Join-Path $OutputDirectory 'process.csv') + '"'), '-StopFile', ('"' + $processStopFile + '"')) `
+        -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $OutputDirectory 'process-collector.log') `
+        -RedirectStandardError (Join-Path $OutputDirectory 'process-collector-error.log')
+    if (-not $NoTracker) {
+        $trackerExe = Join-Path $ViewerRepository '.tools\head-tracked-display\python_tracker\.venv\Scripts\python.exe'
+        $trackerCollector = Start-Process -FilePath $shell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass',
+            '-File', ('"' + (Join-Path $PSScriptRoot 'measure_process.ps1') + '"'), '-ExpectedPlayerPath', ('"' + $trackerExe + '"'),
+            '-IncludeDescendants', '-DurationSec', [string]($Duration + 300), '-IntervalMs', '1000',
+            '-OutputPath', ('"' + (Join-Path $OutputDirectory 'tracker-process.csv') + '"'), '-StopFile', ('"' + $trackerStopFile + '"')) `
+            -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $OutputDirectory 'tracker-process-collector.log') `
+            -RedirectStandardError (Join-Path $OutputDirectory 'tracker-process-collector-error.log')
+    }
     if (-not $SkipGpuLog) {
         if (Get-Command 'nvidia-smi' -ErrorAction SilentlyContinue) {
             $shell = (Get-Command 'powershell.exe' -ErrorAction Stop).Source
@@ -48,11 +69,33 @@ try {
         }
         else { Write-Warning 'nvidia-smi is unavailable; this benchmark has no driver memory samples.' }
     }
-    $runParameters = @{ Camera = $Camera; NoTracker = $NoTracker; PlayerArguments = $playerArguments }
+    $runParameters = @{ Camera = $Camera; NoTracker = $NoTracker; PlayerArguments = $playerArguments; PlayerPath = $expectedPlayerPath }
     if ($CalibrationDirectory) { $runParameters.CalibrationDirectory = $CalibrationDirectory }
     & (Join-Path $PSScriptRoot 'run.ps1') @runParameters
 }
 finally {
+    if ($trackerCollector) {
+        [System.IO.File]::WriteAllText($trackerStopFile, '')
+        $trackerCollector.Refresh()
+        if (-not $trackerCollector.HasExited -and -not $trackerCollector.WaitForExit(2500)) {
+            Stop-Process -Id $trackerCollector.Id -ErrorAction SilentlyContinue
+            if (-not $trackerCollector.WaitForExit(2500)) { Write-Warning 'Owned tracker collector did not exit after termination; inspect its PID and collector log.' }
+        }
+        $trackerCollector.Refresh()
+        if ($trackerCollector.HasExited -and $trackerCollector.ExitCode -ne 0) { Write-Warning 'Tracker collector failed or required forced cleanup; inspect tracker-process-collector-error.log.' }
+        Remove-Item -LiteralPath $trackerStopFile -ErrorAction SilentlyContinue
+    }
+    if ($processCollector) {
+        [System.IO.File]::WriteAllText($processStopFile, '')
+        $processCollector.Refresh()
+        if (-not $processCollector.HasExited -and -not $processCollector.WaitForExit(2500)) {
+            Stop-Process -Id $processCollector.Id -ErrorAction SilentlyContinue
+            if (-not $processCollector.WaitForExit(2500)) { Write-Warning 'Owned process collector did not exit after termination; inspect its PID and collector log.' }
+        }
+        $processCollector.Refresh()
+        if ($processCollector.HasExited -and $processCollector.ExitCode -ne 0) { Write-Warning 'Process collector failed or required forced cleanup; inspect process-collector-error.log.' }
+        Remove-Item -LiteralPath $processStopFile -ErrorAction SilentlyContinue
+    }
     if ($gpuCollector) {
         [System.IO.File]::WriteAllText($stopFile, '')
         $gpuCollector.Refresh()

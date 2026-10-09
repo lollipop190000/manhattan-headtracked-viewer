@@ -58,6 +58,8 @@ $caseDirectories = @(Get-ChildItem -LiteralPath $suiteDirectory -Directory | Whe
 
 `tools/benchmark.ps1` creates a unique output directory by default and starts a hidden, owned NVIDIA driver collector when `nvidia-smi` is available. It writes `gpu.csv` beside the frame report and stops the collector in `finally` when the shared launcher returns, including failure paths. `-SkipGpuLog` disables it; `-GpuIntervalMs 500` samples twice per second. Existing benchmark/GPU result files are not overwritten. Collector logs remain beside the report so missing or failed measurements are explicit.
 
+`process.csv` records the exact player executable's Windows working set and private bytes at 1Hz. `tracker-process.csv` records the exact tracker virtual-environment executable and its verified descendants, including Windows' separate base-Python child. Descendant ownership uses PID/parent-PID and creation-time checks; it never reads command lines or includes unrelated Python processes. Discovery refreshes every ten seconds. Missing counters or incomplete ownership make the corresponding total unavailable. The analyzer aligns samples to the measured interval and reports game and tracker separately. The sum of their individual private-byte peaks is a conservative upper bound, not a measured simultaneous peak. Driver VRAM remains a separate measurement.
+
 The launcher requests **1920×1200 Exclusive Fullscreen** (`-screen-fullscreen 1 -window-mode exclusive -screen-width 1920 -screen-height 1200`) to use the whole measured physical panel. Check the player's actual recorded render size; a requested size alone is not evidence that the driver accepted the mode. Windowed output on a 2880×1800 panel occupies only part of the measured screen and needs calibration for that smaller physical viewport.
 
 `benchmark-environment.json` records the requested mode, prelaunch desktop pixel size/refresh rate, AC status, GPU name/driver/total memory and driver-exposed power-limit readings. Unsupported values are `null` with explicit availability flags; they are never replaced by a guessed wattage. Desktop size/Hz comes from [Windows EnumDisplaySettingsW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdisplaysettingsw), which reports physical pixels independent of DPI scaling. These driver limits can vary with laptop power management and do not prove that one fixed performance profile was active throughout the run.
@@ -135,7 +137,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_clone.ps1 -Revi
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/verify_clone.ps1 -Revision <full Git commit> -StaticOnly
 ```
 
-The command keeps the independent clone in ignored `.verification/` and records its exact commit, source version and Windows player SHA-256. `-SourceArchiveDirectory` permits an explicitly labeled offline-source variant; omit it when verifying authenticated private-release download. `-NoTracker` is a baseline variant and is not webcam acceptance. Builds in the isolated clone permit regenerated scene/settings changes; Git source and original city input hashes remain recorded.
+The command keeps the independent clone in ignored `.verification/` and records its exact commit, source version and Windows player SHA-256. `-SourceArchiveDirectory` permits an explicitly labeled offline-source variant; omit it when verifying authenticated private-release download. `-NoTracker` is a baseline variant and is not webcam acceptance. The isolated build uses the normal clean-source gate. A preflight normalizes only a generated Addressables GUID difference after verifying that all remaining tracked settings bytes match the committed file. Authored scene/settings changes remain subject to the dirty-source gate.
 
 The verification record reads source version/release and technology revision from the **cloned revision**, and fingerprints its source manifest and tracker lock. A static-only run records that no sources were downloaded and no player was launched. Setup requires the committed, tested tracker lock; it cannot silently fall back to a different dependency set.
 
@@ -149,10 +151,10 @@ As of 2026-10-10, reusable changes published in [technology commit `960d5de55037
 | Minimal consumer without URP or demo | 39/39 EditMode and 11/11 PlayMode tests passed |
 | Runtime-only consumer without URP or Unity Test Framework | Windows build succeeded; standalone package smoke exited 0 |
 | Parameterized shared launcher | 21 assertions passed |
-| Manhattan portable checks | 42/42 Python data tests and 8/8 PowerShell assertions passed |
-| Manhattan Unity tests after scene portability and streaming fixes | 42/42 EditMode passed; PlayMode 13 passed, 1 GPU-only fade test skipped; zero failures/errors |
+| Manhattan portable checks | 55/55 Python data tests and 8/8 PowerShell assertions passed |
+| Manhattan Unity tests after scene portability and streaming fixes | 42/42 EditMode passed; PlayMode 15 passed, 1 GPU-only fade test skipped; zero failures/errors |
 | Custom Near shader live-GPU test | 1/1 passed on the actual GPU, zero skips; standalone city verification remains separate |
-| Deferred tile-release lifecycle | All 4 added PlayMode tests passed; the combined PlayMode suite has 13 passed and 1 GPU-only skip |
+| Deferred tile-release lifecycle | All 5 added PlayMode tests passed; the combined PlayMode suite has 15 passed and 1 GPU-only skip |
 
 Original package XML/build/smoke evidence remains in the technical checkout's ignored `Builds/ManhattanPackageValidation/`. The runtime-only smoke covers projection, frame/source ownership, collider removal, JSON calibration and feature round trips. These package checks do not establish the Manhattan player's visual quality or frame rate.
 
@@ -169,6 +171,8 @@ Full-city Windows builds have succeeded with 10,038 independently baked tiles, 6
 The first two 180-second Midtown 50m/s measurements recorded two complete circuits each at an actual 1920×1200 render/output. Their frame P95 was 16.683ms, P99 16.684ms and maximum 33.337ms, with no ≥50ms frame and no tile-load failure. The second run recorded a 2.063GiB player working-set peak. Its streaming P95 was 2.319ms, above the initial 2ms streaming goal. These are limited baseline observations, not acceptance of all city routes. The webcam process was connected but fresh face observations were 0%; regional webcam qualification and physical head movement remain pending.
 
 A webcam startup run exited cleanly, released its owned tracker, and the camera could immediately be reopened to acquire a frame. No captured webcam image was retained. Ten regional measurements, matched proxy comparison, long memory stability and manual head-motion/TAA checks remain separate acceptance work.
+
+Local URP 17.3 code inspection confirms that the render pipeline applies TAA jitter to the camera's off-axis projection and keeps an unjittered matrix for motion vectors. Reset-history calls also reset the persistent motion-vector state. The custom Near shader uses the stock object-motion pass with matching opacity clipping. This source review and projection tests do not replace moving-head image checks for temporal ghosting, facade shimmer or the first frame after a history reset.
 
 ## Published source and initial fresh-clone record
 

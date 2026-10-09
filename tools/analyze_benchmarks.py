@@ -66,13 +66,13 @@ def read_frames(path):
     return rows, ([f"Ignored {invalid} malformed/non-finite frame rows"] if invalid else [])
 
 
-def memory_trend(rows, region, speed, measured_duration, circuit_duration=None):
+def memory_trend(rows, region, speed, measured_duration, circuit_duration=None, memory_key="process_working_set_bytes"):
     circuit = circuit_duration if circuit_duration and circuit_duration > 0 else REGION_CIRCUIT_METRES / speed if region in REGIONS and speed and speed > 0 else None
     start = max(0.0, circuit - 15.0) if circuit is not None else None
     # Working set is sampled once/second by the player. Remove repeated frame-level values.
     samples = {}
     for row in rows:
-        value = row.get("process_working_set_bytes")
+        value = row.get(memory_key)
         if start is not None and row["seconds"] >= start and value is not None and value > 0:
             samples[int(row["seconds"])] = (row["seconds"], value)
     ordered = sorted(samples.values())
@@ -144,6 +144,98 @@ def driver_gpu(path, report):
     return result
 
 
+def external_process_memory(path, report, label="player", require_tree=False, enabled=True):
+    """Secondary Windows counters for one exact-path player lifetime, excluding warmup."""
+    region, speed = report.get("routeRegion"), number(report.get("speed"))
+    duration, circuit = number(report.get("durationSeconds")), number(report.get("routeDurationSeconds"))
+    result = dict(enabled=enabled, sampleCount=0, timeAligned=False, pid=None, scopePids=[], treeCoverageVerified=None,
+                  workingSetPeakBytes=None, privateCommitPeakBytes=None,
+                  workingSetSampleCount=0, privateCommitSampleCount=0,
+                  privateCommitTrend=memory_trend([], region, speed, duration, circuit, "private_memory_bytes"),
+                  scope=f"secondary Windows counters for exact {label} executable path and pinned PID" +
+                        (", plus verified descendants; ancestry refreshed every 10 seconds" if require_tree else ""), warnings=[])
+    if not enabled:
+        result["scope"] = "tracker explicitly disabled by benchmark launch options"
+        result["privateCommitTrend"]["assessment"] = "disabled: no tracker requested"
+        return result
+    if not path.exists():
+        result["warnings"].append(f"{path.name} missing; secondary external {label} counters unavailable")
+        return result
+    finish = utc(report.get("utcTime"))
+    if finish is None or duration is None or duration < 0:
+        result["warnings"].append("Runtime UTC/duration missing; external process counters cannot exclude startup/warmup")
+        return result
+    begin = finish - timedelta(seconds=duration)
+    samples, invalid = [], 0
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        for row in csv.DictReader(stream):
+            timestamp, process_id = utc(row.get("sampleUtc")), number(row.get("pid"))
+            if timestamp is None or process_id is None or process_id <= 0 or not process_id.is_integer():
+                invalid += 1
+                continue
+            if not begin <= timestamp <= finish:
+                continue
+            working_set, private_memory = number(row.get("workingSetBytes")), number(row.get("privateMemoryBytes"))
+            scope_ids, tree_verified = [], None
+            if require_tree:
+                identifiers = row.get("scopePids", "").split(";")
+                scope_ids = [int(value) for value in identifiers if value.isdecimal() and int(value) > 0]
+                discovery = utc(row.get("treeDiscoveryUtc"))
+                tree_verified = str(row.get("treeCoverageVerified", "")).casefold() == "true" and \
+                    len(scope_ids) == len(identifiers) and int(process_id) in scope_ids and \
+                    discovery is not None and 0 <= (timestamp - discovery).total_seconds() <= 11
+                if not tree_verified:
+                    working_set = private_memory = None
+            samples.append(dict(seconds=(timestamp - begin).total_seconds(), pid=int(process_id),
+                                scope_pids=scope_ids, tree_verified=tree_verified,
+                                working_set_bytes=working_set if working_set is not None and working_set > 0 else None,
+                                private_memory_bytes=private_memory if private_memory is not None and private_memory > 0 else None))
+    if invalid:
+        result["warnings"].append(f"Ignored {invalid} process rows with invalid UTC/PID")
+    if not samples:
+        result["warnings"].append("No external process sample aligned with measured runtime interval")
+        return result
+    if len({row["pid"] for row in samples}) != 1:
+        result["warnings"].append(f"Multiple {label} PIDs in measured interval; external counters do not identify one lifetime")
+        return result
+    samples.sort(key=lambda row: row["seconds"])
+    working_sets = [row["working_set_bytes"] for row in samples if row["working_set_bytes"] is not None]
+    private_memory = [row["private_memory_bytes"] for row in samples if row["private_memory_bytes"] is not None]
+    result.update(sampleCount=len(samples), timeAligned=True, pid=samples[0]["pid"],
+                  scopePids=sorted({process_id for row in samples for process_id in row["scope_pids"]}),
+                  treeCoverageVerified=all(row["tree_verified"] is True for row in samples) if require_tree else None,
+                  workingSetPeakBytes=max(working_sets) if working_sets else None,
+                  privateCommitPeakBytes=max(private_memory) if private_memory else None,
+                  workingSetSampleCount=len(working_sets), privateCommitSampleCount=len(private_memory),
+                  privateCommitTrend=memory_trend(samples, region, speed, duration, circuit, "private_memory_bytes"))
+    if not working_sets:
+        result["warnings"].append("No valid external working-set samples; unknown counters remain unavailable")
+    if not private_memory:
+        result["warnings"].append("No valid external private-memory samples; unknown counters remain unavailable")
+    if require_tree and not result["treeCoverageVerified"]:
+        result["warnings"].append("Tracker descendant coverage is not verified for every measured sample")
+    return result
+
+
+def combined_private_memory(player, tracker, tracker_requested):
+    result = dict(peakUpperBoundBytes=None, trackerRequested=tracker_requested,
+                  scope="sum of separate measured-interval private-memory peaks; conservative upper bound for measured player and tracker tree, not an actual concurrent peak",
+                  assessment="pending: required aligned private-memory counter or verified tracker-tree coverage unavailable")
+    def complete_peak(measurement):
+        return measurement["privateCommitPeakBytes"] if measurement["timeAligned"] and measurement["sampleCount"] > 0 and \
+            measurement["privateCommitSampleCount"] == measurement["sampleCount"] else None
+    player_peak = complete_peak(player)
+    if tracker_requested is False:
+        result["peakUpperBoundBytes"] = player_peak
+        result["assessment"] = "player only; tracker explicitly disabled" if player_peak is not None else result["assessment"]
+    elif tracker_requested is True and tracker["treeCoverageVerified"] is True:
+        tracker_peak = complete_peak(tracker)
+        if player_peak is not None and tracker_peak is not None:
+            result["peakUpperBoundBytes"] = player_peak + tracker_peak
+            result["assessment"] = "separate measured peaks summed; review each process trend independently"
+    return result
+
+
 def metric(report, rows, json_key, csv_key, fraction=.95):
     values = [r[csv_key] for r in rows if r.get(csv_key) is not None and r[csv_key] >= 0]
     return percentile(values, fraction) if values else number(report.get(json_key))
@@ -153,10 +245,17 @@ def analyze_run(directory):
     report = read_json(directory / "benchmark.json")
     rows, warnings = read_frames(directory / "frames.csv")
     driver = driver_gpu(directory / "gpu.csv", report)
+    process = external_process_memory(directory / "process.csv", report)
     speed, duration = number(report.get("speed")), number(report.get("durationSeconds"))
     region = report.get("routeRegion") or "unspecified"
     environment_path = directory / "benchmark-environment.json"
     environment = read_json(environment_path) if environment_path.exists() else None
+    tracker_requested = (environment or {}).get("benchmarkOptions", {}).get("trackerRequested")
+    if not isinstance(tracker_requested, bool):
+        tracker_requested = None
+    tracker = external_process_memory(directory / "tracker-process.csv", report, "tracker", require_tree=True,
+                                      enabled=tracker_requested is not False)
+    combined = combined_private_memory(process, tracker, tracker_requested)
     route_duration = number(report.get("routeDurationSeconds"))
     coverage = number(report.get("measuredRouteCoverageFraction"))
     if coverage is not None and coverage < 0:
@@ -196,9 +295,10 @@ def analyze_run(directory):
                p95StreamingMs=metric(report, rows, "p95StreamingMs", "streaming_ms"),
                p95CollisionMs=metric(report, rows, "p95CollisionMs", "collision_ms"),
                workingSetPeakBytes=working_set_peak if working_set_peak else None, gfxApproxPeakBytes=gfx_peak,
-               driverGpu=driver, memoryTrend=memory_trend(rows, region, speed, duration, route_duration),
+               driverGpu=driver, externalProcess=process, trackerProcess=tracker, combinedPrivateMemory=combined,
+               memoryTrend=memory_trend(rows, region, speed, duration, route_duration),
                streamingFailures=number(report.get("streamingFailures")), runtimeReportedPassed=report.get("performanceTargetPassed"),
-               warnings=warnings + driver["warnings"], runtimeLimitation=report.get("limitation"))
+               warnings=warnings + driver["warnings"] + process["warnings"] + tracker["warnings"], runtimeLimitation=report.get("limitation"))
     if rows and number(report.get("frameCount")) != len(rows):
         run["warnings"].append("JSON frameCount differs from valid CSV rows; CSV statistics used")
     # Missing telemetry stays pending instead of becoming a false zero/pass.
@@ -365,6 +465,29 @@ def markdown(result):
         lines.append(f"| {run['region']} / {format_number(run['speed'], 0)} / {'ON' if run['collisionProxies'] else 'OFF'} | " + " | ".join([
             format_number(trend["firstWindowMedianBytes"], 2, 1024 ** 2), format_number(trend["lastWindowMedianBytes"], 2, 1024 ** 2), format_number(trend["medianDeltaBytes"], 2, 1024 ** 2),
             format_number(trend["slopeBytesPerSecond"] * 60 if trend["slopeBytesPerSecond"] is not None else None, 3, 1024 ** 2), trend["assessment"]]) + " |")
+    lines += ["", "## Secondary external process memory", "",
+              "The 1Hz Windows collector checks the exact player executable path and pins its PID. Only samples inside the measured UTC interval are included. Private memory is committed private process memory, separate from working set. These counters supplement the native player WS above; missing or zero counters remain unavailable. Trend windows use the same first-circuit boundary as native WS and do not by themselves prove memory stability.", "",
+              "| Region / m/s / proxies | PID | Samples | External WS peak GiB | Private commit peak GiB | Private Δ MiB | Private slope MiB/min | Assessment |",
+              "|---|---:|---:|---:|---:|---:|---:|---|"]
+    for run in result["runs"]:
+        process = run["externalProcess"]
+        trend = process["privateCommitTrend"]
+        lines.append(f"| {run['region']} / {format_number(run['speed'], 0)} / {'ON' if run['collisionProxies'] else 'OFF'} | " + " | ".join([
+            str(process["pid"] or "pending"), str(process["sampleCount"]), format_number(process["workingSetPeakBytes"], 3, GIB),
+            format_number(process["privateCommitPeakBytes"], 3, GIB), format_number(trend["medianDeltaBytes"], 2, 1024 ** 2),
+            format_number(trend["slopeBytesPerSecond"] * 60 if trend["slopeBytesPerSecond"] is not None else None, 3, 1024 ** 2), trend["assessment"]]) + " |")
+    lines += ["", "Tracker counters include the exact virtualenv executable and verified descendants, with ancestry refreshed every 10 seconds. PID/start-time identity checks prevent recycled PIDs from being counted. Unknown members/counters remain unavailable. No camera observations, pixels or command lines are recorded. The combined private bound sums separate measured peaks and is not an actual concurrent peak; it is unavailable unless all required private counters and tracker-tree coverage are verified.", "",
+              "| Region / m/s | Tracker scope PIDs | Tree verified | Tracker WS peak GiB | Tracker private peak GiB | Private Δ MiB | Private slope MiB/min | Combined private upper bound GiB | Assessment |",
+              "|---|---|---|---:|---:|---:|---:|---:|---|"]
+    for run in result["runs"]:
+        tracker, combined = run["trackerProcess"], run["combinedPrivateMemory"]
+        trend = tracker["privateCommitTrend"]
+        lines.append(f"| {run['region']} / {format_number(run['speed'], 0)} | " + " | ".join([
+            ";".join(str(process_id) for process_id in tracker["scopePids"]) or ("disabled" if not tracker["enabled"] else "pending"),
+            str(tracker["treeCoverageVerified"]), format_number(tracker["workingSetPeakBytes"], 3, GIB), format_number(tracker["privateCommitPeakBytes"], 3, GIB),
+            format_number(trend["medianDeltaBytes"], 2, 1024 ** 2),
+            format_number(trend["slopeBytesPerSecond"] * 60 if trend["slopeBytesPerSecond"] is not None else None, 3, 1024 ** 2),
+            format_number(combined["peakUpperBoundBytes"], 3, GIB), combined["assessment"] + "; " + trend["assessment"]]) + " |")
     geometry = result["geometry"]
     lines += ["", "## Geometry and residency budget", "", geometry["status"] + ".", "", "| Layer | Baked tiles | Triangles | Sum of tile byte estimates (GiB) |", "|---|---:|---:|---:|"]
     for layer in geometry["layers"]:

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from analyze_benchmarks import aggregate, analyze_run, driver_gpu, memory_trend, percentile, markdown
+from analyze_benchmarks import aggregate, analyze_run, combined_private_memory, driver_gpu, external_process_memory, memory_trend, percentile, markdown
 
 
 def measured_fixture(repository, name, duration=160, proxies=False, tracking=1, completed=2, render_width=1920, dirty=False):
@@ -75,6 +75,111 @@ class BenchmarkAnalysisTests(unittest.TestCase):
             self.assertTrue(result["timeAligned"])
             self.assertEqual(1, result["sampleCount"])
             self.assertEqual(3000 * 1024 ** 2, result["peakBytes"])
+
+    def test_external_process_counters_exclude_startup_and_analyze_one_pid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "process.csv"
+            path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n"
+                            "2026-10-10T00:00:05Z,99,9000,9000\n"
+                            "2026-10-10T00:00:10Z,42,1000,2000\n"
+                            "2026-10-10T00:00:15Z,42,1100,2500\n"
+                            "2026-10-10T00:00:20Z,42,1200,3000\n"
+                            "2026-10-10T00:00:21Z,99,9000,9000\n", encoding="utf-8")
+            result = external_process_memory(path, dict(routeRegion="Midtown", speed=50,
+                                                       utcTime="2026-10-10T00:00:20Z", durationSeconds=10, routeDurationSeconds=1))
+            self.assertTrue(result["timeAligned"])
+            self.assertEqual(42, result["pid"])
+            self.assertEqual(3, result["sampleCount"])
+            self.assertEqual(1200, result["workingSetPeakBytes"])
+            self.assertEqual(3000, result["privateCommitPeakBytes"])
+            self.assertAlmostEqual(100, result["privateCommitTrend"]["slopeBytesPerSecond"])
+            self.assertIn("20-minute", result["privateCommitTrend"]["assessment"])
+
+    def test_external_unknown_counters_and_unaligned_samples_remain_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "process.csv"
+            report = dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=10)
+            path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n"
+                            "2026-10-10T00:00:15Z,42,N/A,NaN\n"
+                            "2026-10-10T00:00:16Z,42,0,-1\n", encoding="utf-8")
+            result = external_process_memory(path, report)
+            self.assertIsNone(result["workingSetPeakBytes"])
+            self.assertIsNone(result["privateCommitPeakBytes"])
+            self.assertEqual(0, result["privateCommitSampleCount"])
+            path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n2026-10-10T00:00:05Z,42,9000,9000\n", encoding="utf-8")
+            for incomplete in (report, dict(durationSeconds=10), dict(utcTime=report["utcTime"])):
+                with self.subTest(report=incomplete):
+                    result = external_process_memory(path, incomplete)
+                    self.assertFalse(result["timeAligned"])
+                    self.assertIsNone(result["privateCommitPeakBytes"])
+
+    def test_external_multiple_pids_cannot_form_one_memory_trend(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "process.csv"
+            path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n"
+                            "2026-10-10T00:00:15Z,42,1000,2000\n"
+                            "2026-10-10T00:00:16Z,43,1100,2500\n", encoding="utf-8")
+            result = external_process_memory(path, dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=10))
+            self.assertFalse(result["timeAligned"])
+            self.assertIsNone(result["privateCommitPeakBytes"])
+            self.assertTrue(any("Multiple player PIDs" in warning for warning in result["warnings"]))
+
+    def test_external_private_commit_does_not_replace_native_working_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            path = measured_fixture(repository, "with-process")
+            (path / "process.csv").write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n"
+                                               "2026-10-10T00:29:30Z,42,4294967296,8589934592\n", encoding="utf-8")
+            result = aggregate([path], repository)
+            run = result["runs"][0]
+            self.assertEqual(1073741824, run["workingSetPeakBytes"])
+            self.assertEqual(4294967296, run["externalProcess"]["workingSetPeakBytes"])
+            self.assertEqual(8589934592, run["externalProcess"]["privateCommitPeakBytes"])
+            self.assertTrue(run["checks"]["processMemory"])
+            self.assertIn("Secondary external process memory", markdown(result))
+
+    def test_verified_tracker_tree_and_separate_peaks_form_conservative_bound(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            report = dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=20, routeRegion="Midtown", speed=50, routeDurationSeconds=1)
+            player_path, tracker_path = folder / "process.csv", folder / "tracker-process.csv"
+            player_path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n2026-10-10T00:00:04Z,7,1000,8000\n", encoding="utf-8")
+            tracker_path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc\n"
+                                    "2026-10-10T00:00:06Z,42,2000,3000,42;43,True,2026-10-10T00:00:05Z\n"
+                                    "2026-10-10T00:00:11Z,42,2500,3500,42;43,True,2026-10-10T00:00:10Z\n"
+                                    "2026-10-10T00:00:16Z,42,3000,4000,42;43,True,2026-10-10T00:00:15Z\n", encoding="utf-8")
+            player = external_process_memory(player_path, report)
+            tracker = external_process_memory(tracker_path, report, "tracker", require_tree=True)
+            self.assertTrue(tracker["treeCoverageVerified"])
+            self.assertEqual([42, 43], tracker["scopePids"])
+            self.assertEqual(4000, tracker["privateCommitPeakBytes"])
+            bound = combined_private_memory(player, tracker, True)
+            self.assertEqual(12000, bound["peakUpperBoundBytes"], "Different sample timestamps are valid for a separate-peak upper bound.")
+            self.assertIn("not an actual concurrent peak", bound["scope"])
+            self.assertAlmostEqual(100, tracker["privateCommitTrend"]["slopeBytesPerSecond"])
+
+    def test_tracker_tree_unknown_identity_or_counter_keeps_combined_bound_unavailable(self):
+        player = dict(timeAligned=True, sampleCount=2, privateCommitSampleCount=2, privateCommitPeakBytes=8000)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tracker-process.csv"
+            report = dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=20)
+            header = "sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc\n"
+            for counter, members, verified, discovery in (("4000", "42;43", "False", "00:00:05"),
+                                                          ("N/A", "42;43", "True", "00:00:05"),
+                                                          ("4000", "43", "True", "00:00:05"),
+                                                          ("4000", "42;43", "True", "00:00:30")):
+                with self.subTest(counter=counter, members=members, verified=verified, discovery=discovery):
+                    path.write_text(header + f"2026-10-10T00:00:06Z,42,3000,{counter},{members},{verified},2026-10-10T{discovery}Z\n", encoding="utf-8")
+                    tracker = external_process_memory(path, report, "tracker", require_tree=True)
+                    self.assertIsNone(combined_private_memory(player, tracker, True)["peakUpperBoundBytes"])
+
+    def test_no_tracker_is_explicitly_disabled_and_unknown_launch_scope_is_pending(self):
+        player = dict(timeAligned=True, sampleCount=1, privateCommitSampleCount=1, privateCommitPeakBytes=8000)
+        tracker = external_process_memory(Path("missing-tracker.csv"), {}, "tracker", require_tree=True, enabled=False)
+        self.assertFalse(tracker["enabled"])
+        self.assertEqual([], tracker["warnings"])
+        self.assertEqual(8000, combined_private_memory(player, tracker, False)["peakUpperBoundBytes"])
+        self.assertIsNone(combined_private_memory(player, tracker, None)["peakUpperBoundBytes"])
 
     def test_short_memory_trend_reports_growth_without_claiming_a_leak(self):
         rows = [dict(seconds=float(i), process_working_set_bytes=1000000 + 1000 * i) for i in range(60)]

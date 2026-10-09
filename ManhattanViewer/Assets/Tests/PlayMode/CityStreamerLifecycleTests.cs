@@ -26,6 +26,7 @@ public sealed class CityStreamerLifecycleTests
         public bool DeferCompletions;
         public int Pending => pending.Count;
         public readonly List<int> ReleaseFrames = new List<int>();
+        public readonly Dictionary<string, int> ReleasesPerAddress = new Dictionary<string, int>();
         public override string ProviderId => id;
         public override Type GetDefaultType(IResourceLocation location) => typeof(GameObject);
         public override void Provide(ProvideHandle handle)
@@ -48,6 +49,8 @@ public sealed class CityStreamerLifecycleTests
         public override void Release(IResourceLocation location, object asset)
         {
             Releases++; ReleaseFrames.Add(Time.frameCount);
+            ReleasesPerAddress.TryGetValue(location.PrimaryKey, out int released);
+            ReleasesPerAddress[location.PrimaryKey] = released + 1;
             Object.Destroy(asset as GameObject);
         }
         public void Cleanup()
@@ -173,6 +176,29 @@ public sealed class CityStreamerLifecycleTests
         MoveAndEvaluate(Vector3.right * 10000); streamer.workBudgetMilliseconds = 0;
         Object.Destroy(host); yield return null; host = null;
         Assert.That(provider.Releases, Is.EqualTo(3), "Shutdown must release every retained handle without waiting for the deferred queue.");
+    }
+
+    [UnityTest]
+    public IEnumerator SwappedResidentCanBeReleasedReloadedAndCleanedUpWithoutLosingOtherHandles()
+    {
+        CreateStreamer(5); yield return WaitLoaded(5);
+        Bounds first = catalog.tiles[1].cityBounds, last = catalog.tiles[4].cityBounds;
+        catalog.tiles[1].cityBounds = catalog.tiles[4].cityBounds = new Bounds(Vector3.right * 10000, Vector3.one);
+        MoveAndEvaluate(Vector3.zero);
+        Tick(); yield return null;
+        Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.EqualTo(3)); Assert.That(streamer.EstimatedResidentBytes, Is.EqualTo(3072));
+        Assert.That(provider.ReleasesPerAddress[catalog.tiles[1].address], Is.EqualTo(1));
+        Assert.That(provider.ReleasesPerAddress[catalog.tiles[4].address], Is.EqualTo(1), "A queued resident moved into the freed slot must still release its own handle.");
+        catalog.tiles[1].cityBounds = first; catalog.tiles[4].cityBounds = last;
+        MoveAndEvaluate(Vector3.zero); yield return WaitLoaded(5);
+        Assert.That(provider.Provides, Is.EqualTo(7), "Only the two departed residents may be downloaded again.");
+        foreach (Transform tile in host.transform) Assert.That(tile.gameObject.activeSelf, Is.True);
+        streamer.workBudgetMilliseconds = 0; Object.Destroy(host); yield return null; host = null;
+        Assert.That(provider.Releases, Is.EqualTo(7));
+        for (int i = 0; i < catalog.tiles.Length; i++)
+            Assert.That(provider.ReleasesPerAddress[catalog.tiles[i].address], Is.EqualTo(i == 1 || i == 4 ? 2 : 1),
+                "Each original/reloaded Addressables handle must be released exactly once.");
     }
 
     [UnityTearDown]
