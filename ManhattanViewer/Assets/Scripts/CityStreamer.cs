@@ -81,7 +81,16 @@ namespace Manhattan.Viewer
                 default: return 1200f;
             }
         }
-        public static float DistanceToTile(Bounds bounds, Vector3 cityPosition) => Vector3.Distance(bounds.ClosestPoint(cityPosition), cityPosition);
+        public static float DistanceToTile(Bounds bounds, Vector3 cityPosition)
+        {
+            // Bounds.ClosestPoint crosses into native code. Clamp each axis here instead;
+            // retain distances in metres so request ordering and fade/radius boundaries stay unchanged.
+            Vector3 minimum = bounds.min, maximum = bounds.max;
+            float x = cityPosition.x < minimum.x ? minimum.x - cityPosition.x : cityPosition.x > maximum.x ? cityPosition.x - maximum.x : 0f;
+            float y = cityPosition.y < minimum.y ? minimum.y - cityPosition.y : cityPosition.y > maximum.y ? cityPosition.y - maximum.y : 0f;
+            float z = cityPosition.z < minimum.z ? minimum.z - cityPosition.z : cityPosition.z > maximum.z ? cityPosition.z - maximum.z : 0f;
+            return Mathf.Sqrt(x * x + y * y + z * z);
+        }
         public static bool CanReplace(CityTileRecord fallback, int visibleCoreReplacementCount) =>
             fallback != null && fallback.layer == CityLayer.Skyline && fallback.requiredReplacementCount > 0 &&
             visibleCoreReplacementCount >= fallback.requiredReplacementCount;

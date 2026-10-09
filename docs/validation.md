@@ -150,7 +150,7 @@ As of 2026-10-10, reusable changes published in [technology commit `960d5de55037
 | Runtime-only consumer without URP or Unity Test Framework | Windows build succeeded; standalone package smoke exited 0 |
 | Parameterized shared launcher | 21 assertions passed |
 | Manhattan portable checks | 30/30 Python data tests and 8/8 PowerShell assertions passed |
-| Manhattan Unity tests after rendering fixes | 34/34 EditMode passed; PlayMode 9 passed, 1 GPU-only fade test skipped; zero failures/errors |
+| Manhattan Unity tests after rendering and telemetry fixes | 41/41 EditMode passed; PlayMode 9 passed, 1 GPU-only fade test skipped; zero failures/errors |
 | Custom Near shader live-GPU test | 1/1 passed on the actual GPU, zero skips; standalone city verification remains separate |
 
 Original package XML/build/smoke evidence remains in the technical checkout's ignored `Builds/ManhattanPackageValidation/`. The runtime-only smoke covers projection, frame/source ownership, collider removal, JSON calibration and feature round trips. These package checks do not establish the Manhattan player's visual quality or frame rate.

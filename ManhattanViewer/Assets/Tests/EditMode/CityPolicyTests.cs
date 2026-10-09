@@ -8,11 +8,84 @@ using UnityEngine;
 public sealed class CityPolicyTests
 {
     [Test]
+    public void CurrentWindowsProcessHasRealWorkingSetTelemetry()
+    {
+        if (Application.platform != RuntimePlatform.WindowsEditor && Application.platform != RuntimePlatform.WindowsPlayer)
+            Assert.Ignore("Windows OS telemetry integration check.");
+        Assert.That(ProcessMemoryTelemetry.TryWorkingSetBytes(out long bytes), Is.True);
+        Assert.That(bytes, Is.GreaterThan(1024L * 1024), "An active Unity process must report actual resident memory instead of an unavailable zero counter.");
+    }
+
+    [Test]
     public void StreamingBoundsDistanceUsesNearestSurfaceRatherThanTileCenter()
     {
         var bounds = new Bounds(new Vector3(250, 50, 250), new Vector3(500, 100, 500));
         Assert.That(CityStreamer.DistanceToTile(bounds, new Vector3(501, 1, 250)), Is.EqualTo(1).Within(.0001));
         Assert.That(CityStreamer.DistanceToTile(bounds, bounds.center), Is.Zero);
+    }
+
+    [Test]
+    public void ManagedBoundsDistanceMatchesUnityInsideFacesEdgesCornersAndDegenerateBounds()
+    {
+        var boundsCases = new[]
+        {
+            new Bounds(new Vector3(250, 50, 250), new Vector3(500, 100, 500)),
+            new Bounds(new Vector3(-1225.25f, 1.75f, 3585.5f), new Vector3(125.5f, 63.25f, 250.75f)),
+            new Bounds(new Vector3(9000, 0, -8000), Vector3.zero),
+            new Bounds(new Vector3(-9000, 0, 8000), new Vector3(500, 0, 500))
+        };
+        foreach (Bounds bounds in boundsCases)
+        {
+            Vector3 minimum = bounds.min, maximum = bounds.max;
+            var positions = new[]
+            {
+                bounds.center, minimum, maximum,
+                new Vector3(minimum.x, bounds.center.y, bounds.center.z),
+                new Vector3(maximum.x + 1, bounds.center.y, bounds.center.z),
+                new Vector3(bounds.center.x, minimum.y - 2, maximum.z + 3),
+                minimum - new Vector3(3, 4, 12), maximum + new Vector3(3, 4, 12)
+            };
+            foreach (Vector3 position in positions)
+            {
+                float expected = Vector3.Distance(bounds.ClosestPoint(position), position);
+                Assert.That(CityStreamer.DistanceToTile(bounds, position), Is.EqualTo(expected).Within(.002f),
+                    "Bounds " + bounds + ", position " + position);
+            }
+        }
+    }
+
+    [Test]
+    public void ManagedBoundsDistanceMatchesUnityForDeterministicCityScaleCases()
+    {
+        var random = new System.Random(170322);
+        float Sample(float minimum, float maximum) => minimum + (float)random.NextDouble() * (maximum - minimum);
+        for (int i = 0; i < 2048; i++)
+        {
+            var bounds = new Bounds(new Vector3(Sample(-10000, 10000), Sample(-100, 1000), Sample(-10000, 10000)),
+                new Vector3(Sample(0, 1000), Sample(0, 600), Sample(0, 1000)));
+            Vector3 position = bounds.center + new Vector3(Sample(-1500, 1500), Sample(-800, 800), Sample(-1500, 1500));
+            float expected = Vector3.Distance(bounds.ClosestPoint(position), position);
+            Assert.That(CityStreamer.DistanceToTile(bounds, position), Is.EqualTo(expected).Within(.002f),
+                "Deterministic case " + i + ": " + bounds + ", position " + position);
+        }
+    }
+
+    [TestCase(CityLayer.Core)] [TestCase(CityLayer.Near)] [TestCase(CityLayer.Vegetation)] [TestCase(CityLayer.Collision)]
+    public void ManagedDistancePreservesVisibilityLoadAndReleaseBoundaries(CityLayer layer)
+    {
+        var bounds = new Bounds(new Vector3(256, 64, -512), new Vector3(128, 128, 256));
+        foreach (float radius in new[] { CityStreamer.VisibleRadius(layer), CityStreamer.LoadRadius(layer), CityStreamer.ReleaseRadius(layer) })
+        {
+            foreach (float offset in new[] { -.125f, 0f, .125f })
+            {
+                Vector3 position = new Vector3(bounds.max.x + radius + offset, bounds.center.y, bounds.center.z);
+                float expected = Vector3.Distance(bounds.ClosestPoint(position), position);
+                float actual = CityStreamer.DistanceToTile(bounds, position);
+                Assert.That(actual, Is.EqualTo(expected), "Axis-aligned boundary distances must remain exact.");
+                Assert.That(actual <= radius, Is.EqualTo(expected <= radius));
+                Assert.That(1f - Mathf.InverseLerp(120f, 180f, actual), Is.EqualTo(1f - Mathf.InverseLerp(120f, 180f, expected)));
+            }
+        }
     }
 
     [TestCase(CityLayer.Core)] [TestCase(CityLayer.Near)] [TestCase(CityLayer.Vegetation)] [TestCase(CityLayer.Collision)]

@@ -54,7 +54,7 @@ namespace Manhattan.Viewer
         private BenchmarkRouteInput route;
         private IMotionInputSource previousInput;
         private readonly List<float> frames = new List<float>(), streaming = new List<float>(), collision = new List<float>();
-        private readonly List<string> csv = new List<string>();
+        private StreamWriter csvWriter;
         private ProfilerRecorder graphicsMemory;
         private float startedAt, warmupUntil, duration, benchmarkSpeed;
         private string outputDirectory;
@@ -74,23 +74,41 @@ namespace Manhattan.Viewer
         public long GpuMemoryBytes => graphicsMemory.Valid ? graphicsMemory.LastValue : 0;
 
         private void OnEnable() => graphicsMemory = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Used Memory", 1);
-        private void OnDisable() { if (graphicsMemory.Valid) graphicsMemory.Dispose(); }
+        private void OnDisable() { CloseCsv(); if (graphicsMemory.Valid) graphicsMemory.Dispose(); }
+
+        private void CloseCsv()
+        {
+            var writer = csvWriter; csvWriter = null;
+            if (writer != null) writer.Dispose();
+        }
 
         public void StartBenchmark(float speed, float seconds, string directory, bool collisionProxies, bool quit = false, string region = "Midtown")
         {
             if (recording) return;
             previousInput = flight.InputSource;
-            benchmarkSpeed = Mathf.Clamp(speed, 1f, 50f); duration = Mathf.Max(1f, seconds);
+            benchmarkSpeed = Mathf.Clamp(speed, 1f, 50f); duration = Mathf.Clamp(seconds, 1f, 7200f);
             outputDirectory = string.IsNullOrEmpty(directory) ? Path.Combine(Application.persistentDataPath, "Benchmarks", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")) : Path.GetFullPath(directory);
+            // Retained CSV strings otherwise create an artificial rising memory
+            // curve during the very test intended to detect residency leaks.
+            Directory.CreateDirectory(outputDirectory); CloseCsv();
+            csvWriter = new StreamWriter(new FileStream(Path.Combine(outputDirectory, "frames.csv"), FileMode.CreateNew,
+                FileAccess.Write, FileShare.Read, 65536), new UTF8Encoding(false), 65536);
+            csvWriter.WriteLine("seconds,frame_ms,streaming_ms,collision_ms,unity_cpu_bytes,gpu_bytes,tile_bytes,loaded_tiles,pending,tracking,process_working_set_bytes,city_x,city_y,city_z,route_cycles,route_elapsed_seconds");
+            // Reserve numeric samples before warmup, retaining their full timing
+            // precision without growing list backing arrays during measurements.
+            int capacity = Mathf.CeilToInt(duration * Mathf.Max(120f, (float)Screen.currentResolution.refreshRateRatio.value * 2f)) + 4;
+            frames.Clear(); streaming.Clear(); collision.Clear();
+            if (frames.Capacity < capacity) frames.Capacity = capacity;
+            if (streaming.Capacity < capacity) streaming.Capacity = capacity;
+            if (collision.Capacity < capacity) collision.Capacity = capacity;
             benchmarkRegion = NormalizeRegion(region);
             points = RegionRoute(benchmarkRegion, flight.CityPosition);
             flight.SetPose(points[0], Quaternion.LookRotation(points[1] - points[0]));
             route = new BenchmarkRouteInput(points, benchmarkSpeed); flight.InputSource = route;
             routeDuration = route.Duration; routeCycles = measuredCycleEvents = 0; measuredStartRouteTime = -1f;
             streamer.CollisionProxiesEnabled = collisionProxies;
-            frames.Clear(); streaming.Clear(); collision.Clear(); csv.Clear(); trackedFrames = 0; maxCpu = maxGpu = maxTiles = maxProcess = 0;
+            trackedFrames = 0; maxCpu = maxGpu = maxTiles = maxProcess = processWorkingSet = 0; nextMemorySample = 0f;
             startedAt = Time.unscaledTime; warmupUntil = startedAt + 15f; quitWhenDone = quit; recording = true;
-            csv.Add("seconds,frame_ms,streaming_ms,collision_ms,unity_cpu_bytes,gpu_bytes,tile_bytes,loaded_tiles,pending,tracking,process_working_set_bytes,city_x,city_y,city_z,route_cycles,route_elapsed_seconds");
         }
 
         public static Vector3[] DefaultRoute(Vector3 initial)
@@ -154,16 +172,22 @@ namespace Manhattan.Viewer
             if (Time.unscaledTime >= nextMemorySample)
             {
                 nextMemorySample = Time.unscaledTime + 1f;
-                using (var process = System.Diagnostics.Process.GetCurrentProcess()) processWorkingSet = process.WorkingSet64;
+                ProcessMemoryTelemetry.TryWorkingSetBytes(out processWorkingSet);
             }
             maxCpu = Math.Max(maxCpu, cpu); maxGpu = Math.Max(maxGpu, gpu); maxTiles = Math.Max(maxTiles, streamer.EstimatedResidentBytes);
             maxProcess = Math.Max(maxProcess, processWorkingSet);
             if (display.IsTracking) trackedFrames++;
             Vector3 cityPosition = flight.CityPosition;
-            csv.Add(string.Format(CultureInfo.InvariantCulture, "{0:F3},{1:F4},{2:F4},{3:F4},{4},{5},{6},{7},{8},{9},{10},{11:F4},{12:F4},{13:F4},{14},{15:F4}",
+            try { csvWriter.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F3},{1:F4},{2:F4},{3:F4},{4},{5},{6},{7},{8},{9},{10},{11:F4},{12:F4},{13:F4},{14},{15:F4}",
                 Time.unscaledTime - warmupUntil, CurrentFrameMs, streamer.FrameWorkMilliseconds, collisionMs,
                 cpu, gpu, streamer.EstimatedResidentBytes, streamer.LoadedTiles, streamer.PendingLoads, display.IsTracking ? 1 : 0, processWorkingSet,
-                cityPosition.x, cityPosition.y, cityPosition.z, routeCycles, route.Elapsed));
+                cityPosition.x, cityPosition.y, cityPosition.z, routeCycles, route.Elapsed)); }
+            catch (IOException error)
+            {
+                recording = false; flight.InputSource = previousInput; CloseCsv();
+                Debug.LogError("Benchmark frame recording failed: " + error.Message);
+                if (quitWhenDone) Application.Quit(1); return;
+            }
             if (Time.unscaledTime - warmupUntil >= duration) Finish();
         }
 
@@ -171,6 +195,7 @@ namespace Manhattan.Viewer
         {
             if (!recording) return null;
             recording = false; flight.InputSource = previousInput;
+            CloseCsv();
             var camera = display.GetComponent<Camera>();
             float routeDistance = 0f;
             for (int i = 1; i < points.Length; i++) routeDistance += Vector3.Distance(points[i - 1], points[i]);
@@ -217,7 +242,6 @@ namespace Manhattan.Viewer
             Directory.CreateDirectory(outputDirectory);
             LastReportPath = Path.Combine(outputDirectory, "benchmark.json");
             File.WriteAllText(LastReportPath, JsonUtility.ToJson(report, true));
-            File.WriteAllLines(Path.Combine(outputDirectory, "frames.csv"), csv, new UTF8Encoding(false));
             ScreenCapture.CaptureScreenshot(Path.Combine(outputDirectory, "screenshot.png"));
             Debug.Log("Benchmark saved: " + LastReportPath);
             if (quitWhenDone) Invoke(nameof(QuitAfterCapture), 1f);
