@@ -43,6 +43,12 @@ function Find-PlayerMemorySample {
     return $null
 }
 
+function Assert-NoExistingTrackedProcess {
+    param([Parameter(Mandatory)][string]$ExpectedPlayerPath)
+    $existing = Find-PlayerMemorySample -ExpectedPlayerPath $ExpectedPlayerPath
+    if ($null -ne $existing) { throw "An exact benchmark target is already running (PID $($existing.pid)). Close it before starting the benchmark." }
+}
+
 function Get-OwnedProcessIds {
     param([int]$RootProcessId, [object[]]$Inventory)
     $owned = New-Object 'System.Collections.Generic.HashSet[int]'
@@ -96,7 +102,8 @@ function Get-ProcessTreeMemorySample {
     [pscustomobject][ordered]@{ sampleUtc = [DateTime]::UtcNow.ToString('o'); pid = $RootSample.pid;
         workingSetBytes = $(if ($verified -and $workingComplete) { $workingSet } else { $null });
         privateMemoryBytes = $(if ($verified -and $privateComplete) { $privateMemory } else { $null });
-        scopePids = ($Snapshot.ProcessIds -join ';'); treeCoverageVerified = $verified; treeDiscoveryUtc = $Snapshot.DiscoveryUtc }
+        scopePids = ($Snapshot.ProcessIds -join ';'); treeCoverageVerified = $verified; treeDiscoveryUtc = $Snapshot.DiscoveryUtc;
+        treeMembershipVerifiedPerSample = $true }
 }
 
 function Invoke-ProcessMemoryCollector {
@@ -109,10 +116,9 @@ function Invoke-ProcessMemoryCollector {
     $writer = New-Object System.IO.StreamWriter($csvPath, $false, (New-Object System.Text.UTF8Encoding($false)))
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
     $sampledProcessId = $null
-    $treeSnapshot = $null; $lastDiscoverySeconds = -10
     try {
         $header = '"sampleUtc","pid","workingSetBytes","privateMemoryBytes"'
-        if ($IncludeDescendants) { $header += ',"scopePids","treeCoverageVerified","treeDiscoveryUtc"' }
+        if ($IncludeDescendants) { $header += ',"scopePids","treeCoverageVerified","treeDiscoveryUtc","treeMembershipVerifiedPerSample"' }
         $writer.WriteLine($header); $writer.Flush()
         while ($watch.Elapsed.TotalSeconds -lt $DurationSec) {
             if ($StopFile -and (Test-Path -LiteralPath $StopFile)) { break }
@@ -120,15 +126,13 @@ function Invoke-ProcessMemoryCollector {
             if ($null -ne $sample) {
                 $sampledProcessId = $sample.pid
                 if ($IncludeDescendants) {
-                    if ($watch.Elapsed.TotalSeconds - $lastDiscoverySeconds -ge 10) {
-                        try {
-                            # Read ancestry identifiers only; never request command lines.
-                            $inventory = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId, ParentProcessId -ErrorAction Stop)
-                            $treeSnapshot = New-ProcessTreeSnapshot -RootProcessId $sampledProcessId -Inventory $inventory
-                        }
-                        catch { $treeSnapshot = [pscustomobject]@{ ProcessIds = @($sampledProcessId); StartTicks = @{}; Verified = $false; DiscoveryUtc = [DateTime]::UtcNow.ToString('o') } }
-                        $lastDiscoverySeconds = $watch.Elapsed.TotalSeconds
+                    try {
+                        # Verify current membership for every counted sample.
+                        # Read ancestry identifiers only; never request command lines.
+                        $inventory = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId, ParentProcessId -ErrorAction Stop)
+                        $treeSnapshot = New-ProcessTreeSnapshot -RootProcessId $sampledProcessId -Inventory $inventory
                     }
+                    catch { $treeSnapshot = [pscustomobject]@{ ProcessIds = @($sampledProcessId); StartTicks = @{}; Verified = $false; DiscoveryUtc = [DateTime]::UtcNow.ToString('o') } }
                     $sample = Get-ProcessTreeMemorySample -RootSample $sample -Snapshot $treeSnapshot
                 }
                 $csv = @($sample | ConvertTo-Csv -NoTypeInformation)

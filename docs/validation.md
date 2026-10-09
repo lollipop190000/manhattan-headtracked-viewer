@@ -58,7 +58,7 @@ $caseDirectories = @(Get-ChildItem -LiteralPath $suiteDirectory -Directory | Whe
 
 `tools/benchmark.ps1` creates a unique output directory by default and starts a hidden, owned NVIDIA driver collector when `nvidia-smi` is available. It writes `gpu.csv` beside the frame report and stops the collector in `finally` when the shared launcher returns, including failure paths. `-SkipGpuLog` disables it; `-GpuIntervalMs 500` samples twice per second. Existing benchmark/GPU result files are not overwritten. Collector logs remain beside the report so missing or failed measurements are explicit.
 
-`process.csv` records the exact player executable's Windows working set and private bytes at 1Hz. `tracker-process.csv` records the exact tracker virtual-environment executable and its verified descendants, including Windows' separate base-Python child. Descendant ownership uses PID/parent-PID and creation-time checks; it never reads command lines or includes unrelated Python processes. Discovery refreshes every ten seconds. Missing counters or incomplete ownership make the corresponding total unavailable. The analyzer aligns samples to the measured interval and reports game and tracker separately. The sum of their individual private-byte peaks is a conservative upper bound, not a measured simultaneous peak. Driver VRAM remains a separate measurement.
+`process.csv` records the exact player executable's Windows working set and private bytes at 1Hz. `tracker-process.csv` records the exact tracker virtual-environment executable and its verified descendants, including Windows' separate base-Python child. Descendant ownership uses PID/parent-PID and creation-time checks; it never reads command lines or includes unrelated Python processes. Current ancestry is verified for every counted sample. Missing counters or incomplete ownership make the corresponding total unavailable. The analyzer aligns samples to the measured interval and reports game and tracker separately. The sum of their individual private-byte peaks is a conservative upper bound, not a measured simultaneous peak. Driver VRAM remains a separate measurement.
 
 The launcher requests **1920×1200 Exclusive Fullscreen** (`-screen-fullscreen 1 -window-mode exclusive -screen-width 1920 -screen-height 1200`) to use the whole measured physical panel. Check the player's actual recorded render size; a requested size alone is not evidence that the driver accepted the mode. Windowed output on a 2880×1800 panel occupies only part of the measured screen and needs calibration for that smaller physical viewport.
 
@@ -151,7 +151,7 @@ As of 2026-10-10, reusable changes published in [technology commit `960d5de55037
 | Minimal consumer without URP or demo | 39/39 EditMode and 11/11 PlayMode tests passed |
 | Runtime-only consumer without URP or Unity Test Framework | Windows build succeeded; standalone package smoke exited 0 |
 | Parameterized shared launcher | 21 assertions passed |
-| Manhattan portable checks | 55/55 Python data tests and 8/8 PowerShell assertions passed |
+| Manhattan portable checks | 58/58 Python data tests and 8/8 PowerShell assertions passed |
 | Manhattan Unity tests after scene portability and streaming fixes | 42/42 EditMode passed; PlayMode 15 passed, 1 GPU-only fade test skipped; zero failures/errors |
 | Custom Near shader live-GPU test | 1/1 passed on the actual GPU, zero skips; standalone city verification remains separate |
 | Deferred tile-release lifecycle | All 5 added PlayMode tests passed; the combined PlayMode suite has 15 passed and 1 GPU-only skip |

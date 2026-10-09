@@ -153,7 +153,7 @@ def external_process_memory(path, report, label="player", require_tree=False, en
                   workingSetSampleCount=0, privateCommitSampleCount=0,
                   privateCommitTrend=memory_trend([], region, speed, duration, circuit, "private_memory_bytes"),
                   scope=f"secondary Windows counters for exact {label} executable path and pinned PID" +
-                        (", plus verified descendants; ancestry refreshed every 10 seconds" if require_tree else ""), warnings=[])
+                        (", plus verified descendants; current ancestry verified for every counted sample" if require_tree else ""), warnings=[])
     if not enabled:
         result["scope"] = "tracker explicitly disabled by benchmark launch options"
         result["privateCommitTrend"]["assessment"] = "disabled: no tracker requested"
@@ -182,8 +182,9 @@ def external_process_memory(path, report, label="player", require_tree=False, en
                 scope_ids = [int(value) for value in identifiers if value.isdecimal() and int(value) > 0]
                 discovery = utc(row.get("treeDiscoveryUtc"))
                 tree_verified = str(row.get("treeCoverageVerified", "")).casefold() == "true" and \
+                    str(row.get("treeMembershipVerifiedPerSample", "")).casefold() == "true" and \
                     len(scope_ids) == len(identifiers) and int(process_id) in scope_ids and \
-                    discovery is not None and 0 <= (timestamp - discovery).total_seconds() <= 11
+                    discovery is not None and 0 <= (timestamp - discovery).total_seconds() <= 2
                 if not tree_verified:
                     working_set = private_memory = None
             samples.append(dict(seconds=(timestamp - begin).total_seconds(), pid=int(process_id),
@@ -476,7 +477,7 @@ def markdown(result):
             str(process["pid"] or "pending"), str(process["sampleCount"]), format_number(process["workingSetPeakBytes"], 3, GIB),
             format_number(process["privateCommitPeakBytes"], 3, GIB), format_number(trend["medianDeltaBytes"], 2, 1024 ** 2),
             format_number(trend["slopeBytesPerSecond"] * 60 if trend["slopeBytesPerSecond"] is not None else None, 3, 1024 ** 2), trend["assessment"]]) + " |")
-    lines += ["", "Tracker counters include the exact virtualenv executable and verified descendants, with ancestry refreshed every 10 seconds. PID/start-time identity checks prevent recycled PIDs from being counted. Unknown members/counters remain unavailable. No camera observations, pixels or command lines are recorded. The combined private bound sums separate measured peaks and is not an actual concurrent peak; it is unavailable unless all required private counters and tracker-tree coverage are verified.", "",
+    lines += ["", "Tracker counters include the exact virtualenv executable and verified descendants, with current ancestry verified for every counted sample. PID/start-time identity checks prevent recycled PIDs from being counted. Unknown members/counters remain unavailable. No camera observations, pixels or command lines are recorded. The combined private bound sums separate measured peaks and is not an actual concurrent peak; it is unavailable unless all required private counters and tracker-tree coverage are verified.", "",
               "| Region / m/s | Tracker scope PIDs | Tree verified | Tracker WS peak GiB | Tracker private peak GiB | Private Δ MiB | Private slope MiB/min | Combined private upper bound GiB | Assessment |",
               "|---|---|---|---:|---:|---:|---:|---:|---|"]
     for run in result["runs"]:

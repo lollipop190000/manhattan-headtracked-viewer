@@ -63,6 +63,21 @@ class ProcessSamplingTests(unittest.TestCase):
         self.assertEqual(42, sample["secondPid"])
         self.assertEqual(["name:ManhattanViewer", "pid:42"], sample["queries"])
 
+    def test_preflight_rejects_only_the_existing_exact_target(self):
+        result = self.powershell(r"""
+            function Find-PlayerMemorySample {
+                param([string]$ExpectedPlayerPath)
+                if ($ExpectedPlayerPath -eq 'C:\Venv\python.exe') { return [pscustomobject]@{pid=42} }
+                return $null
+            }
+            $rejected=$false
+            try { Assert-NoExistingTrackedProcess -ExpectedPlayerPath 'C:\Venv\python.exe' } catch { $rejected=$true }
+            Assert-NoExistingTrackedProcess -ExpectedPlayerPath 'C:\Other\python.exe'
+            @{ exactRejected=$rejected; unrelatedAllowed=$true } | ConvertTo-Json -Compress
+        """)
+        self.assertTrue(result["exactRejected"])
+        self.assertTrue(result["unrelatedAllowed"])
+
     def test_stop_signal_closes_csv_and_existing_results_are_preserved(self):
         temporary_root = ROOT / ".cache/tests"
         temporary_root.mkdir(parents=True, exist_ok=True)
@@ -119,6 +134,34 @@ class ProcessSamplingTests(unittest.TestCase):
         self.assertIsNone(result["unknown"]["privateMemoryBytes"])
         self.assertFalse(result["recycled"]["treeCoverageVerified"])
         self.assertIsNone(result["recycled"]["privateMemoryBytes"])
+
+    def test_every_counted_sample_discovers_new_children(self):
+        temporary_root = ROOT / ".cache/tests"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as temporary:
+            output = str(Path(temporary) / "tree.csv").replace("'", "''")
+            stop = str(Path(temporary) / "stop").replace("'", "''")
+            result = self.powershell(r"""
+                $root=[pscustomobject]@{Id=42;HasExited=$false;Path='C:\Venv\python.exe';WorkingSet64=1000;PrivateMemorySize64=2000;StartTime=[datetime]'2026-10-10T00:00:00Z'}
+                $child=[pscustomobject]@{Id=43;HasExited=$false;Path='C:\Python313\python.exe';WorkingSet64=3000;PrivateMemorySize64=4000;StartTime=[datetime]'2026-10-10T00:00:01Z'}
+                foreach($fake in @($root,$child)) { $fake | Add-Member ScriptMethod Refresh { }; $fake | Add-Member ScriptMethod Dispose { } }
+                function Get-Process { param([string]$Name,[int]$Id,[string]$ErrorAction); if($Id -eq 43) { return $child }; return $root }
+                $script:discoveryCalls=0; $script:sleeps=0; $script:queriedProperties=@()
+                function Get-CimInstance {
+                    param([string]$ClassName,[string[]]$Property,[string]$ErrorAction)
+                    $script:queriedProperties=$Property; $script:discoveryCalls++
+                    $records=@([pscustomobject]@{ProcessId=42;ParentProcessId=5})
+                    if($script:discoveryCalls -gt 1) { $records += [pscustomobject]@{ProcessId=43;ParentProcessId=42} }
+                    return $records
+                }
+            """ + "function Start-Sleep { param([int]$Milliseconds); $script:sleeps++; if($script:sleeps -ge 2) { [IO.File]::WriteAllText('" + stop + "','') } }; "
+                r"Invoke-ProcessMemoryCollector -ExpectedPlayerPath 'C:\Venv\python.exe' -OutputPath '" + output + "' -DurationSec 1 -IncludeDescendants -StopFile '" + stop + "' | Out-Null; "
+                "$rows=@(Import-Csv -LiteralPath '" + output + "'); @{rows=$rows; discoveries=$script:discoveryCalls; properties=$script:queriedProperties} | ConvertTo-Json -Compress")
+            self.assertEqual(2, result["discoveries"])
+            self.assertEqual(["ProcessId", "ParentProcessId"], result["properties"])
+            self.assertEqual(["42", "42;43"], [row["scopePids"] for row in result["rows"]])
+            self.assertEqual(["2000", "6000"], [row["privateMemoryBytes"] for row in result["rows"]])
+            self.assertTrue(all(row["treeMembershipVerifiedPerSample"] == "True" for row in result["rows"]))
 
 
 if __name__ == "__main__":

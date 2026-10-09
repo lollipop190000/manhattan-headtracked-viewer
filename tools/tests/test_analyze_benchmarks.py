@@ -144,10 +144,10 @@ class BenchmarkAnalysisTests(unittest.TestCase):
             report = dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=20, routeRegion="Midtown", speed=50, routeDurationSeconds=1)
             player_path, tracker_path = folder / "process.csv", folder / "tracker-process.csv"
             player_path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes\n2026-10-10T00:00:04Z,7,1000,8000\n", encoding="utf-8")
-            tracker_path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc\n"
-                                    "2026-10-10T00:00:06Z,42,2000,3000,42;43,True,2026-10-10T00:00:05Z\n"
-                                    "2026-10-10T00:00:11Z,42,2500,3500,42;43,True,2026-10-10T00:00:10Z\n"
-                                    "2026-10-10T00:00:16Z,42,3000,4000,42;43,True,2026-10-10T00:00:15Z\n", encoding="utf-8")
+            tracker_path.write_text("sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc,treeMembershipVerifiedPerSample\n"
+                                    "2026-10-10T00:00:06Z,42,2000,3000,42;43,True,2026-10-10T00:00:05Z,True\n"
+                                    "2026-10-10T00:00:11Z,42,2500,3500,42;43,True,2026-10-10T00:00:10Z,True\n"
+                                    "2026-10-10T00:00:16Z,42,3000,4000,42;43,True,2026-10-10T00:00:15Z,True\n", encoding="utf-8")
             player = external_process_memory(player_path, report)
             tracker = external_process_memory(tracker_path, report, "tracker", require_tree=True)
             self.assertTrue(tracker["treeCoverageVerified"])
@@ -163,15 +163,27 @@ class BenchmarkAnalysisTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "tracker-process.csv"
             report = dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=20)
-            header = "sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc\n"
+            header = "sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc,treeMembershipVerifiedPerSample\n"
             for counter, members, verified, discovery in (("4000", "42;43", "False", "00:00:05"),
                                                           ("N/A", "42;43", "True", "00:00:05"),
                                                           ("4000", "43", "True", "00:00:05"),
                                                           ("4000", "42;43", "True", "00:00:30")):
                 with self.subTest(counter=counter, members=members, verified=verified, discovery=discovery):
-                    path.write_text(header + f"2026-10-10T00:00:06Z,42,3000,{counter},{members},{verified},2026-10-10T{discovery}Z\n", encoding="utf-8")
+                    path.write_text(header + f"2026-10-10T00:00:06Z,42,3000,{counter},{members},{verified},2026-10-10T{discovery}Z,True\n", encoding="utf-8")
                     tracker = external_process_memory(path, report, "tracker", require_tree=True)
                     self.assertIsNone(combined_private_memory(player, tracker, True)["peakUpperBoundBytes"])
+
+    def test_cached_tree_traces_without_current_membership_proof_are_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tracker-process.csv"
+            report = dict(utcTime="2026-10-10T00:00:20Z", durationSeconds=20)
+            header = "sampleUtc,pid,workingSetBytes,privateMemoryBytes,scopePids,treeCoverageVerified,treeDiscoveryUtc,treeMembershipVerifiedPerSample\n"
+            for marker, discovery in (("", "00:00:05"), ("False", "00:00:05"), ("True", "00:00:01")):
+                with self.subTest(marker=marker, discovery=discovery):
+                    path.write_text(header + f"2026-10-10T00:00:06Z,42,3000,4000,42;43,True,2026-10-10T{discovery}Z,{marker}\n", encoding="utf-8")
+                    tracker = external_process_memory(path, report, "tracker", require_tree=True)
+                    self.assertFalse(tracker["treeCoverageVerified"])
+                    self.assertIsNone(tracker["privateCommitPeakBytes"])
 
     def test_no_tracker_is_explicitly_disabled_and_unknown_launch_scope_is_pending(self):
         player = dict(timeAligned=True, sampleCount=1, privateCommitSampleCount=1, privateCommitPeakBytes=8000)
