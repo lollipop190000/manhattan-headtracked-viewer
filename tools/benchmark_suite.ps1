@@ -13,7 +13,7 @@ $exploratory = $PSBoundParameters.ContainsKey('DurationOverride')
 $mode = if ($NoTracker) { 'no-tracker-baseline' } elseif ($exploratory) { 'duration-override-exploratory' } else { 'webcam-target' }
 $cases = @()
 foreach ($region in @('Midtown', 'Downtown', 'Park', 'Uptown', 'Air')) {
-    foreach ($speed in @(10, 50)) {
+    foreach ($speed in @(10, 50, 100)) {
         $duration = if ($speed -eq 10) { 900 } else { 180 }
         $cases += [pscustomobject]@{ id = "$region-$speed"; region = $region; speed = $speed; duration = $duration; collisionProxies = $false; purpose = 'regional' }
     }

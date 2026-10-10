@@ -29,6 +29,8 @@ namespace Manhattan.Viewer
         public string viewerRevision, technologyRevision, sourceManifestSha256, buildUtc;
         public bool dirtyWorkingTree, buildIdentityAvailable;
         public float speed, durationSeconds, p95FrameMs, p99FrameMs, maximumFrameMs, p95StreamingMs, p95CollisionMs, trackingFraction;
+        // speed remains the legacy alias for the applied route speed, never the requested speed.
+        public float requestedSpeed, actualRouteSpeed;
         public long maximumCpuBytes, maximumGpuBytes, maximumEstimatedTileBytes, endingCpuBytes, maximumProcessWorkingSetBytes;
         public int framesOver50Ms;
         public bool graphicsMemoryCounterAvailable, collisionProxies, performanceTargetPassed;
@@ -37,6 +39,15 @@ namespace Manhattan.Viewer
 
     public static class BenchmarkStatistics
     {
+        public static double MeasuredSeconds(double clockSeconds, double warmupUntil) => Math.Max(0d, clockSeconds - warmupUntil);
+        public static bool RuntimeTargetsPassed(BenchmarkReport report) => report.frameCount > 0 &&
+            report.requestedSpeed >= FlightSpeedLimits.Minimum && report.requestedSpeed <= FlightSpeedLimits.Maximum &&
+            report.requestedSpeed == report.actualRouteSpeed && report.p95FrameMs <= 16.7f && report.p99FrameMs <= 25f &&
+            float.IsFinite(report.p95StreamingMs) && report.p95StreamingMs >= 0f && report.p95StreamingMs <= 2f &&
+            report.framesOver50Ms == 0 && report.streamingFailures == 0 && report.trackingFraction >= .9f &&
+            report.maximumProcessWorkingSetBytes <= 10L * 1024 * 1024 * 1024 && report.graphicsMemoryCounterAvailable &&
+            report.maximumGpuBytes <= 6L * 1024 * 1024 * 1024;
+
         public static float Percentile(List<float> values, float percentile)
         {
             if (values.Count == 0) return 0;
@@ -56,14 +67,15 @@ namespace Manhattan.Viewer
         private readonly List<float> frames = new List<float>(), streaming = new List<float>(), collision = new List<float>();
         private StreamWriter csvWriter;
         private ProfilerRecorder graphicsMemory;
-        private float startedAt, warmupUntil, duration, benchmarkSpeed;
+        private double startedAt, warmupUntil;
+        private float duration, benchmarkSpeed, requestedSpeed;
         private string outputDirectory;
         private string benchmarkRegion;
         private bool quitWhenDone, recording;
         private int trackedFrames;
         private long maxCpu, maxGpu, maxTiles, maxProcess;
         private long processWorkingSet;
-        private float nextMemorySample;
+        private double nextMemorySample;
         private Vector3[] points;
         private int routeCycles, measuredCycleEvents;
         private float routeDuration, measuredStartRouteTime = -1f;
@@ -86,7 +98,8 @@ namespace Manhattan.Viewer
         {
             if (recording) return;
             previousInput = flight.InputSource;
-            benchmarkSpeed = Mathf.Clamp(speed, 1f, 50f); duration = Mathf.Clamp(seconds, 1f, 7200f);
+            if (!float.IsFinite(speed)) throw new ArgumentOutOfRangeException(nameof(speed), "Benchmark speed must be finite.");
+            requestedSpeed = speed; benchmarkSpeed = FlightSpeedLimits.Clamp(speed); duration = Mathf.Clamp(seconds, 1f, 7200f);
             outputDirectory = string.IsNullOrEmpty(directory) ? Path.Combine(Application.persistentDataPath, "Benchmarks", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")) : Path.GetFullPath(directory);
             // Retained CSV strings otherwise create an artificial rising memory
             // curve during the very test intended to detect residency leaks.
@@ -108,7 +121,7 @@ namespace Manhattan.Viewer
             routeDuration = route.Duration; routeCycles = measuredCycleEvents = 0; measuredStartRouteTime = -1f;
             streamer.CollisionProxiesEnabled = collisionProxies;
             trackedFrames = 0; maxCpu = maxGpu = maxTiles = maxProcess = processWorkingSet = 0; nextMemorySample = 0f;
-            startedAt = Time.unscaledTime; warmupUntil = startedAt + 15f; quitWhenDone = quit; recording = true;
+            startedAt = Time.unscaledTimeAsDouble; warmupUntil = startedAt + 15d; quitWhenDone = quit; recording = true;
         }
 
         public static Vector3[] DefaultRoute(Vector3 initial)
@@ -151,7 +164,7 @@ namespace Manhattan.Viewer
                 if (measuredStartRouteTime >= 0f) measuredCycleEvents++;
                 route = new BenchmarkRouteInput(points, benchmarkSpeed); flight.InputSource = route;
             }
-            if (Time.unscaledTime < warmupUntil) return;
+            if (Time.unscaledTimeAsDouble < warmupUntil) return;
             if (measuredStartRouteTime < 0f) measuredStartRouteTime = routeCycles * routeDuration + route.Elapsed;
             float collisionMs = 0f;
             if (streamer.CollisionProxiesEnabled)
@@ -169,17 +182,17 @@ namespace Manhattan.Viewer
             }
             frames.Add(CurrentFrameMs); streaming.Add(streamer.FrameWorkMilliseconds); collision.Add(collisionMs);
             long cpu = CpuMemoryBytes, gpu = GpuMemoryBytes;
-            if (Time.unscaledTime >= nextMemorySample)
+            if (Time.unscaledTimeAsDouble >= nextMemorySample)
             {
-                nextMemorySample = Time.unscaledTime + 1f;
+                nextMemorySample = Time.unscaledTimeAsDouble + 1d;
                 ProcessMemoryTelemetry.TryWorkingSetBytes(out processWorkingSet);
             }
             maxCpu = Math.Max(maxCpu, cpu); maxGpu = Math.Max(maxGpu, gpu); maxTiles = Math.Max(maxTiles, streamer.EstimatedResidentBytes);
             maxProcess = Math.Max(maxProcess, processWorkingSet);
             if (display.IsTracking) trackedFrames++;
             Vector3 cityPosition = flight.CityPosition;
-            try { csvWriter.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F3},{1:F4},{2:F4},{3:F4},{4},{5},{6},{7},{8},{9},{10},{11:F4},{12:F4},{13:F4},{14},{15:F4}",
-                Time.unscaledTime - warmupUntil, CurrentFrameMs, streamer.FrameWorkMilliseconds, collisionMs,
+            try { csvWriter.WriteLine(string.Format(CultureInfo.InvariantCulture, "{0:F6},{1:F4},{2:F4},{3:F4},{4},{5},{6},{7},{8},{9},{10},{11:F6},{12:F6},{13:F6},{14},{15:F6}",
+                BenchmarkStatistics.MeasuredSeconds(Time.unscaledTimeAsDouble, warmupUntil), CurrentFrameMs, streamer.FrameWorkMilliseconds, collisionMs,
                 cpu, gpu, streamer.EstimatedResidentBytes, streamer.LoadedTiles, streamer.PendingLoads, display.IsTracking ? 1 : 0, processWorkingSet,
                 cityPosition.x, cityPosition.y, cityPosition.z, routeCycles, route.Elapsed)); }
             catch (IOException error)
@@ -188,7 +201,7 @@ namespace Manhattan.Viewer
                 Debug.LogError("Benchmark frame recording failed: " + error.Message);
                 if (quitWhenDone) Application.Quit(1); return;
             }
-            if (Time.unscaledTime - warmupUntil >= duration) Finish();
+            if (BenchmarkStatistics.MeasuredSeconds(Time.unscaledTimeAsDouble, warmupUntil) >= duration) Finish();
         }
 
         public BenchmarkReport Finish()
@@ -224,7 +237,8 @@ namespace Manhattan.Viewer
                 viewerRevision = identity?.viewerRevision, technologyRevision = identity?.technologyRevision,
                 sourceManifestSha256 = identity?.sourceManifestSha256, buildUtc = identity?.buildUtc,
                 dirtyWorkingTree = identity != null && identity.dirtyWorkingTree, buildIdentityAvailable = identity != null,
-                speed = benchmarkSpeed, durationSeconds = Mathf.Max(0, Time.unscaledTime - warmupUntil),
+                speed = route.Speed, requestedSpeed = requestedSpeed, actualRouteSpeed = route.Speed,
+                durationSeconds = (float)BenchmarkStatistics.MeasuredSeconds(Time.unscaledTimeAsDouble, warmupUntil),
                 p95FrameMs = BenchmarkStatistics.Percentile(frames, .95f), p99FrameMs = BenchmarkStatistics.Percentile(frames, .99f),
                 maximumFrameMs = BenchmarkStatistics.Percentile(frames, 1f), p95StreamingMs = BenchmarkStatistics.Percentile(streaming, .95f),
                 p95CollisionMs = BenchmarkStatistics.Percentile(collision, .95f),
@@ -236,9 +250,7 @@ namespace Manhattan.Viewer
                 limitation = "GPU counter is Unity graphics allocations, not total dedicated VRAM. CPU and process working-set counters are reported separately. Frame timings include vsync. Human head movements and visual artifacts require visual review."
             };
             foreach (float frame in frames) if (frame >= 50) report.framesOver50Ms++;
-            report.performanceTargetPassed = report.frameCount > 0 && report.p95FrameMs <= 16.7f && report.p99FrameMs <= 25f &&
-                report.framesOver50Ms == 0 && report.streamingFailures == 0 && report.trackingFraction >= .9f &&
-                maxProcess <= 10L * 1024 * 1024 * 1024 && report.graphicsMemoryCounterAvailable && maxGpu <= 6L * 1024 * 1024 * 1024;
+            report.performanceTargetPassed = BenchmarkStatistics.RuntimeTargetsPassed(report);
             Directory.CreateDirectory(outputDirectory);
             LastReportPath = Path.Combine(outputDirectory, "benchmark.json");
             File.WriteAllText(LastReportPath, JsonUtility.ToJson(report, true));

@@ -59,7 +59,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 | Esc / Settings | 포인터 해제·오른쪽 설정창 |
 | Alt+F4 | 게임 종료 |
 
-기본 속도는 10m/s이며 `Movement speed (m/s)`에서 1~50m/s로 바꿉니다. `Tracking`, `Window`, `Surface`는 각각 머리 오프셋 적용, 얇은 입체 창틀, 재질 표면 디테일을 제어합니다. Tracking OFF는 현재 머리 오프셋을 유지하면서 WASD 이동을 계속합니다. 가까운 창틀·창문·건물 모서리를 보며 천천히 좌우·상하·앞뒤로 머리를 움직여 투영을 확인합니다.
+기본 속도는 10m/s이며 `Movement speed (m/s)`에서 1~100m/s로 바꿉니다. `Tracking`, `Window`, `Surface`는 각각 머리 오프셋 적용, 얇은 입체 창틀, 재질 표면 디테일을 제어합니다. Tracking OFF는 현재 머리 오프셋을 유지하면서 WASD 이동을 계속합니다. 가까운 창틀·창문·건물 모서리를 보며 천천히 좌우·상하·앞뒤로 머리를 움직여 투영을 확인합니다.
 
 웹캠이 열리지 않으면 다른 카메라 앱을 닫고 Windows의 카메라 접근 권한과 `-Camera` 번호를 확인합니다. `Settings`의 `Show diagnostics`는 추적 상태·결과 지연·프레임 시간·타일 로딩 상태를 표시합니다. 런처 실행 로그는 실행 파일 옆 `Player.log`, `tracker-output.log`, `tracker-error.log`에 생성됩니다. 직접 실행한 플레이어의 기본 로그는 위 개인 저장 위치의 `Player.log`입니다.
 

@@ -14,6 +14,32 @@ SCRIPT = ROOT / "tools/benchmark.ps1"
 
 @unittest.skipUnless(sys.platform == "win32" and SHELL, "Windows PowerShell 5.1 collector lifetime tests")
 class BenchmarkCollectorTests(unittest.TestCase):
+    def test_speed_binding_accepts_100_and_rejects_unsupported_requests_without_launch(self):
+        result = self.powershell(r"""
+            $bind=[ScriptBlock]::Create($ast.ParamBlock.Extent.Text + '; $Speed')
+            $accepted=@(10,50,100 | ForEach-Object { & $bind -Speed $_ })
+            $rejected=$false
+            try { & $bind -Speed 101 | Out-Null } catch { $rejected=$true }
+            @{accepted=$accepted;rejected=$rejected} | ConvertTo-Json -Compress
+        """)
+        self.assertEqual([10, 50, 100], result["accepted"])
+        self.assertTrue(result["rejected"])
+
+    def test_suite_dry_run_contains_fifteen_regions_and_five_100_cases_without_launch(self):
+        suite = str(ROOT / "tools/benchmark_suite.ps1").replace("'", "''")
+        result = self.powershell(r"""
+            function Start-Process { throw 'Dry run must never launch a process' }
+            $all=(& 'SUITE_PATH' -DryRun -NoTracker -WarningAction SilentlyContinue 6>&1 | Out-String -Width 200)
+            $fast=(& 'SUITE_PATH' -DryRun -NoTracker -CaseFilter '*-100' -WarningAction SilentlyContinue 6>&1 | Out-String -Width 200)
+            @{all=$all;fast=$fast} | ConvertTo-Json -Compress
+        """.replace("SUITE_PATH", suite))
+        self.assertIn("cases: 17", result["all"])
+        self.assertIn("02:19:40", result["all"])
+        self.assertIn("cases: 5", result["fast"])
+        for region in ("Midtown", "Downtown", "Park", "Uptown", "Air"):
+            self.assertIn(f"{region}-100", result["fast"])
+        self.assertNotIn("Midtown-50-proxies", result["fast"])
+
     def powershell(self, code):
         # Load only the cleanup function; dot-sourcing benchmark.ps1 would launch the game.
         script_path = str(SCRIPT).replace("'", "''")
