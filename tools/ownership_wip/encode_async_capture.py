@@ -10,7 +10,7 @@ for i,s in enumerate(m):
     assert (p/s['file']).exists();lines.extend(["file '"+s['file']+"'",'option framerate 1000'])
     if i+1<len(m):lines.append(f'duration {times[i+1]-times[i]:.9f}')
 (p/'frames.ffconcat').write_text('\n'.join(lines)+'\n')
-ff=imageio_ffmpeg.get_ffmpeg_exe();movie=p/'fixed-rooftop-motion.mp4';assert not movie.exists();args=[ff,'-hide_banner','-f','concat','-safe','0','-i',str(p/'frames.ffconcat')]
+ff=imageio_ffmpeg.get_ffmpeg_exe();movie=p/'cohort-cost-rooftop-roundtrip.mp4';assert not movie.exists();args=[ff,'-hide_banner','-f','concat','-safe','0','-i',str(p/'frames.ffconcat')]
 if vf:args+=['-vf',vf]
 args+=['-fps_mode','vfr','-c:v','libx264','-preset','veryfast','-crf','18','-pix_fmt','yuv420p','-video_track_timescale','1000000','-threads','4','-movflags','+faststart',str(movie)]
 r=subprocess.run(args,capture_output=True,text=True);(p/'encode.log').write_text(r.stderr);assert r.returncode==0

@@ -1,3 +1,36 @@
+# Latest scoped streaming work, 2026-10-10
+
+This followup builds on `633c6fc024f34ced9c1c102160bcbc90f111caa9`, which fixed the confirmed same-camera blank facade/roof regression. Its push CI run38065434465 and PR CI run38065438159 both completed successfully. Those jobs are portable source/repository checks: Python81ran with18platform skips, plus5GPU-parser and3environment-parser assertions; they do not run Unity. Main and PR #1 remain unchanged. Draft PR #2 remains WIP.
+
+## Short cost isolation and minimum reduction
+
+A separate optional-instrumentation Player used15s warmup and30s Midtown100m/s measurement, noTracker, no capture,1835measured frames. Primary nested phase totals are diagnostic, not a new acceptance gate. Streaming1343.18ms total includes ownership plus post-publication visibility688.22ms(51.2%), evaluation180.55ms, request169.80ms, completed-load150.00ms, Near feedback127.42ms and release23.97ms. Inside those phases Core coverage preparation106.40ms and atomic Core revalidation57.92ms are distinguished; Instantiate itself is19.12ms. Do not add inner phases again. This supports inspecting repeated CPU validation/mask work before changing assets or GPU effects.
+
+Only redundant work is reduced: reuse shared-material contract reads within a single no-yield Core coverage check, clearing the cache before each Core and on every Tick exit; skip exact-owner ordinal writes when a complete validated cohort will immediately overwrite all eligible hull bits. Partial ownership still uses the original exact correspondence. The fresh atomic publication cache and all root/mesh/material/cohort rechecks remain. No budget/threshold reduction, visibility radius change, material override, geometry regeneration, new model, engine/package change, webcam launch or20-minute requirement is introduced.
+
+## Fixed visual scope and exact source
+
+Current SkylineGeometryOwnership.cs SHA256 `cdadfb8646903798e90cc5d5eef60458383f1464f63bf4fd36cbb3b5b7d7c53c`.
+Current normal diagnostic Player runtime assembly SHA256 `71203dd87f96acc75c60eea7589c435b45f9232dfad324d8031626c3a68b5d73`.
+Current continuous roundtrip MP4 SHA256 `4ee00e3cb30cbce64c8ce4a7fdf29005d32c789c3c2fe543351c47b74399ddcd`.
+Same street and roof poses preserve the restored windowed facade/roof surfaces. Mean absolute RGB difference against public C8 is0.2382/255 street and0.4519/255 roof; against fixed633c6fc it is0.3168 and0.3870. TAA/timing prevents bit-identical images. The16s east400m/back400m roof/LOD route used481actual backbuffer frames,29.9707fps,1920x1200,TAA/SurfaceON,noTracker,normal streaming/origin shifts,pending<=2,failures0,readback/skip0. Variable timestamps are retained with maximum0.669ms encoding deviation; no interpolation, trimming or accelerated playback. The free-flight route passes close to/through existing building geometry with collision proxies disabled. Original facade occlusion restoration is distinguished from global perceptual flicker acceptance, which remains pending. Private media/logs are excluded from Git.
+
+## Current checks and limitations
+
+At the initial optimization source69505f06, full local PlayMode110/110 passed. After adding only cache cleanup on every Tick exit, current sourcecdadfb86 focused Skyline30/30 passed. These are overlapping scopes; do not claim140 unique tests or a full110-case rerun at the final cleanup SHA. The previous fixed633 source's full105 and focused30 union has110unique cases, with25overlap. Local results and source hashes remain explicitly scoped; no new remote CI result is assumed before this followup's checks finish.
+
+Current captureOFF normal Windowed1920x1200 Midtown100m/s noTracker TAA/vSync1,target60,15s warmup90s measurement: all5372measured rows, nearest-rank engine frameP95=16.6832ms,P99=16.6848ms,max=42.9503ms,>=50ms=0; streamingP95=2.3883ms,P99=3.2657ms,max=7.9414ms. Original streaming2ms gate still fails. GPU sampled P955.2685ms; CPU main P954.3363ms. CPU FrameTiming P99=24.9814ms differs from engine delta-time P99 and includes waits/asynchronous sampling; do not interpret the lower engine percentile as a controlled improvement or actual absence of presentation hiccups. No statistical paired improvement claim is made. All-region/fullscreen, real valid webcam observations, long stability and perceptual acceptance remain pending;20minutes is not a required new gate.
+
+## Branch and running
+
+Use branch `goat/ownership-wip-20261010` / draft PR #2. The default main build is not this source. Preserve existing user checkouts; use a separate owned checkout if reproducing the branch. Reuse the current hash-verified city/catalog/sidecar/bundles rather than regenerating assets. The sidecar schema/rule and sourceVersion manhattan-2026-10-10-v2 are unchanged.
+
+For an existing built Player, use the repository's public launcher: `tools/run.ps1 -NoTracker -PlayerPath <this-build-executable> -CalibrationDirectory <separate-disposable-directory> -PlayerArguments "-screen-fullscreen 0 -screen-width 1920 -screen-height 1200"` in PowerShell7. Pass authorized bundles via MANHATTAN_CITY_BUNDLES if using a diagnostic build. NoTracker/synthetic calibration is a diagnostic mode, not webcam validation. Do not overwrite personal calibration. Optional AsyncPlayerCapture.cs attaches only for MANHATTAN_ASYNC_CAPTURE; unset it and MANHATTAN_PLAYER_TELEMETRY/MANHATTAN_STAGE_COSTS/MANHATTAN_BINDING_PROBE for manual interaction. Capture helper is source-only outside Assets in this repository. Media cadence is not product FPS.
+
+Historical fixed633c6fc evidence follows; its old hashes/measurements are not the current optimization hashes.
+
+---
+
 # WIP ownership branch: complete-cohort visual fix
 
 This followup builds on shared WIP `3e8d038be1d21b0251da84704c1299d9bf1ba316`, based on public `c8f3904b17ec1cd4d3471bd59e198ce10d429957`. Main and PR #1 are unchanged. Draft PR #2 remains unfinished; no merge or release is requested.

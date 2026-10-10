@@ -9,7 +9,8 @@ namespace Manhattan.Viewer
 {
     /// <summary>
     /// Legacy merged Skyline bundles need primitive ownership while only part of their Core
-    /// replacement is ready. Only coincident triangles are masked, on private mesh variants.
+    /// replacement is ready. Exact primitive masks handle partial replacement; a complete
+    /// validated catalog cohort retires the eligible legacy hull on private mesh variants.
     /// Prepare the next cohort incrementally; publish mesh pointers and Core activation together.
     /// Imported geometry/materials, fallback triangles with no demonstrated owner, and city metres
     /// are preserved. Visibility/removal may lag while work is prepared, but coverage never does.
@@ -85,6 +86,7 @@ namespace Manhattan.Viewer
         private readonly List<Entry> snapshot=new List<Entry>();
         private struct MaterialContract {public bool opaque, legacyFallback;}
         private readonly Dictionary<Material,MaterialContract> publicationMaterials=new Dictionary<Material,MaterialContract>();
+        private readonly Dictionary<Material,MaterialContract> preparationMaterials=new Dictionary<Material,MaterialContract>();
         private readonly Stopwatch timer=new Stopwatch();
         private IEnumerator work;
         private bool dirty, disposed;
@@ -184,7 +186,7 @@ namespace Manhattan.Viewer
                 }
             }
             }
-            finally {publicationMaterials.Clear();LastTickMilliseconds=timer.Elapsed.TotalMilliseconds;MaximumTickMilliseconds=Math.Max(MaximumTickMilliseconds,LastTickMilliseconds);}
+            finally {publicationMaterials.Clear();preparationMaterials.Clear();LastTickMilliseconds=timer.Elapsed.TotalMilliseconds;MaximumTickMilliseconds=Math.Max(MaximumTickMilliseconds,LastTickMilliseconds);}
         }
         private IEnumerator Reconcile()
         {
@@ -226,7 +228,9 @@ namespace Manhattan.Viewer
             var active=new HashSet<Entry>();
             foreach(var e in snapshot)if(!e.removed&&e.root!=null&&e.tile.layer==CityLayer.Core&&e.indexed&&e.desired)active.Add(e);
             var covers=new HashSet<Entry>();
-            foreach(var core in active){if(core.bound&&CoreCovers(core))covers.Add(core);yield return null;}
+            // Cache shared material reads only within one no-yield Core check. Clear before
+            // every Core and retain the separate fresh atomic-publication cache.
+            foreach(var core in active){preparationMaterials.Clear();if(core.bound&&CoreCovers(core,preparationMaterials))covers.Add(core);yield return null;}
             var complete=new HashSet<Entry>();
             foreach(var e in snapshot)if(!e.removed&&e.tile.layer==CityLayer.Skyline&&CompleteCohort(e,active,covers))complete.Add(e);
             foreach(var e in snapshot)if(!e.removed)foreach(var p in e.parts)Array.Clear(p.staged,0,p.staged.Length);
@@ -235,7 +239,10 @@ namespace Manhattan.Viewer
                 if(e.removed)continue;
                 foreach(var part in e.parts)
                 {
-                    foreach(var owner in part.ownership.owners)
+                    // A complete catalog cohort overwrites all eligible hull bits below.
+                    // Exact owner ordinals add no coverage in that case; partial cohorts
+                    // still use every original primitive correspondence.
+                    if(!complete.Contains(e))foreach(var owner in part.ownership.owners)
                     {
                         Entry core=null;foreach(var candidate in active)if(candidate.tile.id==owner.coreId&&candidate.bound&&Array.IndexOf(candidate.tile.replaces,e.tile.id)>=0){core=candidate;break;}
                         if(core==null||!covers.Contains(core)||!SameOriginSpace(e,core))continue;
@@ -466,7 +473,7 @@ namespace Manhattan.Viewer
         {
             if(disposed)return;disposed=true;(work as IDisposable)?.Dispose();work=null;
             foreach(var e in entries.Values)foreach(var p in e.parts)ReleasePart(p);
-            entries.Clear();bindings.Clear();groups.Clear();replacementCohorts.Clear();snapshot.Clear();publicationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
+            entries.Clear();bindings.Clear();groups.Clear();replacementCohorts.Clear();snapshot.Clear();publicationMaterials.Clear();preparationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
         }
     }
 }
