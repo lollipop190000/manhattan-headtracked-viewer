@@ -273,5 +273,54 @@ public sealed class SkylineOwnershipRegressionTests
         UnityEngine.TestTools.LogAssert.Expect(LogType.Warning,new System.Text.RegularExpressions.Regex("Fallback source changed during preparation"));
         Drain();Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(ownership.RuntimeMeshCount,Is.Zero);
     }
+    private CityTileRecord RelationPair(bool complete,out GameObject b,out Mesh originalB)
+    {
+        sky=Root("relation A",new[]{0,1,2,3,4,5});b=Root("relation B",new[]{0,1,2,3,4,5});core=Root("relation provider",new[]{0,1,2});
+        original=sky.GetComponent<MeshFilter>().sharedMesh;originalB=b.GetComponent<MeshFilter>().sharedMesh;
+        var aTile=new CityTileRecord{id="A",layer=CityLayer.Skyline,requiredReplacementCount=complete?1:2};
+        var bTile=new CityTileRecord{id="B",layer=CityLayer.Skyline,requiredReplacementCount=complete?1:2};
+        var cTile=new CityTileRecord{id="provider",layer=CityLayer.Core,replaces=new[]{"A","B"}};
+        var tiles=new[]{aTile,bTile,cTile};var roots=new[]{sky,b,core};
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=tiles;
+        ownership.Configure(OwnershipTestData.Compile(tiles,roots),"fixture",_=>"fixture-content",catalog);
+        cTile.replaces=new[]{"A"};ownership.Register(aTile,sky);ownership.Register(bTile,b);ownership.Register(cTile,core);return cTile;
+    }
+    [TestCase(false)][TestCase(true)]
+    public void RelationAtoBtoAThenDepartureRestoresEveryPreviouslyPublishedGroup(bool complete)
+    {
+        var tile=RelationPair(complete,out var b,out var originalB);ownership.SetDesired(core,true);Drain();
+        Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?2:1));
+        tile.replaces=new[]{"B"};ownership.Invalidate(core);Drain();
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?2:1));
+        tile.replaces=new[]{"A"};ownership.Invalidate(core);Drain();
+        Assert.That(b.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(originalB));Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?2:1));
+        ownership.SetDesired(core,false);Drain();Assert.That(ownership.CanRelease(core),Is.True);ownership.Unregister(core);Drain();
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(b.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(originalB));Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(ownership.RuntimeMeshCount,Is.Zero);
+    }
+    [TestCase(false)][TestCase(true)]
+    public void RelationHistorySurvivesRepeatedRegistrationAndVisibilityCancellation(bool cancel)
+    {
+        var tile=RelationPair(false,out var b,out var originalB);
+        for(int cycle=0;cycle<3;cycle++)
+        {
+            if(cycle>0)Assert.That(ownership.Register(tile,core),Is.True);
+            ownership.SetDesired(core,true);Drain();tile.replaces=new[]{"B"};ownership.Invalidate(core);Drain();
+            tile.replaces=new[]{"A"};ownership.Invalidate(core);Drain();
+            Assert.That(b.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(originalB));
+            ownership.SetDesired(core,false);
+            if(cancel){ownership.Tick(.00001f);ownership.SetDesired(core,true);ownership.SetDesired(core,false);}
+            Drain();ownership.Unregister(core);Drain();
+            Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(ownership.RuntimeMeshCount,Is.Zero);Assert.That(ownership.StagingArrayBytes,Is.Zero);
+            Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(b.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(originalB));
+        }
+    }
+    [Test]public void StreamerPublicNotificationRestoresIdleFallbackAfterMaterialChange()
+    {
+        ownership.Dispose();var host=new GameObject("notification API");objects.Add(host);var streamer=host.AddComponent<CityStreamer>();streamer.enabled=false;
+        ownership=(SkylineGeometryOwnership)typeof(CityStreamer).GetField("ownership",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(streamer);
+        CreatePair();ownership.SetDesired(core,true);Drain();
+        var changed=new Material(material);objects.Add(changed);changed.SetFloat("_AlphaClip",1);core.GetComponent<MeshRenderer>().sharedMaterial=changed;
+        streamer.InvalidateOwnership(core);Drain();Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.Zero);
+    }
     [TearDown]public void Cleanup(){ownership?.Dispose();foreach(var o in objects)if(o!=null)Object.Destroy(o);objects.Clear();}
 }

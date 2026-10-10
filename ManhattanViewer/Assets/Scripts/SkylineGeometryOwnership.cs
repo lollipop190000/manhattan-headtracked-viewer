@@ -160,6 +160,10 @@ namespace Manhattan.Viewer
                 foreach(string id in e.dependencies)InvalidateGroup(id);
                 if(e.tile.replaces!=null)foreach(string id in e.tile.replaces)
                     if(Array.IndexOf(e.dependencies,id)<0)InvalidateGroup(id);
+                // Retain the immediately previous relation, not only registration's relation.
+                // A -> B -> A must invalidate B on the return, while queued versions preserve
+                // any captured cohort. Clone because callers may mutate the supplied array.
+                e.dependencies=e.tile.replaces==null?Array.Empty<string>():(string[])e.tile.replaces.Clone();
             }
         }
         public bool CanRelease(GameObject root)

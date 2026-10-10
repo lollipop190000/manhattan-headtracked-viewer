@@ -85,6 +85,10 @@ namespace Manhattan.Viewer
         private readonly Dictionary<string, int> replacementCounts = new Dictionary<string, int>();
         private readonly Stopwatch workTimer = new Stopwatch();
         private readonly SkylineGeometryOwnership ownership = new SkylineGeometryOwnership();
+        /// <summary>Notify after a resident tile root's relation, renderer/material or mesh pointer changes.
+        /// Pass null to invalidate every group. Shared mesh vertex/index contents remain immutable.
+        /// Call before the next streaming tick; this does not grant support for mutable shared geometry.</summary>
+        public void InvalidateOwnership(GameObject tileRoot=null)=>ownership.Invalidate(tileRoot);
         public bool OwnershipWorkPending => ownership.Busy;
         public long MaskedSkylineTriangles => ownership.MaskedTriangles;
         public int OwnershipRuntimeMeshCount => ownership.RuntimeMeshCount;
@@ -367,7 +371,7 @@ namespace Manhattan.Viewer
 
         private void OnRebased(Vector3 shift)
         {
-            ownership.Invalidate();
+            InvalidateOwnership();
             foreach (var r in residents) if (r.instance != null) r.instance.transform.position = r.tile.cityOrigin - origin.Offset;
         }
         private static void SetLayer(Transform t, int layer)
@@ -416,7 +420,7 @@ namespace Manhattan.Viewer
             }
             r.hasHandle = r.loading = r.releaseQueued = false; r.renderers = null;
         }
-        private void OnSurfaceDetailsChanged()=>ownership.Invalidate();
+        private void OnSurfaceDetailsChanged()=>InvalidateOwnership();
         private void OnDestroy()
         {
             if(surfaces!=null)surfaces.DetailsChanged-=OnSurfaceDetailsChanged;
