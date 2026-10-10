@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -44,6 +45,66 @@ namespace Manhattan.Viewer
         private readonly Stopwatch workTimer = new Stopwatch();
         private float nextEvaluation;
         private bool initialized;
+
+        private readonly struct EvaluationRadii
+        {
+            public readonly float visible, visibleExit, load, release, loadRejectSquared, releaseRejectSquared;
+            public EvaluationRadii(CityLayer layer)
+            {
+                visible = VisibleRadius(layer); visibleExit = VisibleExitRadius(layer);
+                load = LoadRadius(layer); release = ReleaseRadius(layer);
+                // Keep the old rounded sqrt comparison near every finite boundary. The 1cm
+                // rejection pad exceeds float rounding at the largest policy radius (1200m).
+                // Infinity stays Infinity, so Skyline always uses the original distance path.
+                loadRejectSquared = (load + .01f) * (load + .01f);
+                releaseRejectSquared = (release + .01f) * (release + .01f);
+            }
+        }
+        private static readonly EvaluationRadii[] evaluationRadii =
+        {
+            new EvaluationRadii(CityLayer.Skyline), new EvaluationRadii(CityLayer.Core),
+            new EvaluationRadii(CityLayer.Ground), new EvaluationRadii(CityLayer.Near),
+            new EvaluationRadii(CityLayer.Vegetation), new EvaluationRadii(CityLayer.Collision)
+        };
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float DistanceSquaredToTile(Vector3 minimum, Vector3 maximum, Vector3 position)
+        {
+            float x = position.x < minimum.x ? minimum.x - position.x : position.x > maximum.x ? position.x - maximum.x : 0f;
+            float y = position.y < minimum.y ? minimum.y - position.y : position.y > maximum.y ? position.y - maximum.y : 0f;
+            float z = position.z < minimum.z ? minimum.z - position.z : position.z > maximum.z ? position.z - maximum.z : 0f;
+            return x * x + y * y + z * z;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void EvaluateTile(Residency r, Vector3 position, Vector3 predicted, bool collisionEnabled)
+        {
+            CityLayer layer = r.tile.layer;
+            ref readonly EvaluationRadii radii = ref evaluationRadii[(uint)layer < evaluationRadii.Length ? (int)layer : 1];
+            // Read live bounds once per evaluation; do not cache mutable catalog geometry/layers.
+            Bounds bounds = r.tile.cityBounds;
+            Vector3 minimum = bounds.min, maximum = bounds.max;
+            float currentSquared = DistanceSquaredToTile(minimum, maximum, position);
+            float predictedSquared = DistanceSquaredToTile(minimum, maximum, predicted);
+            float rejectSquared = r.hasHandle ? radii.releaseRejectSquared : radii.loadRejectSquared;
+            if (currentSquared > rejectSquared && predictedSquared > rejectSquared)
+            {
+                // Both distances are beyond load/release and every visible exit radius.
+                // Unrequested distances/priorities are unused; resident Near feedback recomputes
+                // its distance each frame. NaN comparisons fall through to the original path.
+                r.distance = r.priority = float.PositiveInfinity;
+                r.wanted = r.visible = false;
+                return;
+            }
+            r.distance = Mathf.Sqrt(currentSquared);
+            float predictedDistance = Mathf.Sqrt(predictedSquared);
+            float nearest = Mathf.Min(r.distance, predictedDistance);
+            bool allowed = layer != CityLayer.Collision || collisionEnabled;
+            r.wanted = allowed && nearest <= (r.hasHandle ? radii.release : radii.load);
+            r.visible = allowed && r.distance <= (r.visible ? radii.visibleExit : radii.visible);
+            r.priority = layer == CityLayer.Skyline ? -100000f : nearest;
+            if (layer == CityLayer.Core || layer == CityLayer.Ground) r.priority -= 2000f;
+        }
 
         public void Initialize()
         {
@@ -166,14 +227,7 @@ namespace Manhattan.Viewer
             requests.Clear();
             foreach (var r in all)
             {
-                r.distance = DistanceToTile(r.tile.cityBounds, position);
-                float predictedDistance = DistanceToTile(r.tile.cityBounds, predicted);
-                bool allowed = r.tile.layer != CityLayer.Collision || CollisionProxiesEnabled;
-                float threshold = r.hasHandle ? ReleaseRadius(r.tile.layer) : LoadRadius(r.tile.layer);
-                r.wanted = allowed && Mathf.Min(r.distance, predictedDistance) <= threshold;
-                r.visible = allowed && IsVisible(r.tile.layer, r.distance, r.visible);
-                r.priority = r.tile.layer == CityLayer.Skyline ? -100000f : Mathf.Min(r.distance, predictedDistance);
-                if (r.tile.layer == CityLayer.Core || r.tile.layer == CityLayer.Ground) r.priority -= 2000f;
+                EvaluateTile(r, position, predicted, CollisionProxiesEnabled);
                 if (!r.wanted && r.hasHandle && !r.loading) QueueRelease(r);
                 // A completed load can become useful again before its queued release runs.
                 // Put it back through the existing one-instance-per-frame completion path.
