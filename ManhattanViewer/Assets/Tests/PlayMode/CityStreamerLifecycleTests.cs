@@ -25,6 +25,8 @@ public sealed class CityStreamerLifecycleTests
         public int Provides, Releases;
         public bool DeferCompletions;
         public bool RenderAssets, FailLoads;
+        public Func<string,GameObject> AssetFactory;
+        public readonly HashSet<string> FailAddresses = new HashSet<string>();
         public int Pending => pending.Count;
         public readonly List<int> ReleaseFrames = new List<int>();
         public readonly Dictionary<string, int> ReleasesPerAddress = new Dictionary<string, int>();
@@ -38,8 +40,8 @@ public sealed class CityStreamerLifecycleTests
         }
         private void Complete(ProvideHandle handle)
         {
-            if (FailLoads) { handle.Complete<GameObject>(null, false, new Exception("Synthetic tile failure")); return; }
-            var asset = RenderAssets ? GameObject.CreatePrimitive(PrimitiveType.Cube) : new GameObject();
+            if (FailLoads || FailAddresses.Contains(handle.Location.PrimaryKey)) { handle.Complete<GameObject>(null, false, new Exception("Synthetic tile failure")); return; }
+            var asset = AssetFactory != null ? AssetFactory(handle.Location.PrimaryKey) : RenderAssets ? GameObject.CreatePrimitive(PrimitiveType.Cube) : new GameObject();
             asset.name = "provided " + handle.Location.PrimaryKey;
             asset.SetActive(false); assets.Add(asset);
             handle.Complete(asset, true, null);
@@ -69,6 +71,7 @@ public sealed class CityStreamerLifecycleTests
     private CityCatalog catalog;
     private CityStreamer streamer;
     private FreeFlightController flight;
+    private readonly List<Object> ownershipAssets = new List<Object>();
     private static readonly MethodInfo UpdateMethod = typeof(CityStreamer).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic);
     private static readonly MethodInfo EvaluateMethod = typeof(CityStreamer).GetMethod("Evaluate", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -85,7 +88,7 @@ public sealed class CityStreamerLifecycleTests
         Addressables.AddResourceLocator(locator);
     }
 
-    private void CreateStreamer(int count, CityLayer layer = CityLayer.Core)
+    private void CreateStreamer(int count, CityLayer layer = CityLayer.Core, bool withOrigin = false)
     {
         observer = new GameObject("streaming lifecycle observer");
         flight = observer.AddComponent<FreeFlightController>(); flight.enabled = false;
@@ -105,6 +108,11 @@ public sealed class CityStreamerLifecycleTests
         host = new GameObject("streaming lifecycle host");
         streamer = host.AddComponent<CityStreamer>(); streamer.enabled = false;
         streamer.catalog = catalog; streamer.flight = flight; streamer.workBudgetMilliseconds = 1000;
+        if (withOrigin)
+        {
+            var floating = host.AddComponent<FloatingOrigin>(); floating.observer = observer.transform;
+            streamer.origin = floating; flight.Origin = floating;
+        }
         streamer.Initialize();
     }
 
@@ -137,6 +145,105 @@ public sealed class CityStreamerLifecycleTests
         return block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty);
     }
     private void PreventCatalogEvaluation() => typeof(CityStreamer).GetField("nextEvaluation", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(streamer, float.PositiveInfinity);
+
+    private void CreateGeometryStreamer(bool withOrigin = false)
+    {
+        CreateStreamer(3, CityLayer.Core, withOrigin);
+        catalog.tiles[0].layer=CityLayer.Skyline; catalog.tiles[0].requiredReplacementCount=2;
+        for(int i=0;i<3;i++)
+        {
+            catalog.tiles[i].cityOrigin=Vector3.zero;
+            catalog.tiles[i].cityBounds=new Bounds(i==0?Vector3.zero:Vector3.right*10000, Vector3.one);
+            if(i>0)catalog.tiles[i].replaces=new[]{catalog.tiles[0].id};
+        }
+        var material=new Material(Shader.Find("Universal Render Pipeline/Lit"));ownershipAssets.Add(material);
+        material.name="Skyline";
+        material.SetFloat("_Surface",0);material.SetFloat("_AlphaClip",0);material.SetFloat("_ZWrite",1);material.SetFloat("_Cull",2);
+        provider.AssetFactory=address=>
+        {
+            int index=Array.FindIndex(catalog.tiles,t=>t.address==address);
+            var mesh=new Mesh {vertices=new[]{Vector3.zero,Vector3.right,Vector3.up,Vector3.right*10,Vector3.right*11,Vector3.right*10+Vector3.up},
+                triangles=index==0?new[]{0,1,2,3,4,5}:index==1?new[]{0,1,2}:new[]{3,4,5}};
+            ownershipAssets.Add(mesh);
+            var root=new GameObject("ownership fixture");root.AddComponent<MeshFilter>().sharedMesh=mesh;root.AddComponent<MeshRenderer>().sharedMaterial=material;
+            return root;
+        };
+        var fixtureRoots=Array.ConvertAll(catalog.tiles,t=>provider.AssetFactory(t.address));
+        var manager=(SkylineGeometryOwnership)typeof(CityStreamer).GetField("ownership",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(streamer);
+        OwnershipTestData.Configure(manager,catalog.tiles,fixtureRoots,catalog.sourceVersion);
+        foreach(var fixture in fixtureRoots)Object.Destroy(fixture);
+    }
+    private Transform OwnershipTile(int index)=>host.transform.Find(catalog.tiles[index].id);
+    private int SkylineIndexCount()=>OwnershipTile(0).GetComponent<MeshFilter>().sharedMesh.triangles.Length;
+    private IEnumerator WaitOwnershipIdle()
+    {
+        for(int i=0;i<120&&streamer.OwnershipWorkPending;i++){Tick();yield return null;}
+        Assert.That(streamer.OwnershipWorkPending,Is.False);
+    }
+
+    [UnityTest]
+    public IEnumerator DelayedCoreMasksOnlyItsOwnedGeometryAndFailedSecondCoreRetainsRemainingFallback()
+    {
+        CreateGeometryStreamer();yield return WaitLoaded(1);yield return WaitOwnershipIdle();
+        provider.DeferCompletions=true;catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);
+        MoveAndEvaluate(Vector3.zero);Tick();yield return null;
+        Assert.That(streamer.PendingLoads,Is.EqualTo(1));Assert.That(SkylineIndexCount(),Is.EqualTo(6));
+        provider.CompletePending();yield return WaitLoaded(2);yield return WaitOwnershipIdle();
+        Assert.That(OwnershipTile(1).gameObject.activeSelf,Is.True);Assert.That(OwnershipTile(0).gameObject.activeSelf,Is.True);
+        Assert.That(SkylineIndexCount(),Is.EqualTo(3));Assert.That(streamer.MaskedSkylineTriangles,Is.EqualTo(1));
+        provider.DeferCompletions=false;provider.FailAddresses.Add(catalog.tiles[2].address);catalog.tiles[2].cityBounds=new Bounds(Vector3.zero,Vector3.one);
+        LogAssert.Expect(LogType.Error,new System.Text.RegularExpressions.Regex("Synthetic tile failure"));
+        LogAssert.Expect(LogType.Warning,"City tile failed: "+catalog.tiles[2].id+". Keeping skyline fallback.");
+        MoveAndEvaluate(Vector3.zero);
+        for(int i=0;i<10&&streamer.Failures==0;i++){Tick();yield return null;}
+        Assert.That(streamer.Failures,Is.EqualTo(1));Assert.That(SkylineIndexCount(),Is.EqualTo(3));Assert.That(OwnershipTile(0).gameObject.activeSelf,Is.True);
+    }
+
+    [UnityTest]
+    public IEnumerator CanceledCoreCompletionRetainsFullFallbackAndReloadedCoreOwnsOnlyItsTriangle()
+    {
+        CreateGeometryStreamer();yield return WaitLoaded(1);yield return WaitOwnershipIdle();
+        provider.DeferCompletions=true;catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);
+        MoveAndEvaluate(Vector3.zero);Tick();yield return null;Assert.That(provider.Pending,Is.EqualTo(1));
+        catalog.tiles[1].cityBounds=new Bounds(Vector3.right*10000,Vector3.one);MoveAndEvaluate(Vector3.zero);provider.CompletePending();Tick();yield return null;
+        Assert.That(streamer.LoadedTiles,Is.EqualTo(1));Assert.That(SkylineIndexCount(),Is.EqualTo(6));Tick();yield return null;Assert.That(provider.Releases,Is.EqualTo(1));
+        provider.DeferCompletions=false;catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);MoveAndEvaluate(Vector3.zero);
+        yield return WaitLoaded(2);yield return WaitOwnershipIdle();Assert.That(SkylineIndexCount(),Is.EqualTo(3));Assert.That(streamer.MaskedSkylineTriangles,Is.EqualTo(1));
+    }
+
+    [UnityTest]
+    public IEnumerator GeometryOwnershipSurvivesOriginRebaseAndRestoresFallbackBeforeProviderRelease()
+    {
+        CreateGeometryStreamer(true);catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);
+        yield return WaitLoaded(2);yield return WaitOwnershipIdle();
+        flight.SetPose(new Vector3(600,0,20),Quaternion.identity);yield return null;
+        Assert.That(streamer.origin.Offset.sqrMagnitude,Is.GreaterThan(0));
+        Assert.That(OwnershipTile(0).position,Is.EqualTo(-streamer.origin.Offset));Assert.That(OwnershipTile(1).position,Is.EqualTo(-streamer.origin.Offset));
+        Assert.That(SkylineIndexCount(),Is.EqualTo(3));
+        catalog.tiles[1].cityBounds=new Bounds(Vector3.right*10000,Vector3.one);MoveAndEvaluate(Vector3.zero);streamer.workBudgetMilliseconds=0;Tick();yield return null;
+        Assert.That(OwnershipTile(1).gameObject.activeSelf,Is.True);Assert.That(provider.Releases,Is.Zero);Assert.That(SkylineIndexCount(),Is.EqualTo(3));
+        streamer.workBudgetMilliseconds=1000;Tick();yield return null;
+        Assert.That(OwnershipTile(1).gameObject.activeSelf,Is.False);Assert.That(SkylineIndexCount(),Is.EqualTo(6));Assert.That(provider.Releases,Is.Zero,"The fallback cohort must publish before the Core handle is released.");
+        Tick();yield return null;Assert.That(provider.Releases,Is.EqualTo(1));Assert.That(streamer.LoadedTiles,Is.EqualTo(1));
+    }
+
+    [UnityTest]
+    public IEnumerator ReplacementCountDoesNotHideUnownedSkylineFaces()
+    {
+        CreateGeometryStreamer();catalog.tiles[0].requiredReplacementCount=1;catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);
+        yield return WaitLoaded(2);yield return WaitOwnershipIdle();
+        Assert.That(OwnershipTile(1).gameObject.activeSelf,Is.True);Assert.That(OwnershipTile(0).gameObject.activeSelf,Is.True);
+        Assert.That(SkylineIndexCount(),Is.EqualTo(3),"One Core count cannot demonstrate ownership of the second fallback triangle.");
+        catalog.tiles[1].cityBounds=new Bounds(Vector3.right*10000,Vector3.one);MoveAndEvaluate(Vector3.zero);
+        for(int i=0;i<10&&streamer.LoadedTiles!=1;i++){Tick();yield return null;}
+        provider.AssetFactory=address=>
+        {
+            var root=new GameObject("nonmatching core");var mesh=new Mesh {vertices=new[]{Vector3.forward*5,Vector3.forward*5+Vector3.right,Vector3.forward*5+Vector3.up},triangles=new[]{0,1,2}};ownershipAssets.Add(mesh);
+            root.AddComponent<MeshFilter>().sharedMesh=mesh;root.AddComponent<MeshRenderer>().sharedMaterial=OwnershipTile(0).GetComponent<MeshRenderer>().sharedMaterial;return root;
+        };
+        catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);MoveAndEvaluate(Vector3.zero);yield return WaitLoaded(2);yield return WaitOwnershipIdle();
+        Assert.That(streamer.MaskedSkylineTriangles,Is.Zero);Assert.That(OwnershipTile(0).gameObject.activeSelf,Is.True);Assert.That(SkylineIndexCount(),Is.EqualTo(6));
+    }
 
     [UnityTest]
     public IEnumerator NearFadeFollowsFastMovementBetweenCatalogEvaluationsWithoutChangingBodyVisibility()
@@ -416,6 +523,7 @@ public sealed class CityStreamerLifecycleTests
             Addressables.ResourceManager.ResourceProviders.Remove(provider); provider.Cleanup();
         }
         yield return null;
+        foreach(var asset in ownershipAssets)if(asset!=null)Object.Destroy(asset);ownershipAssets.Clear();
         host = observer = null; streamer = null; flight = null; catalog = null; locator = null; provider = null;
     }
 }

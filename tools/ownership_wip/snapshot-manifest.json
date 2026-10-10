@@ -1,0 +1,147 @@
+{
+  "baseRevision": "c8f3904b17ec1cd4d3471bd59e198ce10d429957",
+  "unfinished": true,
+  "frozenSourceManifestSha256": "58083ba937f310d0ef6eb85d4dc836e30ed93a372e374262d836b690741f1ad7",
+  "sourceFiles": [
+    {
+      "path": "ManhattanViewer/Assets/Scripts/CityStreamer.cs",
+      "bytes": 22957,
+      "sha256": "7320f0be8deeec66f9269559d0fcd56cd31757e39d464aa6839361e988296a51",
+      "gitBlobSha": "c3de13217934d703ff9aa6f0c790b1dbfc073ccb"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/SkylineGeometryOwnership.cs",
+      "bytes": 31655,
+      "sha256": "b99f29aea6e80386bb2d3baf09ca22a043c6f16a491eddd59362f40b9ca27710",
+      "gitBlobSha": "44411989b0ba8441cceb7fb1f5f9509f66dbc312"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/SkylineOwnershipData.cs",
+      "bytes": 6066,
+      "sha256": "fe82294572b2ba5ddc8b7758c0ece18eaab90299fb8bacc94f4a4f9f5fa8f4f0",
+      "gitBlobSha": "665105bd96478c9dd7b7824e8397521caa718a5a"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/OfflineOwnershipGroupCompiler.cs",
+      "bytes": 21940,
+      "sha256": "eb7bc0bb47e04f33d37c93346c6b744d3d268c0d68b0074735705379d4f1e2de",
+      "gitBlobSha": "dc6bd14e9c409b4fbda56ce8eb2e60d211f44305"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Editor/BuildAutomation.cs",
+      "bytes": 19389,
+      "sha256": "1debdef7ed64bc549bd52cb7cde8d4e682bd562807da2eb47cf5e069fafab59c",
+      "gitBlobSha": "9db72cc2b83eb719e07b84d1db7c3e1a7e655b07"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Editor/SkylineOwnershipBake.cs",
+      "bytes": 9524,
+      "sha256": "e8a349d85f631de1cadbb5a3c022aa7190f14e985ab6a9a5e87b40d6b591c9c4",
+      "gitBlobSha": "f9c1a86e8ed3f91ed63242ed5003fbd63fffbd89"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/CityStreamerLifecycleTests.cs",
+      "bytes": 33290,
+      "sha256": "bb978cb073c24a6238e86892a49c85d3c4e841023060e23929586b59a0d7671a",
+      "gitBlobSha": "fd4b28fdc67ca5815effcb8824c4fde42046ad13"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/SkylineOwnershipRegressionTests.cs",
+      "bytes": 16387,
+      "sha256": "eb5a9493ba3162c14e876fba361de4bfcf9e04985f10c5ec73a7a5b3cee55197",
+      "gitBlobSha": "323cd20dd4e1b7cad8b205dd442c30771b1c914e"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/SkylineSidecarRegressionTests.cs",
+      "bytes": 16484,
+      "sha256": "db62309d1fd46efc16c58f24dd15d27ba965067c8b60782a86edf2e083b2e213",
+      "gitBlobSha": "5f35dd2790d98a71a1ad6a34d514d70b5e2d99fa"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/OwnershipTestData.cs",
+      "bytes": 1308,
+      "sha256": "9d38f4a09a63ae5f3062e3ea24957433e1b63992e47c0717118355bcc8309a46",
+      "gitBlobSha": "7fafdd11c1fa76229c8862207e809e4334b8ee39"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/CityStreamer.cs.meta",
+      "bytes": 59,
+      "sha256": "13160e65cb4918948da1e29c911f705f1a1bf71da5f834541fc8842b1d47c7c1",
+      "gitBlobSha": "4964d11672d1c0757cb45821f1016f6c3f4808b5"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/SkylineGeometryOwnership.cs.meta",
+      "bytes": 59,
+      "sha256": "7abfb7bef869cc5ca7c0cef4446e98ff5ce49026405cd432767853d8434bade0",
+      "gitBlobSha": "5fbf06f8765441625f228cf88de30aac075127eb"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/SkylineOwnershipData.cs.meta",
+      "bytes": 59,
+      "sha256": "8f871a322b308dc88cacf2940efe2fe54a6a77c228d4d00de5fb08c90ca0acb9",
+      "gitBlobSha": "93433a1969d020a2fc2765bba4eb76219f6a7cef"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/OfflineOwnershipGroupCompiler.cs.meta",
+      "bytes": 59,
+      "sha256": "fd126160c39efa87393a1f49c5b551c0caa34999cca2adcc33243775c042bd4a",
+      "gitBlobSha": "fefd7de20c1321237f6f0bda6508fd6c4574d0d0"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Editor/BuildAutomation.cs.meta",
+      "bytes": 59,
+      "sha256": "2116f95e202eea81f90f7bee789d5abd4eb4ea4b232c24828cbf67224458375c",
+      "gitBlobSha": "de078f7f4d7cb5bfab1df410b6142e7e6d293e63"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Editor/SkylineOwnershipBake.cs.meta",
+      "bytes": 59,
+      "sha256": "b156c46d3f357eb111caa512c595715b36be0895d50f3c0122cf55610034311a",
+      "gitBlobSha": "af44af83f8145ef3a6459057ef2feab22d625899"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/CityStreamerLifecycleTests.cs.meta",
+      "bytes": 60,
+      "sha256": "445a163ba043f801c013cadefe6ea0d7af0a086c4ff92ffdeb9e1545769d1e43",
+      "gitBlobSha": "f5d54fef817f66c276d99351a259d9cccbde3333"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/SkylineOwnershipRegressionTests.cs.meta",
+      "bytes": 59,
+      "sha256": "655926bc311c2617677671157c92dcf6a26bdbd9e6d402d0101fad7cb52ae459",
+      "gitBlobSha": "9a973541ac518e679e586320080b95cc8a7eec04"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/SkylineSidecarRegressionTests.cs.meta",
+      "bytes": 59,
+      "sha256": "3e8a25cdfc2d85d188cf92619beeeb63166b62c652fdb87068faf96c7c0ae9d3",
+      "gitBlobSha": "e63b97004e284ae78a2803366a2119df27aeab0e"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/OwnershipTestData.cs.meta",
+      "bytes": 59,
+      "sha256": "49c038aafca648f99413ed28d1018d70d1b007972d644bf1f9a5521db7c25fa6",
+      "gitBlobSha": "1cabcda85dfc03e5930c464b481a0f72f596ff31"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 1660,
+      "sha256": "807321667478c0ccaa6c9baf4a9e260e14be6a08d8f65da44167ed5411bbdefa",
+      "gitBlobSha": "01235317530564148220330e5379b1d1d5daf69b"
+    },
+    {
+      "path": "README.md",
+      "bytes": 10318,
+      "sha256": "426d3f98fd152980451f7f7c0be703235ac42905e81b4f7a594cc1ae87d968e2",
+      "gitBlobSha": "ef49520817b8fcef19157783b9b77dd60b9d9f66"
+    },
+    {
+      "path": "docs/skyline-ownership.md",
+      "bytes": 5013,
+      "sha256": "6880e4333c2d85bff3db95bf7ba03e2e453b8442b95504291b6a8af4827aa3db",
+      "gitBlobSha": "34077e91054acd3c0718c016bc9b3de0b674009f"
+    }
+  ],
+  "derivedSidecarIncluded": false,
+  "currentCaptureMp4Sha256": "6e50e3bb982a98e6b4f754d1e8a6d6ce3e59b109c0cc5b0bc90459de0cdda77a"
+}

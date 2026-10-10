@@ -1,0 +1,67 @@
+{
+  "parent": "9f4de233451b7690eefef491ce0746a8ecb0b12a",
+  "scope": "Mutable replacement relation dependency history correctness; no performance rerun",
+  "tests": {
+    "play": {
+      "result": "Passed",
+      "total": "124",
+      "passed": "124",
+      "failed": "0",
+      "skipped": "0",
+      "xmlSHA256": "e057063784529fa28c78f58f566a9340e414f78e3d00f9fe820902bc832d8921"
+    },
+    "edit": {
+      "result": "Passed",
+      "total": "178",
+      "passed": "178",
+      "failed": "0",
+      "skipped": "0",
+      "xmlSHA256": "931895e5cd4227ef001b667c3381bce84ae71533f5d8aab3ad5daea40f2193ae"
+    },
+    "redControl": {
+      "result": "Failed(Child)",
+      "total": "4",
+      "passed": "0",
+      "failed": "4",
+      "skipped": "0",
+      "xmlSHA256": "272e352d373269a87eae1c871f97c30a722cf3561447e0a496e7a70c22d81318"
+    }
+  },
+  "source": {
+    "SkylineGeometryOwnership.cs": {
+      "windowsFrozenSHA256": "1111a7ceb2f6880b0c0ff6e3cb4f7c34e9befaef177a52ce9e6ee325afda6899",
+      "publishedLFSHA256": "719da4d34d64219bdec76f1cfce26e9acfc613a43db383c36a1178144e1ba3cc"
+    },
+    "CityStreamer.cs": {
+      "windowsFrozenSHA256": "cd32460bd5f8be4a76814ca324d389cd033b9f35973d1243ab7e00afc5a9e741",
+      "publishedLFSHA256": "df7d12046dcf8910382edfeedd1f17d7c5422d5934344aea941a8f71203e5a0b"
+    },
+    "SkylineOwnershipRegressionTests.cs": {
+      "windowsFrozenSHA256": "63629ec1dbc21415241726723157f7b7b69ea1374f1c95a28ad17498191c667c",
+      "publishedLFSHA256": "6c4be2fd8f41c9d3c63a9d0c80bca66dd2c997deab164147cfbae3469c57b724"
+    }
+  },
+  "meshContract": "sharedMesh pointer changes require InvalidateOwnership; in-place sharedMesh vertex/index contents remain immutable and unsupported",
+  "render": {
+    "method": "URP SingleCameraRequest to RenderTexture, hidden batch noTracker, synthetic calibration, same pose/catalog/helper, 16 render warm frames",
+    "size": [
+      1920,
+      1200
+    ],
+    "control": "9f4 logic with unchanged caller API",
+    "RGBMeanAbsoluteDifference": 0.2250551215277778,
+    "pixelsMaxChannelDifferenceGreater20": 1815,
+    "fixedPNGSHA256": "711f4b46bb4e4b2ac3015a86de2721f6ab526858bbae893dc3309dfce3c41f14",
+    "controlPNGSHA256": "f968da57f006eeabea4940e6ed1ad112fc997b231c3ea06911413d381cf89458",
+    "fixedRuntimeAssemblySHA256": "cccfd96265b92dafd00aad2f34a740e98fbd4de36bf8163c55dcbcd36490f6ad",
+    "limitation": "Offscreen still only; differs in postprocessing from previous native backbuffer. Not performance, motion/flicker or webcam acceptance. First batch ScreenCapture PNG was black and excluded."
+  },
+  "historicalPerformance": {
+    "revision": "9f4de233451b7690eefef491ce0746a8ecb0b12a",
+    "streamP95Ms": 2.138,
+    "streamP99Ms": 2.8103,
+    "streamMaxMs": 4.3521,
+    "gate2msPassed": false,
+    "newFixBenchmarkRun": false
+  }
+}

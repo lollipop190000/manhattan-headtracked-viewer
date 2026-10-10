@@ -84,6 +84,27 @@ namespace Manhattan.Viewer
         private readonly Queue<Residency> deferredReleases = new Queue<Residency>();
         private readonly Dictionary<string, int> replacementCounts = new Dictionary<string, int>();
         private readonly Stopwatch workTimer = new Stopwatch();
+        private readonly SkylineGeometryOwnership ownership = new SkylineGeometryOwnership();
+        /// <summary>Notify after a resident tile root's relation, renderer/material or mesh pointer changes.
+        /// Pass null to invalidate every group. Shared mesh vertex/index contents remain immutable.
+        /// Call before the next streaming tick; this does not grant support for mutable shared geometry.</summary>
+        public void InvalidateOwnership(GameObject tileRoot=null)=>ownership.Invalidate(tileRoot);
+        public bool OwnershipWorkPending => ownership.Busy;
+        public long MaskedSkylineTriangles => ownership.MaskedTriangles;
+        public int OwnershipRuntimeMeshCount => ownership.RuntimeMeshCount;
+        public int OwnershipUnsupportedMeshes => ownership.UnsupportedMeshes;
+        public long OwnershipPublications => ownership.Publications;
+        public double OwnershipTickMilliseconds => ownership.LastTickMilliseconds;
+        public double OwnershipMaximumTickMilliseconds => ownership.MaximumTickMilliseconds;
+        public double OwnershipMaximumValidationMilliseconds => ownership.MaximumSourceValidationMilliseconds;
+        public double OwnershipMaximumMeshReadMilliseconds => ownership.MaximumMeshReadMilliseconds;
+        public double OwnershipMaximumMeshCloneMilliseconds => ownership.MaximumMeshCloneMilliseconds;
+        public double OwnershipMaximumUploadMilliseconds => ownership.MaximumIndexUploadMilliseconds;
+        public long OwnershipDecodedMappingBytes => ownership.DecodedMappingBytes;
+        public long OwnershipStagingArrayBytes => ownership.StagingArrayBytes;
+        public double OwnershipMaximumPublicationMilliseconds => ownership.MaximumPublicationMilliseconds;
+        public double OwnershipMaximumRevalidationMilliseconds => ownership.MaximumRevalidationMilliseconds;
+        public double OwnershipMaximumCleanupMilliseconds => ownership.MaximumCleanupMilliseconds;
         private float nextEvaluation;
         private bool initialized;
 
@@ -151,6 +172,17 @@ namespace Manhattan.Viewer
         {
             if (initialized || catalog == null) return;
             initialized = true;
+            if(surfaces!=null)surfaces.DetailsChanged+=OnSurfaceDetailsChanged;
+            var sidecar=Resources.Load<TextAsset>("CityOwnership");
+            if(sidecar!=null)
+            {
+                try {
+                    var digest=Resources.Load<TextAsset>("CityOwnershipHash");
+                    if(digest==null||!SkylineOwnershipBinding.VerifyPayload(sidecar.text,digest.text))throw new InvalidOperationException("Sidecar payload integrity mismatch");
+                    ownership.Configure(JsonUtility.FromJson<SkylineOwnershipData>(sidecar.text),catalog.sourceVersion,null,catalog);
+                }
+                catch(Exception error){UnityEngine.Debug.LogWarning("Ownership sidecar invalid; full fallback preserved: "+error.Message);}
+            }
             foreach (var tile in catalog.tiles)
                 if (tile != null && !string.IsNullOrEmpty(tile.address)) all.Add(new Residency { tile = tile });
             if (origin != null) origin.Rebased += OnRebased;
@@ -239,6 +271,7 @@ namespace Manhattan.Viewer
                 r.instance.transform.localScale = Vector3.one;
                 if (r.tile.layer == CityLayer.Collision) SetLayer(r.instance.transform, 30);
                 r.renderers = r.instance.GetComponentsInChildren<Renderer>(true);
+                ownership.Register(r.tile, r.instance, r.handle.Result);
                 if (surfaces != null) surfaces.Register(r.instance, r.tile.layer == CityLayer.Near);
                 LoadedTiles++;
                 UpdateVisibility();
@@ -257,6 +290,9 @@ namespace Manhattan.Viewer
                 EstimatedResidentBytes += cost; PendingLoads++; ongoing++;
             }
             UpdateNearFeedback();
+            long previousPublication = ownership.Publications;
+            ownership.Tick(Mathf.Max(0f, workBudgetMilliseconds - (float)workTimer.Elapsed.TotalMilliseconds));
+            if (ownership.Publications != previousPublication) UpdateVisibility();
             FrameWorkMilliseconds = (float)workTimer.Elapsed.TotalMilliseconds;
         }
 
@@ -287,7 +323,9 @@ namespace Manhattan.Viewer
             replacementCounts.Clear();
             foreach (var r in residents)
             {
-                if (r.instance == null || !r.visible || r.tile.layer != CityLayer.Core || r.tile.replaces == null) continue;
+                if (r.instance == null || r.tile.layer != CityLayer.Core || r.tile.replaces == null) continue;
+                bool represented = ownership.Manages(r.instance) ? r.instance.activeSelf : r.visible;
+                if (!represented) continue;
                 foreach (string id in r.tile.replaces)
                 {
                     if (string.IsNullOrEmpty(id)) continue;
@@ -297,8 +335,15 @@ namespace Manhattan.Viewer
             foreach (var r in residents)
             {
                 if (r.instance == null) continue;
+                if (r.tile.layer == CityLayer.Core && ownership.Manages(r.instance))
+                {
+                    ownership.SetDesired(r.instance, r.visible);
+                    continue;
+                }
                 replacementCounts.TryGetValue(r.tile.id, out int visibleCoreReplacementCount);
-                bool active = r.visible && !CanReplace(r.tile, visibleCoreReplacementCount);
+                bool managedSkyline = r.tile.layer == CityLayer.Skyline && ownership.Manages(r.instance);
+                bool active = r.visible && (managedSkyline || !CanReplace(r.tile, visibleCoreReplacementCount)) &&
+                    (r.tile.layer != CityLayer.Skyline || ownership.CanShowSkyline(r.instance));
                 if (r.instance.activeSelf != active) r.instance.SetActive(active);
             }
         }
@@ -326,6 +371,7 @@ namespace Manhattan.Viewer
 
         private void OnRebased(Vector3 shift)
         {
+            InvalidateOwnership();
             foreach (var r in residents) if (r.instance != null) r.instance.transform.position = r.tile.cityOrigin - origin.Offset;
         }
         private static void SetLayer(Transform t, int layer)
@@ -345,6 +391,12 @@ namespace Manhattan.Viewer
                 var r = deferredReleases.Dequeue(); r.releaseQueued = false;
                 if (!r.hasHandle || r.loading) continue;
                 if (r.wanted && r.handle.Status == AsyncOperationStatus.Succeeded) continue;
+                if (r.instance != null && !ownership.CanRelease(r.instance))
+                {
+                    ownership.SetDesired(r.instance, false);
+                    QueueRelease(r);
+                    break;
+                }
                 Release(r);
                 break; // Spread tile destruction and Addressables releases across frames.
             }
@@ -353,6 +405,7 @@ namespace Manhattan.Viewer
         {
             if (r.instance != null)
             {
+                ownership.Unregister(r.instance);
                 if (surfaces != null) surfaces.Unregister(r.instance);
                 Destroy(r.instance); r.instance = null; LoadedTiles--;
             }
@@ -367,8 +420,11 @@ namespace Manhattan.Viewer
             }
             r.hasHandle = r.loading = r.releaseQueued = false; r.renderers = null;
         }
+        private void OnSurfaceDetailsChanged()=>InvalidateOwnership();
         private void OnDestroy()
         {
+            if(surfaces!=null)surfaces.DetailsChanged-=OnSurfaceDetailsChanged;
+            ownership.Dispose();
             if (origin != null) origin.Rebased -= OnRebased;
             while (residents.Count > 0) Release(residents[residents.Count - 1]);
             deferredReleases.Clear();
