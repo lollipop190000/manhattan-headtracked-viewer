@@ -1,5 +1,5 @@
-> **WIP shared snapshot — unfinished, 2026-10-10. Do not merge or treat as a release.**
-> The ownership candidate has a confirmed same-camera visual difference: some windowed facades become broad blank surfaces, and roof surfaces differ from public C8. Root cause is being investigated. Visible all-frame performance gates also fail. Passing fixture tests do not establish city visual equivalence. See [current WIP status and reproduction](docs/ownership-wip-status.md).
+> **WIP shared branch, 2026-10-10. Do not merge or treat as a release.**
+> The confirmed blank facade/roof regression has a scoped complete-cohort fix and new same-camera Player captures. Original visible performance gates still fail; webcam, long stability and perceptual acceptance remain pending. See [current status and reproduction](docs/ownership-wip-status.md).
 
 # Manhattan Head Tracked Viewer
 

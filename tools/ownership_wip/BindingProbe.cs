@@ -15,9 +15,10 @@ public sealed class TemporaryVisualBindingProbe:MonoBehaviour
     [Serializable]private sealed class Mat {public int slot,id;public string name,shader;public Color color;public float cull,surface;public string baseMap;}
     [Serializable]private sealed class Sub {public int submesh,originalIndices,finalIndices;public string originalHash,finalHash;}
     [Serializable]private sealed class Item {public string tile,layer,path,sourceMesh,finalMesh;public int sourceMeshId,finalMeshId,rendererId;public bool active,enabled,forceOff,visible,wanted;public Mat[] originalMaterials,finalMaterials;public Sub[] subs;}
-    [Serializable]private sealed class Hit {public string tile,layer,path,mesh,material;public int submesh,ordinal,a,b,c;public float distance;public Vector3 cityHit;public bool frontFace;}
+    [Serializable]private sealed class Hit {public string tile,layer,path,mesh,material;public int submesh,ordinal,a,b,c;public float distance;public Vector3 cityHit,cityA,cityB,cityC;public bool frontFace;}
     [Serializable]private sealed class Pixel {public Vector2 topLeftPixel;public Hit[] hits;}
-    [Serializable]private sealed class Report {public Vector3 city,euler;public bool surfaceDetails;public long masked;public Item[] renderers;public Pixel[] pixels;}
+    [Serializable]private sealed class State {public string tile,layer;public int required;public bool bound,desired,committed,covers;public string[] replaces;}
+    [Serializable]private sealed class Report {public Vector3 city,euler;public bool surfaceDetails;public long masked;public Item[] renderers;public Pixel[] pixels;public State[] ownershipStates;}
     private static object Field(object o,string name)=>o.GetType().GetField(name,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).GetValue(o);
     private static string Hash(int[] data){var bytes=new byte[data.Length*4];Buffer.BlockCopy(data,0,bytes,0,bytes.Length);using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-","").ToLowerInvariant();}
     private static Mat[] Mats(Material[] mats)=>mats.Select((m,i)=>m==null?new Mat {slot=i,name="NULL"}:new Mat {slot=i,id=m.GetInstanceID(),name=m.name,shader=m.shader.name,color=m.HasProperty("_BaseColor")?m.GetColor("_BaseColor"):Color.clear,cull=m.HasProperty("_Cull")?m.GetFloat("_Cull"):-1,surface=m.HasProperty("_Surface")?m.GetFloat("_Surface"):-1,baseMap=m.HasProperty("_BaseMap")&&m.GetTexture("_BaseMap")!=null?m.GetTexture("_BaseMap").name:"none"}).ToArray();
@@ -63,13 +64,14 @@ public sealed class TemporaryVisualBindingProbe:MonoBehaviour
                         {
                             int a=indices[i],b=indices[i+1],c=indices[i+2];var e1=vertices[b]-vertices[a];var e2=vertices[c]-vertices[a];var p=Vector3.Cross(d,e2);float determinant=Vector3.Dot(e1,p);if(Mathf.Abs(determinant)<1e-7f)continue;float inverse=1/determinant;var s=o-vertices[a];float u=Vector3.Dot(s,p)*inverse;if(u<0||u>1)continue;var q=Vector3.Cross(s,e1);float v=Vector3.Dot(d,q)*inverse;if(v<0||u+v>1)continue;float t=Vector3.Dot(e2,q)*inverse;if(t<0)continue;
                             var material=materials.Length>0?materials[Math.Min(sub,materials.Length-1)]:null;bool front=determinant>0;if(material!=null&&material.HasProperty("_Cull")&&material.GetFloat("_Cull")==2&&!front)continue;
-                            hits[r].Add(new Hit {tile=tile.id,layer=tile.layer.ToString(),path=path,mesh=mesh.name,material=material==null?"NULL":material.name,submesh=sub,ordinal=i/3,a=a,b=b,c=c,distance=t,cityHit=ray.origin+ray.direction*t+app.Origin.Offset,frontFace=front});
+                            hits[r].Add(new Hit {tile=tile.id,layer=tile.layer.ToString(),path=path,mesh=mesh.name,material=material==null?"NULL":material.name,submesh=sub,ordinal=i/3,a=a,b=b,c=c,distance=t,cityHit=ray.origin+ray.direction*t+app.Origin.Offset,cityA=f.transform.TransformPoint(vertices[a])+app.Origin.Offset,cityB=f.transform.TransformPoint(vertices[b])+app.Origin.Offset,cityC=f.transform.TransformPoint(vertices[c])+app.Origin.Offset,frontFace=front});
                         }
                     }
                 }
             }
         }
         for(int i=0;i<pixels.Length;i++)pixels[i].hits=hits[i].OrderBy(h=>h.distance).Take(20).ToArray();
-        File.WriteAllText(Path.Combine(output,phase+"-binding-probe.json"),JsonUtility.ToJson(new Report {city=app.Flight.CityPosition,euler=app.Flight.transform.eulerAngles,surfaceDetails=app.Streamer.surfaces.EnabledDetails,masked=app.Streamer.MaskedSkylineTriangles,renderers=items.ToArray(),pixels=pixels},true));
+        var ownership=Field(app.Streamer,"ownership");var states=new List<State>();foreach(DictionaryEntry kv in (IDictionary)Field(ownership,"entries")){var e=kv.Value;var tile=(CityTileRecord)Field(e,"tile");bool covers=tile.layer==CityLayer.Core&&(bool)ownership.GetType().GetMethod("CoreCovers",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(ownership,new object[]{e,null});states.Add(new State {tile=tile.id,layer=tile.layer.ToString(),required=tile.requiredReplacementCount,bound=(bool)Field(e,"bound"),desired=(bool)Field(e,"desired"),committed=(bool)Field(e,"committed"),covers=covers,replaces=tile.replaces});}
+        File.WriteAllText(Path.Combine(output,phase+"-binding-probe.json"),JsonUtility.ToJson(new Report {city=app.Flight.CityPosition,euler=app.Flight.transform.eulerAngles,surfaceDetails=app.Streamer.surfaces.EnabledDetails,masked=app.Streamer.MaskedSkylineTriangles,renderers=items.ToArray(),pixels=pixels,ownershipStates=states.ToArray()},true));
     }
 }

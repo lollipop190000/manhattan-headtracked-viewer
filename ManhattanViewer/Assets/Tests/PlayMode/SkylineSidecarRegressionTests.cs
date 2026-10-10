@@ -36,6 +36,76 @@ public sealed class SkylineSidecarRegressionTests
         ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);
     }
     private void Drain(){for(int i=0;i<1000&&ownership.Busy;i++)ownership.Tick(1000);Assert.That(ownership.Busy,Is.False);}
+    [TestCase(1,true)]
+    [TestCase(2,false)]
+    public void CompleteReplacementRetiresSameQuadWithDifferentDiagonalOnlyForExactCatalogCohort(int required,bool complete)
+    {
+        var quad=new[]{Vector3.zero,Vector3.right,Vector3.right+Vector3.up,Vector3.up};
+        original.Clear();original.vertices=quad;original.triangles=new[]{0,1,2,0,2,3};
+        var detailed=source.GetComponent<MeshFilter>().sharedMesh;detailed.Clear();detailed.vertices=quad;detailed.triangles=new[]{0,1,3,1,2,3};
+        skyTile.requiredReplacementCount=required;var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile};
+        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core});Assert.That(data.groups[0].parts,Is.Empty,"Different diagonals share no complete triangle");
+        ownership.Configure(data,"fixture",_=>"fixture-content",catalog);ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);Drain();
+        Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?2:0));Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.GetIndexCount(0),Is.EqualTo(complete?0:6));
+        Assert.That(original.triangles,Is.EqualTo(new[]{0,1,2,0,2,3}));Assert.That(core.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(detailed));
+        ownership.SetDesired(core,false);Drain();Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(core.activeSelf,Is.False);
+    }
+    [TestCase("mesh")]
+    [TestCase("material")]
+    [TestCase("relation")]
+    public void CompleteCohortMutationBeforePublicationRestoresFullFallback(string mutation)
+    {
+        skyTile.requiredReplacementCount=1;var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile};
+        ownership.Configure(data,"fixture",_=>"fixture-content",catalog);ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);
+        var flags=BindingFlags.Instance|BindingFlags.NonPublic;var entries=(IDictionary)typeof(SkylineGeometryOwnership).GetField("entries",flags).GetValue(ownership);var snapshot=(IList)typeof(SkylineGeometryOwnership).GetField("snapshot",flags).GetValue(ownership);foreach(var entry in entries.Values)snapshot.Add(entry);
+        var work=(IEnumerator)typeof(SkylineGeometryOwnership).GetMethod("Reconcile",flags).Invoke(ownership,null);typeof(SkylineGeometryOwnership).GetField("work",flags).SetValue(ownership,work);
+        for(int i=0;i<1000&&ownership.RuntimeMeshCount==0;i++)Assert.That(work.MoveNext(),Is.True);Assert.That(ownership.RuntimeMeshCount,Is.EqualTo(1));
+        if(mutation=="mesh")core.GetComponent<MeshFilter>().sharedMesh=null;
+        else if(mutation=="material"){var material=new Material(source.GetComponent<MeshRenderer>().sharedMaterial);objects.Add(material);material.SetFloat("_AlphaClip",1);core.GetComponent<MeshRenderer>().sharedMaterial=material;}
+        else coreTile.replaces=Array.Empty<string>();
+        LogAssert.Expect(LogType.Warning,new Regex("Core coverage changed during preparation|Complete replacement cohort changed during preparation"));Drain();
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(ownership.RuntimeMeshCount,Is.Zero);
+    }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void CompleteCatalogCohortRetiresUnmatchedHullAndRestoresItBeforeOwnerDeparture(bool surfaceOff)
+    {
+        var otherSource=Root("other core",new[]{3,4,5},source.GetComponent<MeshRenderer>().sharedMaterial);
+        var vertices=otherSource.GetComponent<MeshFilter>().sharedMesh.vertices;for(int i=3;i<6;i++)vertices[i]+=Vector3.forward*.0012f;
+        otherSource.GetComponent<MeshFilter>().sharedMesh.vertices=vertices;
+        var other=Object.Instantiate(otherSource);objects.Add(other);
+        var otherTile=new CityTileRecord {id="other",address="other-address",layer=CityLayer.Core,replaces=new[]{"sky"}};
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile,otherTile};
+        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core,other});
+        // Only the first primitive coincides exactly. Complete catalog replacement is a
+        // distinct contract; do not widen spatial tolerance or discard material intent.
+        ownership.Configure(data,"fixture",_=>"fixture-content",catalog);
+        ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.Register(otherTile,other,otherSource);
+        var surfaces=sky.AddComponent<SurfaceDetailComparison>();surfaces.EnabledDetails=!surfaceOff;surfaces.Register(sky);
+        ownership.SetDesired(core,true);Drain();Assert.That(ownership.MaskedTriangles,Is.EqualTo(1));
+        ownership.SetDesired(other,true);Drain();Assert.That(ownership.MaskedTriangles,Is.EqualTo(2));Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.GetIndexCount(0),Is.Zero);
+        Assert.That(core.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(source.GetComponent<MeshFilter>().sharedMesh));
+        ownership.SetDesired(other,false);Assert.That(ownership.CanRelease(other),Is.False);Drain();
+        Assert.That(other.activeSelf,Is.False);Assert.That(ownership.CanRelease(other),Is.True);Assert.That(ownership.MaskedTriangles,Is.EqualTo(1));
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{3,4,5}));Assert.That(original.triangles.Length,Is.EqualTo(6));
+        surfaces.Unregister(sky);
+    }
+    [TestCase("textured")]
+    [TestCase("intentional")]
+    [TestCase("overlay")]
+    public void CompleteCohortPreservesImportedSurfaceIntent(string kind)
+    {
+        var otherSource=Root("other core",new[]{3,4,5},source.GetComponent<MeshRenderer>().sharedMaterial);var other=Object.Instantiate(otherSource);objects.Add(other);
+        var otherTile=new CityTileRecord {id="other",address="other-address",layer=CityLayer.Core,replaces=new[]{"sky"}};
+        var special=new Material(sky.GetComponent<MeshRenderer>().sharedMaterial);objects.Add(special);
+        if(kind=="textured"){var texture=new Texture2D(2,2);objects.Add(texture);special.SetTexture("_BaseMap",texture);}
+        if(kind=="intentional")special.name="Intentional facade";
+        if(kind=="overlay")sky.GetComponent<MeshRenderer>().sharedMaterials=new[]{sky.GetComponent<MeshRenderer>().sharedMaterial,special};else sky.GetComponent<MeshRenderer>().sharedMaterial=special;
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile,otherTile};
+        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core,other});ownership.Configure(data,"fixture",_=>"fixture-content",catalog);
+        ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.Register(otherTile,other,otherSource);ownership.SetDesired(core,true);ownership.SetDesired(other,true);Drain();
+        Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+    }
     [Test]public void MissingSidecarPreservesFullFallback()
     {
         ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);Drain();

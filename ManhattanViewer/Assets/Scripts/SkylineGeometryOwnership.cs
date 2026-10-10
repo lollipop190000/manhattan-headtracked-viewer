@@ -40,6 +40,10 @@ namespace Manhattan.Viewer
         private readonly Dictionary<GameObject,Entry> entries=new Dictionary<GameObject,Entry>();
         private readonly Dictionary<string,SkylineOwnershipTile> bindings=new Dictionary<string,SkylineOwnershipTile>();
         private readonly Dictionary<string,SkylineOwnershipGroup> groups=new Dictionary<string,SkylineOwnershipGroup>();
+        // The catalog's complete replacement contract is separate from primitive coincidence.
+        // Legacy hull and detailed Core can use different triangulation, so a complete, bound
+        // replacement cohort must retire the eligible hull even when exact ordinals miss it.
+        private readonly Dictionary<string,string[]> replacementCohorts=new Dictionary<string,string[]>();
         private Func<string,string> resolveBinding=SkylineOwnershipBinding.BundleSignature;
         public int SidecarBindings => bindings.Count;
         public long DecodedMappingBytes {get;private set;}
@@ -55,18 +59,28 @@ namespace Manhattan.Viewer
         public double MaximumRevalidationMilliseconds {get;private set;}
         public double MaximumCleanupMilliseconds {get;private set;}
         public long StagingArrayBytes {get;private set;}
-        public void Configure(SkylineOwnershipData data,string sourceVersion,Func<string,string> resolver=null)
+        public void Configure(SkylineOwnershipData data,string sourceVersion,Func<string,string> resolver=null,CityCatalog catalog=null)
         {
             if(entries.Count!=0)throw new InvalidOperationException("Configure ownership before residency loads");
-            bindings.Clear();groups.Clear();DecodedMappingBytes=0;
+            bindings.Clear();groups.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;
             resolveBinding=resolver??SkylineOwnershipBinding.BundleSignature;
             if(data==null||data.schema!=2||data.ruleVersion!="legacy-flat-hull-v4-extra-material-safe"||data.sourceVersion!=sourceVersion)return;
             try
             {
                 foreach(var tile in data.tiles)bindings.Add(tile.id,tile);
                 foreach(var group in data.groups){groups.Add(group.skylineId,group);foreach(var part in group.parts)foreach(var owner in part.owners)DecodedMappingBytes+=owner.ordinals.LongLength*4;}
+                if(catalog!=null&&catalog.sourceVersion==sourceVersion)
+                    foreach(var sky in catalog.tiles)
+                    {
+                        if(sky==null||sky.layer!=CityLayer.Skyline||sky.requiredReplacementCount<=0||!bindings.ContainsKey(sky.id))continue;
+                        var ids=new HashSet<string>();bool valid=true;
+                        foreach(var core in catalog.tiles)
+                            if(core!=null&&core.layer==CityLayer.Core&&core.replaces!=null&&Array.IndexOf(core.replaces,sky.id)>=0)
+                                if(!bindings.ContainsKey(core.id)||!ids.Add(core.id))valid=false;
+                        if(valid&&ids.Count==sky.requiredReplacementCount){var expected=new string[ids.Count];ids.CopyTo(expected);replacementCohorts.Add(sky.id,expected);}
+                    }
             }
-            catch(Exception){bindings.Clear();groups.Clear();DecodedMappingBytes=0;}
+            catch(Exception){bindings.Clear();groups.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;}
         }
         private readonly List<Entry> snapshot=new List<Entry>();
         private struct MaterialContract {public bool opaque, legacyFallback;}
@@ -166,7 +180,7 @@ namespace Manhattan.Viewer
                     }
                     // Restoration is a visibility publication too: wake the streamer immediately,
                     // including late Skyline roots gated inactive during preparation.
-                    MaskedTriangles=0;Publications++;bindings.Clear();groups.Clear();DecodedMappingBytes=0;snapshot.Clear();dirty=false;return;
+                    MaskedTriangles=0;Publications++;bindings.Clear();groups.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;snapshot.Clear();dirty=false;return;
                 }
             }
             }
@@ -186,7 +200,7 @@ namespace Manhattan.Viewer
             }
             foreach(var e in snapshot)
             {
-                if(e.removed||e.root==null||e.tile.layer!=CityLayer.Skyline||!e.bound||e.group==null||e.parts.Count!=0)continue;
+                if(e.removed||e.root==null||e.tile.layer!=CityLayer.Skyline||!e.bound||(e.group==null&&!replacementCohorts.ContainsKey(e.tile.id))||e.parts.Count!=0)continue;
                 bool needed=false;
                 foreach(var core in snapshot)if(!core.removed&&core.bound&&core.tile.layer==CityLayer.Core&&(core.desired||core.committed)&&Array.IndexOf(core.tile.replaces,e.tile.id)>=0){needed=true;break;}
                 if(!needed)continue;
@@ -194,8 +208,8 @@ namespace Manhattan.Viewer
                 {
                     var mesh=filter.sharedMesh;if(mesh==null||!Renderable(filter,e.root))continue;
                     var path=SkylineOwnershipBinding.Path(filter.transform,e.root.transform);
-                    SkylineOwnershipPart map=null;foreach(var candidate in e.group.parts)if(candidate.path==path){map=candidate;break;}
-                    if(map==null)continue;
+                    SkylineOwnershipPart map=null;if(e.group!=null)foreach(var candidate in e.group.parts)if(candidate.path==path){map=candidate;break;}
+                    if(map==null){if(!replacementCohorts.ContainsKey(e.tile.id))continue;map=new SkylineOwnershipPart {path=path,owners=Array.Empty<SkylineOwnershipOwner>()};}
                     if(!ReadableTriangles(mesh)){UnsupportedMeshes++;continue;}
                     var watch=Stopwatch.StartNew();
                     var indices=new int[mesh.subMeshCount][];var matchable=new bool[mesh.subMeshCount];int total=0;
@@ -213,6 +227,8 @@ namespace Manhattan.Viewer
             foreach(var e in snapshot)if(!e.removed&&e.root!=null&&e.tile.layer==CityLayer.Core&&e.indexed&&e.desired)active.Add(e);
             var covers=new HashSet<Entry>();
             foreach(var core in active){if(core.bound&&CoreCovers(core))covers.Add(core);yield return null;}
+            var complete=new HashSet<Entry>();
+            foreach(var e in snapshot)if(!e.removed&&e.tile.layer==CityLayer.Skyline&&CompleteCohort(e,active,covers))complete.Add(e);
             foreach(var e in snapshot)if(!e.removed)foreach(var p in e.parts)Array.Clear(p.staged,0,p.staged.Length);
             foreach(var e in snapshot)
             {
@@ -231,6 +247,7 @@ namespace Manhattan.Viewer
                     {
                         int count=part.indices[sub].Length/3;
                         if(!part.matchable[sub]||!Opaque(part.filter,sub,true))Array.Clear(part.staged,first,count);
+                        else if(complete.Contains(e))for(int i=first;i<first+count;i++)part.staged[i]=true;
                         first+=count;
                     }
                 }
@@ -285,6 +302,7 @@ namespace Manhattan.Viewer
             // contracts are read once, while renderer/pointer/transform state is rechecked.
             publicationMaterials.Clear();
             foreach(var core in covers)if(!CoreCovers(core,publicationMaterials))throw new InvalidOperationException("Core coverage changed during preparation");
+            foreach(var sky in complete)if(!CompleteCohort(sky,active,covers))throw new InvalidOperationException("Complete replacement cohort changed during preparation");
             foreach(var e in snapshot)if(!e.removed&&e.tile.layer==CityLayer.Skyline)foreach(var p in e.parts)
             {
                 if(p.filter==null||!OriginalRootFrame(e)||!p.local.Equals(SkylineOwnershipBinding.LocalTransform(p.filter.transform,e.root.transform))||
@@ -326,6 +344,17 @@ namespace Manhattan.Viewer
         {
             if(!mesh.isReadable)return false;
             for(int i=0;i<mesh.subMeshCount;i++)if(mesh.GetTopology(i)!=MeshTopology.Triangles)return false;
+            return true;
+        }
+        private bool CompleteCohort(Entry sky,HashSet<Entry> active,HashSet<Entry> covers)
+        {
+            if(!sky.bound||!replacementCohorts.TryGetValue(sky.tile.id,out var expected)||sky.tile.requiredReplacementCount!=expected.Length)return false;
+            foreach(string id in expected)
+            {
+                Entry found=null;
+                foreach(var core in active)if(!core.removed&&core.root!=null&&core.tile.id==id){if(found!=null)return false;found=core;}
+                if(found==null||!found.bound||!covers.Contains(found)||found.tile.replaces==null||Array.IndexOf(found.tile.replaces,sky.tile.id)<0||!SameOriginSpace(sky,found))return false;
+            }
             return true;
         }
         private static bool Renderable(MeshFilter filter,GameObject root,MeshRenderer cachedRenderer=null)
@@ -437,7 +466,7 @@ namespace Manhattan.Viewer
         {
             if(disposed)return;disposed=true;(work as IDisposable)?.Dispose();work=null;
             foreach(var e in entries.Values)foreach(var p in e.parts)ReleasePart(p);
-            entries.Clear();bindings.Clear();groups.Clear();snapshot.Clear();publicationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
+            entries.Clear();bindings.Clear();groups.Clear();replacementCohorts.Clear();snapshot.Clear();publicationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
         }
     }
 }

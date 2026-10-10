@@ -174,7 +174,7 @@ namespace Manhattan.Viewer
                 try {
                     var digest=Resources.Load<TextAsset>("CityOwnershipHash");
                     if(digest==null||!SkylineOwnershipBinding.VerifyPayload(sidecar.text,digest.text))throw new InvalidOperationException("Sidecar payload integrity mismatch");
-                    ownership.Configure(JsonUtility.FromJson<SkylineOwnershipData>(sidecar.text),catalog.sourceVersion);
+                    ownership.Configure(JsonUtility.FromJson<SkylineOwnershipData>(sidecar.text),catalog.sourceVersion,null,catalog);
                 }
                 catch(Exception error){UnityEngine.Debug.LogWarning("Ownership sidecar invalid; full fallback preserved: "+error.Message);}
             }

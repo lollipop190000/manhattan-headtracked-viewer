@@ -1,0 +1,111 @@
+{
+  "parentRevision": "3e8d038be1d21b0251da84704c1299d9bf1ba316",
+  "unfinished": true,
+  "completeCohortVisualFix": true,
+  "generatedAssetsIncluded": false,
+  "privateCalibrationOrFacesIncluded": false,
+  "sourceFiles": [
+    {
+      "path": "ManhattanViewer/Assets/Scripts/SkylineGeometryOwnership.cs",
+      "sha256": "d5437c06b2060cfc9ee0cc05d98dc5049d273e2556589929c5ba647489e5736e"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Scripts/CityStreamer.cs",
+      "sha256": "b14f2670333786eaf1571fd880f42fcf16aac61a0ebde85c2aae26448ea2c2c5"
+    },
+    {
+      "path": "ManhattanViewer/Assets/Tests/PlayMode/SkylineSidecarRegressionTests.cs",
+      "sha256": "900fb6fb7b241e621276747d78bd5217cf34f9df36e7f8428e1adccae6433276"
+    },
+    {
+      "path": "tools/ownership_wip/AsyncPlayerCapture.cs",
+      "sha256": "fb2570679407523e9c281d557b8fd6325d050d0736225c898035f76b1ea06ba1"
+    },
+    {
+      "path": "tools/ownership_wip/BindingProbe.cs",
+      "sha256": "5fc52dba489d291e60fc47d7416b0f595eeef258418e64467687f18e825e2657"
+    }
+  ],
+  "capture": {
+    "frames": 391,
+    "width": 1920,
+    "height": 1200,
+    "firstToLastSeconds": 13.0011711,
+    "actualMeanCaptureFps": 29.99729770497367,
+    "requestedFps": 30,
+    "timestampMaxErrorSeconds": 0.0006345000000003154,
+    "orientationAnchorSameMAD": 0.0,
+    "orientationAnchorFlippedMAD": 35.85257349537037,
+    "encodingOrientationTransform": "none",
+    "variableFrameRate": true,
+    "noInterpolationTrimOrAcceleration": true,
+    "maxRequestIssueMs": 0.17250000000000001,
+    "maxDataCopyMs": 7.4912,
+    "maxBackgroundWriteMs": 8.799900000000001,
+    "readbackErrors": 0,
+    "schedulingSkipped": 0,
+    "maxPending": 2,
+    "maxFailures": 0,
+    "firstPose": {
+      "x": 1225.0,
+      "y": 150.0,
+      "z": 3585.0
+    },
+    "lastPose": {
+      "x": 1874.359619140625,
+      "y": 150.0,
+      "z": 3585.0
+    },
+    "runtimeSourceSha256": "d5437c06b2060cfc9ee0cc05d98dc5049d273e2556589929c5ba647489e5736e",
+    "movieSha256": "377573f88626654eab1a0597608c51117736f38a9899e73a890d6d1bd322d28c",
+    "movieBytes": 14470897,
+    "performanceAcceptance": false
+  },
+  "validation": {
+    "runtimeSourceSha256": "d5437c06b2060cfc9ee0cc05d98dc5049d273e2556589929c5ba647489e5736e",
+    "playerRuntimeAssemblySha256": "0f65328871c891fa2ae97767879a25dbb663445b40526b0313e027ddbc095aa8",
+    "scope": "Normal Windowed1920x1200, Midtown100m/s,15s warmup90s measurement, noTracker, TAA/vSync1,target60, captureOFF; all measured rows nearest-rank",
+    "frame": {
+      "n": 5355,
+      "p50": 16.6498,
+      "p95": 16.6833,
+      "p99": 24.0795,
+      "maximum": 44.1166,
+      "framesGE50": 0
+    },
+    "streaming": {
+      "n": 5355,
+      "p50": 0.2536,
+      "p95": 2.4792,
+      "p99": 3.4918,
+      "maximum": 10.3654,
+      "framesGE50": 0
+    },
+    "numericGates": {
+      "frameP95": true,
+      "frameP99": true,
+      "noFramesGE50": true,
+      "streamingP95": false
+    },
+    "tests": {
+      "ownership-validation-play-cohort-fix-v1-20261010": {
+        "total": "105",
+        "passed": "105",
+        "failed": "0",
+        "skipped": "0",
+        "inconclusive": "0",
+        "duration": "83.5443389",
+        "xmlSha256": "eb8be3555f751c7b8f9bbb893cdcfe1fb68b242dacbb66fba1d192795d87a998"
+      },
+      "ownership-validation-play-cohort-fix-focused-v3-20261010": {
+        "total": "30",
+        "passed": "30",
+        "failed": "0",
+        "skipped": "0",
+        "inconclusive": "0",
+        "duration": "0.3286569",
+        "xmlSha256": "ddcc1edec393714d174759bff3a7c753d699d9bb5a7e91a492d4c74fa189d238"
+      }
+    }
+  }
+}
