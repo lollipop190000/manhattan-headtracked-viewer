@@ -12,7 +12,7 @@ namespace Manhattan.Viewer
         private ManhattanBootstrap app;
         private Font font;
         private GameObject drawer, setup;
-        private UnityEngine.UI.Text diagnostics, message;
+        private UnityEngine.UI.Text diagnostics, message, captureMessage;
         private float nextDiagnostics;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
@@ -41,8 +41,9 @@ namespace Manhattan.Viewer
             CompareButton(comparisons, "Surface", 348, () => app.Preferences.surfaceDetail, value => { app.Preferences.surfaceDetail = value; app.Surfaces.EnabledDetails = value; app.SavePreferences(); });
             var settings = Rect("Settings Anchor", canvas.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-184, -24), new Vector2(160, 40));
             settings.pivot = new Vector2(0, 1); Button(settings, "Settings  /  Esc", () => ShowDrawer(drawer == null || !drawer.activeSelf));
-            var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(900, 130)); diag.pivot = Vector2.zero;
-            diagnostics = Text(diag, "", 15, 0, 0, 900, 130); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
+            var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(900, 280)); diag.pivot = Vector2.zero;
+            diagnostics = Text(diag, "", 14, 0, 0, 900, 280); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
+            diagnostics.supportRichText = false;
             BuildDrawer(canvas.transform); BuildSetup(canvas.transform);
             app.KeyboardInput.EscapePressed += OnEscape;
             bool requiresSetup = !ViewerPersistence.HasCalibration && !ManhattanBootstrap.HasArgument("--benchmark") && !ManhattanBootstrap.HasArgument("--screenshot-out") && !ManhattanBootstrap.HasArgument("--comparison-captures-out") && !ManhattanBootstrap.HasArgument("--fade-proof-out");
@@ -79,7 +80,10 @@ namespace Manhattan.Viewer
             NumericRow(content, "Screen height (cm)", c.screenHeight * 100f, v => { if (v >= 10 && v <= 200) { c.screenHeight = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Viewing distance (cm)", c.referenceEyeDistanceFromScreen * 100f, v => { if (v >= 25 && v <= 150) { c.referenceEyeDistanceFromScreen = v / 100f; app.UpdateCalibration(); } });
             ActionRow(content, "Save physical calibration", () => { ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); app.Rendering.ResetHistory(); });
-            ActionRow(content, "Capture current face reference", () => { if (app.Display.CaptureReference()) { ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); app.Rendering.ResetHistory(); } });
+            ActionRow(content, "Capture current face reference", CaptureFaceReference);
+            var captureRow = Row(content, 72);
+            captureMessage = Text(captureRow, "Capture replaces the face reference and saves calibration.", 14, 0, 0, 380, 72);
+            Stretch(captureMessage.rectTransform);
             Heading(content, "FLIGHT & IMAGE");
             NumericRow(content, "Movement speed (m/s)", app.Flight.Speed, v => { app.Flight.Speed = v; app.Preferences.movementSpeed = app.Flight.Speed; app.SavePreferences(); });
             NumericRow(content, "Mouse sensitivity", app.KeyboardInput.MouseSensitivity, v => { app.KeyboardInput.MouseSensitivity = Mathf.Clamp(v, .01f, 1f); app.Preferences.mouseSensitivity = app.KeyboardInput.MouseSensitivity; app.SavePreferences(); });
@@ -116,6 +120,20 @@ namespace Manhattan.Viewer
             ActionRow(content, "Close settings", () => ShowDrawer(false));
         }
 
+        private void CaptureFaceReference()
+        {
+            bool captured = app.Display.CaptureReference();
+            bool saved = false;
+            if (captured)
+            {
+                saved = ViewerPersistence.Save(ViewerPersistence.CalibrationFile, app.Display.Calibration);
+                app.Rendering.ResetHistory();
+            }
+            captureMessage.text = ViewerTrackingDiagnostics.FormatCaptureResult(captured, saved);
+            // Refresh visible diagnostics after every explicit attempt, including a failed one.
+            nextDiagnostics = 0f;
+        }
+
         private void BuildSetup(Transform parent)
         {
             var overlay = Rect("First Physical Setup", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -150,11 +168,11 @@ namespace Manhattan.Viewer
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
             diagnostics.text = app.Preferences.diagnostics ? string.Format(CultureInfo.InvariantCulture,
-                "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}  ·  tracking {10}  ·  age {11:F0} ms{12}",
+                "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}{10}",
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
                 app.Flight.CityPosition.x, app.Flight.CityPosition.y, app.Flight.CityPosition.z,
                 app.Benchmark.CpuMemoryBytes / 1048576f, app.Benchmark.GpuMemoryBytes / 1048576f,
-                app.Display.SourceStatus, app.Display.IsTracking, app.Display.ResultAgeMilliseconds,
+                ViewerTrackingDiagnostics.Format(app.Display),
                 app.Benchmark.Recording ? "\nRecording benchmark…" : "") : "";
         }
 
