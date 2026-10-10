@@ -197,6 +197,8 @@ namespace Manhattan.Editor
             ConfigureProject();
             AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult addressableResult);
             if(!string.IsNullOrEmpty(addressableResult.Error))throw new InvalidOperationException(addressableResult.Error);
+            // Compile ownership from these exact built bundles, preserving imported city data.
+            SkylineOwnershipBake.FromBuildSettings(addressableResult.OutputPath);
             // Content was built above; prevent the player preprocessor from building it a second time.
             addressableSettings.BuildAddressablesWithPlayerBuild = AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer;
             string output=Environment.GetEnvironmentVariable("MANHATTAN_BUILD_PATH");

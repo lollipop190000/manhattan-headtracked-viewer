@@ -62,3 +62,9 @@
 .env.*
 .DS_Store
 Thumbs.db
+
+# Derived offline ownership data is regenerated from the exact built city bundles.
+**/Assets/Resources/CityOwnership.json
+**/Assets/Resources/CityOwnership.json.meta
+**/Assets/Resources/CityOwnershipHash.txt
+**/Assets/Resources/CityOwnershipHash.txt.meta
