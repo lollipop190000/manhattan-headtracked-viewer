@@ -9,7 +9,7 @@ This change adds observability and synthetic regression coverage. It does not es
 - Reference feedback distinguishes failed capture, captured-and-saved, and session-only capture when saving fails. First setup and capture/save ordering remain unchanged.
 - `ViewerTrackingDiagnosticsTests` adds 14 EditMode test methods / 22 NUnit cases.
 - `HeadTrackingPipelineTests` adds 9 PlayMode tests with a synthetic observation source. Coverage includes calibrated basic and rigid XYZ motion, screen corners and cube vertices, freeze/resume with continued filtering and flight, hold/loss/staleness, reference capture, floating-origin rebasing, adaptive filtering, and distance correction.
-- The test camera does not render. Projection assertions exercise the actual CPU camera matrices against an independent ray/screen oracle; they do not validate GPU rendering or TAA.
+- The committed pipeline-test camera does not render. Projection assertions exercise the actual CPU camera matrices against an independent ray/screen oracle; they do not validate GPU rendering or TAA.
 
 The technology package remains pinned to `960d5de55037a3fe2739ed055c8de091b8c54aed`. There are no package, launcher, workflow, generated-asset, automatic-capture, or first-setup changes.
 
@@ -68,13 +68,22 @@ The command intentionally omits `-batchmode`, `-nographics`, and `-quit`. Dispos
 - The initial isolated Linux discovery run had 57 passes, 16 platform skips, and one failure caused by a Git LFS pointer in place of the GLB. Subsequent GitHub LFS checkout passed the real geometry test, and the Windows portable run above passed all 74 tests.
 - Existing GitHub [push](https://github.com/lollipop190000/manhattan-headtracked-viewer/actions/runs/38010102499) and [pull-request](https://github.com/lollipop190000/manhattan-headtracked-viewer/actions/runs/38010129961) CI passed for the tested source commit: 58 Python passes, 16 Windows-dependent skips, 0 failures, and 8 PowerShell parser assertions. Source/pin/tracked-file checks and Python syntax also passed. GitHub CI itself does not compile C# or run Unity.
 
+## Supplemental perceptual-depth investigation
+
+The [perceptual-depth validation report](perceptual-depth-validation.md) records two temporary visual diagnostics from 2026-10-10, the supporting perception literature and pinned source references, and the proposed human/real-city checks.
+
+- The chamber/minimal-frame comparison used the actual two configurations with fixed cube geometry and matched eye positions, viewport, and AA. Their different openings and occluders were deliberately retained. Mask disagreement of at most 8 pixels is a pixel-area count, not an 8-pixel positional error; one outer rear target was invisible in the chamber condition at every tested pose.
+- Temporal inspection covered 60 TAA OFF and 60 ON frames. Actual rendered eye trajectories differed by up to 4.66 mm, so a direct image difference cannot isolate TAA. No residual was detected beyond a 2-pixel contour margin under the chosen threshold, while the narrower 1-pixel margin found up to 160 faint pixels. These are bounded diagnostic results, not proof that TAA never ghosts or that people cannot see artifacts.
+- The two temporary harnesses are not included in the product test counts or this PR's code. The recorded 63 EditMode and 25 PlayMode passes remain unchanged.
+- Physical viewport/eye calibration is the first investigation candidate. Human depth perception, actual webcam behavior, and real-city rendering/performance have not been accepted. Readback/PNG timings are not FPS or motion-to-photon measurements.
+
 ## Runtime acceptance still required
 
 The PR remains draft. Passing synthetic tests does not establish actual webcam behavior, rendered city output, or performance.
 
 1. Check diagnostics OFF/ON, no tracker, fresh/stale input, tracking OFF with continuing observations, depth lock, and the actual basic/rigid estimator modes. Check the reference canvas and actual display size, wrapping, and drawer scrolling.
 2. With disposable calibration data, test repeated failed capture, successful explicit capture, and a forced save failure. Check close/reopen behavior and unchanged first setup. Do not overwrite a personal reference for testing.
-3. Validate the real webcam, saved calibration, Windows player, enabled-camera output, and GPU/TAA behavior separately. The synthetic camera is disabled, so these passes do not verify actual city rendering or rendering performance.
+3. Validate the real webcam, saved calibration, Windows player, enabled-camera output, and GPU/TAA behavior separately. The committed pipeline-test camera is disabled; the separate temporary cube diagnostics do not verify actual city rendering or rendering performance.
 
 ### Existing package edge case
 
