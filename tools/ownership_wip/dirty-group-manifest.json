@@ -1,0 +1,234 @@
+{
+  "parentCommit": "1661c21d1adb67098cea0f52413bfd484a13e09d",
+  "sourceSha256": "e631a728d901c3e9d8d45237ed1162b79a5e3f5a9cb30142e00f58490c869258",
+  "sourceFiles": {
+    "SkylineGeometryOwnership.cs": "e631a728d901c3e9d8d45237ed1162b79a5e3f5a9cb30142e00f58490c869258",
+    "CityStreamer.cs": "87ba0796a8aeed24fd71cbc378c2cbb9e9471ceaa9b690e5f49b6fc84dda6ee3",
+    "SurfaceDetailComparison.cs": "f2207c92ee56a44c615f9e50cf820259457772391e72f13267cbc54e7967978f",
+    "SkylineOwnershipRegressionTests.cs": "fb6733e4d7a6cd21f9e02d0f93a414a73a1589662ae20fde727171a67393d591"
+  },
+  "runtimeAssembly": {
+    "path": "city-dirty-groups-build-v2-20261010\\Player\\ManhattanDiagnostic_Data\\Managed\\Manhattan.Viewer.Runtime.dll",
+    "sha256": "791f127dd44b5f739613c1c33f4a46afe1f59c76ae3f1f5493aa26407cf0d023",
+    "bytes": 270336
+  },
+  "tests": {
+    "PlayMode": {
+      "path": "ownership-validation-play-dirty-groups-v2-20261010\\playmode-test.xml",
+      "sha256": "4f4f1722f5cd9a1c38ec6f7c6285092a495aca994ab98c651d0a8ba0106cfa54",
+      "testRun": {
+        "id": "2",
+        "testcasecount": "119",
+        "result": "Passed",
+        "total": "119",
+        "passed": "119",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-10 16:57:50Z",
+        "end-time": "2026-10-10 16:59:15Z",
+        "duration": "84.8772448"
+      }
+    },
+    "EditMode": {
+      "path": "ownership-validation-edit-dirty-groups-v2-20261010\\editmode-test.xml",
+      "sha256": "c28d8c5c83b3166a7d6b9c8267101a58e01c151e3bd0cbb42638f581e2ee0ffd",
+      "testRun": {
+        "id": "2",
+        "testcasecount": "178",
+        "result": "Passed",
+        "total": "178",
+        "passed": "178",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-10 17:00:47Z",
+        "end-time": "2026-10-10 17:00:58Z",
+        "duration": "11.130447"
+      }
+    }
+  },
+  "frame": {
+    "count": 5401,
+    "p95": 16.6832,
+    "p99": 16.6833,
+    "max": 16.6838,
+    "framesGE50": 0
+  },
+  "streaming": {
+    "count": 5401,
+    "p95": 2.138,
+    "p99": 2.8103,
+    "max": 4.3521,
+    "framesGE50": 0
+  },
+  "numericGates": {
+    "frameP95": true,
+    "frameP99": true,
+    "noFramesGE50": true,
+    "streamingP95": false
+  },
+  "prior166": {
+    "frame": {
+      "n": 5372,
+      "p50": 16.6665,
+      "p95": 16.6832,
+      "p99": 16.6848,
+      "maximum": 42.9503,
+      "framesGE50": 0
+    },
+    "streaming": {
+      "n": 5372,
+      "p50": 0.1837,
+      "p95": 2.3883,
+      "p99": 3.2657,
+      "maximum": 7.9414,
+      "framesGE50": 0
+    }
+  },
+  "benchmarkFolder": "city-ownership-visible-dirty-groups-100-20261010-170255-78eca7a9",
+  "benchmark": {
+    "utcTime": "2026-10-10T17:04:42.5396053Z",
+    "unityVersion": "6000.3.22f1",
+    "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+    "cpu": "Intel(R) Core(TM) Ultra 9 185H",
+    "sourceVersion": "manhattan-2026-10-10-v2",
+    "routeRegion": "Midtown",
+    "reportKind": "measured-runtime",
+    "width": 1920,
+    "height": 1200,
+    "frameCount": 5401,
+    "streamingFailures": 0,
+    "renderWidth": 1920,
+    "renderHeight": 1200,
+    "displayModeWidth": 2880,
+    "displayModeHeight": 1800,
+    "completedMeasuredCircuits": 2,
+    "fullscreenMode": "Windowed",
+    "routeDistanceMeters": 2640.361328125,
+    "routeDurationSeconds": 26.40361213684082,
+    "measuredRouteCoverageFraction": 1.0,
+    "translationConstrained": false,
+    "viewerRevision": "c8f3904b17ec1cd4d3471bd59e198ce10d429957",
+    "technologyRevision": "960d5de55037a3fe2739ed055c8de091b8c54aed",
+    "sourceManifestSha256": "82bc35bea819762e3832210187232cafa8e16bea9fd92ecf3cf8dc2f683f8bc7",
+    "buildUtc": "2026-10-10T16:58:22.8908624Z",
+    "dirtyWorkingTree": true,
+    "buildIdentityAvailable": true,
+    "speed": 100.0,
+    "durationSeconds": 90.00094604492188,
+    "p95FrameMs": 16.683170318603516,
+    "p99FrameMs": 16.683277130126953,
+    "maximumFrameMs": 16.683773040771484,
+    "p95StreamingMs": 2.138000011444092,
+    "p95CollisionMs": 0.0,
+    "trackingFraction": 0.0,
+    "requestedSpeed": 100.0,
+    "actualRouteSpeed": 100.0,
+    "maximumCpuBytes": 1758311841,
+    "maximumGpuBytes": 0,
+    "maximumEstimatedTileBytes": 461954658,
+    "endingCpuBytes": 1736680051,
+    "maximumProcessWorkingSetBytes": 2282766336,
+    "framesOver50Ms": 0,
+    "graphicsMemoryCounterAvailable": false,
+    "collisionProxies": false,
+    "performanceTargetPassed": false,
+    "limitation": "GPU counter is Unity graphics allocations, not total dedicated VRAM. CPU and process working-set counters are reported separately. Frame timings include vsync. Human head movements and visual artifacts require visual review."
+  },
+  "stills": {
+    "street": {
+      "prior166": {
+        "meanAbsoluteRGBDifference": 0.23374233217592594,
+        "pixelsMaxChannelDiffGT20": 1238
+      },
+      "publicC8": {
+        "meanAbsoluteRGBDifference": 0.21846368634259258,
+        "pixelsMaxChannelDiffGT20": 2226
+      }
+    },
+    "roof": {
+      "prior166": {
+        "meanAbsoluteRGBDifference": 0.38451982060185186,
+        "pixelsMaxChannelDiffGT20": 8741
+      },
+      "publicC8": {
+        "meanAbsoluteRGBDifference": 0.40390234375,
+        "pixelsMaxChannelDiffGT20": 8106
+      }
+    }
+  },
+  "media": {
+    "frames": 481,
+    "width": 1920,
+    "height": 1200,
+    "firstToLastSeconds": 16.008923099999993,
+    "actualMeanCaptureFps": 29.98327851296882,
+    "requestedFps": 30,
+    "timestampMaxErrorSeconds": 0.0006686999999985233,
+    "orientationAnchorSameMAD": 0.0,
+    "orientationAnchorFlippedMAD": 35.78697193287037,
+    "encodingOrientationTransform": "none",
+    "variableFrameRate": true,
+    "noInterpolationTrimOrAcceleration": true,
+    "maxRequestIssueMs": 0.2775,
+    "maxDataCopyMs": 2.4285,
+    "maxBackgroundWriteMs": 12.188400000000001,
+    "readbackErrors": 0,
+    "schedulingSkipped": 0,
+    "maxPending": 2,
+    "maxFailures": 0,
+    "firstPose": {
+      "x": 1225.0,
+      "y": 150.0,
+      "z": 3585.0
+    },
+    "lastPose": {
+      "x": 1225.521484375,
+      "y": 150.0,
+      "z": 3585.0
+    },
+    "runtimeSourceSha256": "e631a728d901c3e9d8d45237ed1162b79a5e3f5a9cb30142e00f58490c869258",
+    "movieSha256": "73f4928f9f22306f512d4ec57ffe1ff0951eabef83f62fb97008ca9a76444c59",
+    "movieBytes": 18345532,
+    "performanceAcceptance": false
+  },
+  "safety": "No geometry/material eligibility, model/engine/package/tracker or private calibration changes. Mask-only group versions; all Core preparation and atomic publication guards remain fresh. This single 90s result is not a statistically controlled paired improvement. Global flicker and valid webcam observations remain unaccepted.",
+  "frameTimingSamples": {
+    "cpu_frame_ms": {
+      "count": 5400,
+      "p95": 16.7736,
+      "p99": 17.003,
+      "max": 36.4267,
+      "framesGE50": 0
+    },
+    "cpu_main_ms": {
+      "count": 5400,
+      "p95": 3.5563,
+      "p99": 4.2285,
+      "max": 12.7359,
+      "framesGE50": 0
+    },
+    "gpu_frame_ms": {
+      "count": 5400,
+      "p95": 5.211136,
+      "p99": 5.675008,
+      "max": 6.494208,
+      "framesGE50": 0
+    }
+  },
+  "portableTests": {
+    "pythonRan": 81,
+    "errors": 1,
+    "reason": "Existing extraction test failed staging.rename(destination) with WinError5 in task-owned .cache/tests scratch. No OS/security/access change attempted; log preserved.",
+    "manifestValidation": "passed",
+    "gpuParserAssertionsPassed": 5,
+    "environmentParserAssertionsPassed": 3
+  }
+}

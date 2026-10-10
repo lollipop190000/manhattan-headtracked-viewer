@@ -203,5 +203,75 @@ public sealed class SkylineOwnershipRegressionTests
         CreatePair();ownership.SetDesired(core,true);Drain();Assert.That(ownership.RuntimeMeshCount,Is.EqualTo(1));ownership.Dispose();
         Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.RuntimeMeshCount,Is.Zero);Assert.That(material,Is.Not.Null);Assert.That(original.triangles.Length,Is.EqualTo(6));
     }
+    private void TwoGroups(bool complete,out GameObject otherSky,out GameObject otherCore)
+    {
+        sky=Root("sky",new[]{0,1,2,3,4,5});core=Root("core",new[]{0,1,2});
+        otherSky=Root("other sky",new[]{0,1,2,3,4,5});otherCore=Root("other core",new[]{0,1,2});
+        original=sky.GetComponent<MeshFilter>().sharedMesh;
+        var tiles=new[]{new CityTileRecord{id="sky",layer=CityLayer.Skyline,requiredReplacementCount=complete?1:2},
+            new CityTileRecord{id="core",layer=CityLayer.Core,replaces=new[]{"sky"}},
+            new CityTileRecord{id="other sky",layer=CityLayer.Skyline,requiredReplacementCount=complete?1:2},
+            new CityTileRecord{id="other core",layer=CityLayer.Core,replaces=new[]{"other sky"}}};
+        var roots=new[]{sky,core,otherSky,otherCore};
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=tiles;
+        ownership.Configure(OwnershipTestData.Compile(tiles,roots),"fixture",_=>"fixture-content",catalog);
+        for(int i=0;i<tiles.Length;i++)ownership.Register(tiles[i],roots[i]);
+        ownership.SetDesired(core,true);ownership.SetDesired(otherCore,true);Drain();
+    }
+    [TestCase(false)][TestCase(true)]
+    public void DirtyGroupRetainsUnrelatedMaskAndRestoresOnlyDepartingGroup(bool complete)
+    {
+        TwoGroups(complete,out var otherSky,out var otherCore);
+        var retained=sky.GetComponent<MeshFilter>().sharedMesh;long count=ownership.MaskPreparationGroups;
+        ownership.SetDesired(otherCore,false);Drain();
+        Assert.That(ownership.MaskPreparationGroups-count,Is.EqualTo(1));
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(retained));
+        Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?2:1));
+        Assert.That(otherSky.GetComponent<MeshFilter>().sharedMesh.triangles.Length,Is.EqualTo(6));
+        ownership.Unregister(otherCore);Drain();ownership.Register(new CityTileRecord{id="other core",layer=CityLayer.Core,replaces=new[]{"other sky"}},otherCore);
+        ownership.SetDesired(otherCore,true);Drain();
+        Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?4:2));
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(retained));
+    }
+    [TestCase("material")][TestCase("renderer")][TestCase("mesh")]
+    public void ChangedProviderInUnrelatedGroupCannotRetainStaleMask(string mutation)
+    {
+        TwoGroups(false,out var otherSky,out var otherCore);
+        if(mutation=="material"){var changed=new Material(material);objects.Add(changed);changed.SetFloat("_AlphaClip",1);core.GetComponent<MeshRenderer>().sharedMaterial=changed;}
+        else if(mutation=="renderer")Object.DestroyImmediate(core.GetComponent<MeshRenderer>());
+        else core.GetComponent<MeshFilter>().sharedMesh=null;
+        ownership.SetDesired(otherCore,false);Drain();
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.Zero);
+    }
+    [Test]public void ExplicitMutationInvalidationRestoresIdleMaskWithoutDesiredToggle()
+    {
+        CreatePair();ownership.SetDesired(core,true);Drain();
+        var changed=new Material(material);objects.Add(changed);changed.SetFloat("_Surface",1);core.GetComponent<MeshRenderer>().sharedMaterial=changed;
+        ownership.Invalidate(core);Drain();Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+        core.GetComponent<MeshRenderer>().sharedMaterial=material;ownership.Invalidate(core);Drain();Assert.That(ownership.MaskedTriangles,Is.EqualTo(1));
+    }
+    [Test]public void CommonOriginInvalidationRechecksBothGroupsWithoutChangingMetreMasks()
+    {
+        TwoGroups(false,out var otherSky,out var otherCore);long count=ownership.MaskPreparationGroups;
+        foreach(var root in new[]{sky,core,otherSky,otherCore})root.transform.position-=new Vector3(12000,0,9000);
+        ownership.Invalidate();Drain();Assert.That(ownership.MaskPreparationGroups-count,Is.EqualTo(2));Assert.That(ownership.MaskedTriangles,Is.EqualTo(2));
+    }
+    [Test]public void SurfaceNotificationInvalidatesBothDirectionsAndLeavesImportedData()
+    {
+        CreatePair();var surfaces=sky.AddComponent<SurfaceDetailComparison>();surfaces.DetailsChanged+=()=>ownership.Invalidate();
+        surfaces.Register(sky);surfaces.Register(core);ownership.SetDesired(core,true);Drain();
+        long count=ownership.MaskPreparationGroups;surfaces.EnabledDetails=false;Drain();surfaces.EnabledDetails=true;Drain();
+        Assert.That(ownership.MaskPreparationGroups-count,Is.EqualTo(2));Assert.That(ownership.MaskedTriangles,Is.EqualTo(1));Assert.That(original.triangles.Length,Is.EqualTo(6));
+        surfaces.Unregister(core);surfaces.Unregister(sky);
+    }
+    [Test]public void UnrelatedFallbackPointerMutationIsRejectedBeforeCachedMaskPublication()
+    {
+        TwoGroups(false,out var otherSky,out var otherCore);
+        // Restoring the source pointer externally changes the published fallback even though
+        // it is one of our known meshes. Retaining an unrelated group's cached mask is unsafe.
+        sky.GetComponent<MeshFilter>().sharedMesh=original;ownership.SetDesired(otherCore,false);
+        UnityEngine.TestTools.LogAssert.Expect(LogType.Warning,new System.Text.RegularExpressions.Regex("Fallback source changed during preparation"));
+        Drain();Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(ownership.RuntimeMeshCount,Is.Zero);
+    }
     [TearDown]public void Cleanup(){ownership?.Dispose();foreach(var o in objects)if(o!=null)Object.Destroy(o);objects.Clear();}
 }

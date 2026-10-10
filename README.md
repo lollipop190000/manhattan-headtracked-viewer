@@ -1,5 +1,5 @@
-> **WIP shared branch, 2026-10-10. Do not merge or treat as a release.**
-> The confirmed blank facade/roof regression is restored; scoped repeated validation/mask work is reduced. New same-camera stills and16s LOD roundtrip preserve that restoration. Current short visible streamingP952.3883ms still exceeds2ms. Real webcam and global flicker acceptance remain pending. See [current status and reproduction](docs/ownership-wip-status.md).
+> **WIP shared branch; do not merge as a release.**
+> Textured facade/roof restoration is retained; only dirty Skyline masks are prepared with fresh coverage/publication guards. Final Unity tests119/119 Play and178/178 Edit. Current short streamingP95=2.1380ms still exceeds2ms. Real webcam/global flicker acceptance remain pending. See [current status](docs/ownership-wip-status.md).
 
 # Manhattan Head Tracked Viewer
 

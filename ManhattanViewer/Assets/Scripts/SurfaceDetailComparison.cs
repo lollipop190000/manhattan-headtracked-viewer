@@ -25,6 +25,7 @@ namespace Manhattan.Viewer
         private readonly Dictionary<GameObject, List<Binding>> tiles = new Dictionary<GameObject, List<Binding>>();
         private readonly Dictionary<Material, Variant> regularVariants = new Dictionary<Material, Variant>();
         private readonly Dictionary<Material, Variant> fadeVariants = new Dictionary<Material, Variant>();
+        public event Action DetailsChanged;
         public int RuntimeVariantCount => regularVariants.Count + fadeVariants.Count;
         public long OpacityPropertyWrites { get; private set; }
         public long OpacityTileVisits { get; private set; }
@@ -62,6 +63,7 @@ namespace Manhattan.Viewer
                 if (enabledDetails == value) return;
                 enabledDetails = value;
                 foreach (var bindings in tiles.Values) foreach (var binding in bindings) Apply(binding);
+                DetailsChanged?.Invoke();
             }
         }
 

@@ -168,6 +168,7 @@ namespace Manhattan.Viewer
         {
             if (initialized || catalog == null) return;
             initialized = true;
+            if(surfaces!=null)surfaces.DetailsChanged+=OnSurfaceDetailsChanged;
             var sidecar=Resources.Load<TextAsset>("CityOwnership");
             if(sidecar!=null)
             {
@@ -366,6 +367,7 @@ namespace Manhattan.Viewer
 
         private void OnRebased(Vector3 shift)
         {
+            ownership.Invalidate();
             foreach (var r in residents) if (r.instance != null) r.instance.transform.position = r.tile.cityOrigin - origin.Offset;
         }
         private static void SetLayer(Transform t, int layer)
@@ -414,8 +416,10 @@ namespace Manhattan.Viewer
             }
             r.hasHandle = r.loading = r.releaseQueued = false; r.renderers = null;
         }
+        private void OnSurfaceDetailsChanged()=>ownership.Invalidate();
         private void OnDestroy()
         {
+            if(surfaces!=null)surfaces.DetailsChanged-=OnSurfaceDetailsChanged;
             ownership.Dispose();
             if (origin != null) origin.Rebased -= OnRebased;
             while (residents.Count > 0) Release(residents[residents.Count - 1]);
