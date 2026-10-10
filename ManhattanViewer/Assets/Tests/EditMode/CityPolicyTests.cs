@@ -208,8 +208,25 @@ public sealed class CityPolicyTests
     }
 }
 
-// Oracle is the evaluation policy at 78bd313. Compare production decisions and exact
-// requested priorities, including the original List.Sort behavior for equal priorities.
+public sealed class NearDiagnosticEmptyStateTests
+{
+    [Test]
+    public void UnstartedStreamerDoesNotClaimLoadedActiveOpacityOrDistanceSamples()
+    {
+        var host = new GameObject("empty near diagnostic fixture");
+        try
+        {
+            var streamer = host.AddComponent<CityStreamer>(); streamer.enabled = false;
+            var state = streamer.GetNearDiagnostics();
+            Assert.That(state.loadedTiles, Is.Zero); Assert.That(state.activeTiles, Is.Zero);
+            Assert.That(state.activeRenderers, Is.Zero); Assert.That(state.visibleRendererFlags, Is.Zero);
+            Assert.That(state.opacityAvailable, Is.False); Assert.That(state.nearestLoadedTile, Is.Null);
+            Assert.That(state.sourceVersion, Is.EqualTo("unavailable"));
+        }
+        finally { UnityEngine.Object.DestroyImmediate(host); }
+    }
+}
+
 public sealed class CityEvaluationEquivalenceTests
 {
     private static readonly Type Residency = typeof(CityStreamer).GetNestedType("Residency", BindingFlags.NonPublic);

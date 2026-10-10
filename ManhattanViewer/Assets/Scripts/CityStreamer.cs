@@ -26,6 +26,47 @@ namespace Manhattan.Viewer
         public int Failures { get; private set; }
         public long CatalogEvaluations { get; private set; }
 
+        public struct NearDiagnosticState
+        {
+            public string sourceVersion, nearestLoadedTile;
+            public int loadedTiles, activeTiles, activeRenderers, visibleRendererFlags;
+            public float nearestLoadedBoundsDistance, minimumOpacity, maximumOpacity;
+            public bool surfaceDetailsEnabled, opacityAvailable;
+        }
+
+        /// <summary>On-demand, read-only state of instantiated Near residents. Flags are not pixel visibility proof.</summary>
+        public NearDiagnosticState GetNearDiagnostics()
+        {
+            var result = new NearDiagnosticState
+            {
+                sourceVersion = catalog != null ? catalog.sourceVersion : "unavailable",
+                nearestLoadedBoundsDistance = float.PositiveInfinity,
+                minimumOpacity = -1f, maximumOpacity = -1f,
+                surfaceDetailsEnabled = surfaces != null && surfaces.EnabledDetails
+            };
+            Vector3 position = flight != null ? flight.CityPosition : Vector3.zero;
+            foreach (var r in residents)
+            {
+                if (r.instance == null || r.tile.layer != CityLayer.Near) continue;
+                result.loadedTiles++;
+                if (r.instance.activeInHierarchy) result.activeTiles++;
+                if (flight == null) continue;
+                float distance = DistanceToTile(r.tile.cityBounds, position);
+                if (distance < result.nearestLoadedBoundsDistance)
+                {
+                    result.nearestLoadedBoundsDistance = distance;
+                    result.nearestLoadedTile = r.tile.id;
+                }
+            }
+            if (surfaces != null)
+            {
+                surfaces.GetNearFadeRange(out result.minimumOpacity, out result.maximumOpacity,
+                    out result.activeRenderers, out result.visibleRendererFlags);
+                result.opacityAvailable = result.activeRenderers > 0;
+            }
+            return result;
+        }
+
         private sealed class Residency
         {
             public CityTileRecord tile;

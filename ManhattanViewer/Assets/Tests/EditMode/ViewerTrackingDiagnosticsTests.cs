@@ -7,6 +7,37 @@ using UnityEngine;
 public sealed class ViewerTrackingDiagnosticsTests
 {
     [Test]
+    public void NearDiagnosticsDistinguishLoadedActiveFlagsAndUnavailableOpacity()
+    {
+        string empty = ViewerTrackingDiagnostics.FormatNear(default);
+        StringAssert.Contains("Near 0 loaded / 0 active", empty);
+        StringAssert.Contains("Nearest loaded Near bounds: unavailable", empty);
+        StringAssert.Contains("opacity: unavailable", empty);
+        StringAssert.Contains("Catalog: unavailable", empty);
+        var state = new CityStreamer.NearDiagnosticState { sourceVersion = "city-v2", loadedTiles = 7,
+            activeTiles = 4, activeRenderers = 9, visibleRendererFlags = 5, nearestLoadedTile = "Near_test",
+            nearestLoadedBoundsDistance = 25.5f, minimumOpacity = 0, maximumOpacity = .25f,
+            opacityAvailable = true, surfaceDetailsEnabled = true };
+        string text = ViewerTrackingDiagnostics.FormatNear(state);
+        StringAssert.Contains("7 loaded / 4 active", text);
+        StringAssert.Contains("25.5 m (Near_test)", text);
+        StringAssert.Contains("0.000..0.250", text);
+        StringAssert.Contains("visibility flags (pixels unverified)", text);
+        StringAssert.Contains("additive window trim", text);
+        StringAssert.Contains("Surface ON", text);
+        state.surfaceDetailsEnabled = false;
+        StringAssert.Contains("Surface OFF", ViewerTrackingDiagnostics.FormatNear(state));
+    }
+
+    [TestCase(float.NaN, 1f)] [TestCase(0f, float.PositiveInfinity)]
+    [TestCase(-1f, 1f)] [TestCase(1f, 0f)] [TestCase(0f, 1.1f)]
+    public void InvalidNearOpacityRangeIsUnavailable(float minimum, float maximum)
+    {
+        var state = new CityStreamer.NearDiagnosticState { opacityAvailable = true, minimumOpacity = minimum, maximumOpacity = maximum };
+        StringAssert.Contains("opacity: unavailable", ViewerTrackingDiagnostics.FormatNear(state));
+    }
+
+    [Test]
     public void EnabledDoesNotClaimFreshOrValidObservations()
     {
         string status = ViewerTrackingDiagnostics.FormatTrackingState(true, false, false);

@@ -6,6 +6,38 @@ using UnityEngine;
 
 public sealed class BenchmarkSpeedTests
 {
+    [TestCase(-90.00001f)] [TestCase(-90f)] [TestCase(-89.99999f)]
+    [TestCase(-85f)] [TestCase(-40f)] [TestCase(0f)] [TestCase(40f)] [TestCase(85f)]
+    [TestCase(89.99999f)] [TestCase(90f)] [TestCase(90.00001f)]
+    public void GroundPlaneMovementRetainsYawSpeedAndVerticalSeparation(float pitch)
+    {
+        foreach (float yaw in new[] { -720f, -181f, -90f, 0f, 37f, 90f, 179f, 540f })
+        {
+            Quaternion view = Quaternion.Euler(pitch, yaw, 0f);
+            Quaternion azimuth = Quaternion.Euler(0f, yaw, 0f);
+            foreach (Vector3 input in new[] { Vector3.forward, Vector3.back, Vector3.right, Vector3.left,
+                Vector3.up, Vector3.down, Vector3.ClampMagnitude(new Vector3(1, 0, 1), 1),
+                Vector3.ClampMagnitude(new Vector3(1, 1, 1), 1), new Vector3(.2f, -.3f, .4f) })
+            {
+                Vector3 actual = FreeFlightController.GroundPlaneMovement(input, view, yaw);
+                Vector3 expected = azimuth * new Vector3(input.x, 0, input.z) + Vector3.up * input.y;
+                Assert.That(Vector3.Distance(actual, expected), Is.LessThan(.0002f), $"pitch={pitch}, yaw={yaw}, input={input}");
+                Assert.That(actual.y, Is.EqualTo(input.y).Within(.000001f));
+                Assert.That(actual.magnitude, Is.EqualTo(input.magnitude).Within(.00001f));
+            }
+        }
+    }
+
+    [Test]
+    public void GroundPlaneMovementIgnoresCameraRollWithoutChangingAnalogMagnitude()
+    {
+        Quaternion yaw = Quaternion.Euler(0, 123, 0);
+        Quaternion view = yaw * Quaternion.Euler(80, 0, 0) * Quaternion.Euler(0, 0, 65);
+        var input = new Vector3(.2f, .35f, -.5f);
+        Vector3 expected = yaw * new Vector3(input.x, 0, input.z) + Vector3.up * input.y;
+        Assert.That(Vector3.Distance(FreeFlightController.GroundPlaneMovement(input, view, 123), expected), Is.LessThan(.0001f));
+    }
+
     [TestCase(20d)] [TestCase(20000d)] [TestCase(100000d)]
     public void CsvClockPreserves100MetresPerSecondAfterLongUptime(double warmupUntil)
     {

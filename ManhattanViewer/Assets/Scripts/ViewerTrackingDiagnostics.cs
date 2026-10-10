@@ -7,6 +7,24 @@ namespace Manhattan.Viewer
     /// <summary>Read-only labels for the package's public state; never captures or saves calibration.</summary>
     public static class ViewerTrackingDiagnostics
     {
+        public static string FormatNear(CityStreamer.NearDiagnosticState near)
+        {
+            string distance = !string.IsNullOrEmpty(near.nearestLoadedTile) &&
+                float.IsFinite(near.nearestLoadedBoundsDistance) && near.nearestLoadedBoundsDistance >= 0f
+                ? near.nearestLoadedBoundsDistance.ToString("F1", CultureInfo.InvariantCulture) + " m (" +
+                    SingleLine(near.nearestLoadedTile) + ")" : "unavailable";
+            string opacity = near.opacityAvailable && float.IsFinite(near.minimumOpacity) && float.IsFinite(near.maximumOpacity) &&
+                near.minimumOpacity >= 0f && near.maximumOpacity <= 1f && near.minimumOpacity <= near.maximumOpacity
+                ? near.minimumOpacity.ToString("F3", CultureInfo.InvariantCulture) + ".." +
+                    near.maximumOpacity.ToString("F3", CultureInfo.InvariantCulture) : "unavailable";
+            return "Near " + near.loadedTiles + " loaded / " + near.activeTiles + " active  |  Surface " +
+                (near.surfaceDetailsEnabled ? "ON" : "OFF") + "\n" +
+                "Nearest loaded Near bounds: " + distance + "\n" +
+                "Near active renderer opacity: " + opacity + "  |  " + near.activeRenderers +
+                " enabled renderers / " + near.visibleRendererFlags + " visibility flags (pixels unverified)\n" +
+                "Catalog: " + SingleLine(string.IsNullOrEmpty(near.sourceVersion) ? "unavailable" : near.sourceVersion) + "  |  additive window trim, not body replacement";
+        }
+
         public static string Format(HeadTrackedDisplay display)
         {
             var c = display.Calibration;

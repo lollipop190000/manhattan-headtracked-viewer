@@ -2,7 +2,7 @@
 
 맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
 
-Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~50m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
+Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~100m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
 현재 고정된 기술 커밋은 [`960d5de55037a3fe2739ed055c8de091b8c54aed`](https://github.com/lollipop190000/head-tracked-display/commit/960d5de55037a3fe2739ed055c8de091b8c54aed)입니다. 패키지 데모와 URP 없는 최소 소비 프로젝트의 투영·보정·수명주기 검사, 런타임 전용 Windows smoke와 공용 런처 검사를 통과했습니다. 맨해튼 전체 도시 Windows 빌드와 실제 GPU의 비교·창문 디테일 검증도 실행했습니다. 첫 Midtown 50m/s 측정에서는 프레임 P95 16.683ms, P99 16.684ms, 50ms 이상 정지 0회를 기록했습니다. **전체 경로의 웹캠 성능 합격과 실제 머리 이동 확인은 아직 완료되지 않았습니다.** [검증 기록](docs/validation.md)은 실제 측정과 미확인 항목을 구분합니다.
 
@@ -61,9 +61,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 | 조작 | 동작 |
 |---|---|
 | 도시 화면 클릭 | 마우스 포인터 잠금·이동 시작 |
-| W / S | 바라보는 방향으로 전진·후진 |
-| A / D | 좌우 이동 |
-| Q / E | 아래·위 이동 |
+| W / S | 시선의 수평 방향으로 전진·후진(높이 유지) |
+| A / D | 수평 좌우 이동 |
+| Q / E | 도시의 수직 방향으로 아래·위 이동 |
 | 마우스 | yaw·pitch 회전 |
 | Esc / Settings | 포인터 해제·오른쪽 설정창 |
 | Alt+F4 | 플레이어 종료·추적기 정리 |
@@ -81,6 +81,7 @@ Head Tracking OFF는 현재 머리 오프셋을 유지하고 관측·필터링�
 - [자산 버전·재현 방법](docs/assets.md)
 - [입력·충돌·게임 요소 연결](docs/architecture.md)
 - [성능 측정·검증 기준](docs/validation.md)
+- [수평 WASD·Near 진단 검증과 현재 한계](docs/manual-controls-near-diagnostics.md)
 - [제3자 출처·이용 조건](THIRD_PARTY.md)
 
 GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한 추출·무결성 테스트를 실행합니다. Unity 검증은 `tools/test.ps1`, 빌드는 `tools/build.ps1`로 재현합니다. 패키지 기능 변경은 기술 저장소에서 최소 소비 프로젝트 검증을 거친 뒤 이 저장소의 고정 커밋을 함께 갱신합니다.

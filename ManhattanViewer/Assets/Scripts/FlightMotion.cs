@@ -101,12 +101,26 @@ namespace Manhattan.Viewer
             yaw += command.lookDegrees.x;
             pitch = Mathf.Clamp(pitch - command.lookDegrees.y, -85f, 85f);
             transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
-            Vector3 requestedVelocity = transform.TransformDirection(command.localMovement) * speed;
+            Vector3 requestedVelocity = GroundPlaneMovement(command.localMovement, transform.rotation, yaw) * speed;
             Vector3 current = CityPosition;
             Vector3 requested = current + requestedVelocity * Time.unscaledDeltaTime;
             if (TranslationConstraint != null) requested = TranslationConstraint.Constrain(current, requested);
             transform.position = requested - (Origin != null ? Origin.Offset : Vector3.zero);
             Velocity = (requested - current) / Mathf.Max(Time.unscaledDeltaTime, .0001f);
+        }
+
+        /// <summary>WASD follows the view azimuth on world XZ; Q/E follows fixed world up.</summary>
+        public static Vector3 GroundPlaneMovement(Vector3 localMovement, Quaternion viewRotation, float yawDegrees)
+        {
+            Vector3 forward = Vector3.ProjectOnPlane(viewRotation * Vector3.forward, Vector3.up);
+            // Projected forward loses its azimuth at a vertical view. The controller retains
+            // yaw separately, so this fallback neither divides by zero nor invents a new heading.
+            if (forward.sqrMagnitude <= .000001f)
+                forward = Quaternion.Euler(0f, yawDegrees, 0f) * Vector3.forward;
+            forward.Normalize();
+            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+            // Orthonormal horizontal axes preserve the sampled analog/diagonal magnitude.
+            return right * localMovement.x + Vector3.up * localMovement.y + forward * localMovement.z;
         }
     }
 

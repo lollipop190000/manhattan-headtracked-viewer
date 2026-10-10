@@ -43,8 +43,8 @@ namespace Manhattan.Viewer
             CompareButton(comparisons, "Surface", 348, () => app.Preferences.surfaceDetail, value => { app.Preferences.surfaceDetail = value; app.Surfaces.EnabledDetails = value; app.SavePreferences(); });
             var settings = Rect("Settings Anchor", canvas.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-184, -24), new Vector2(160, 40));
             settings.pivot = new Vector2(0, 1); Button(settings, "Settings  /  Esc", () => ShowDrawer(drawer == null || !drawer.activeSelf));
-            var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(900, 280)); diag.pivot = Vector2.zero;
-            diagnostics = Text(diag, "", 14, 0, 0, 900, 280); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
+            var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(1100, 360)); diag.pivot = Vector2.zero;
+            diagnostics = Text(diag, "", 14, 0, 0, 1100, 360); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
             diagnostics.supportRichText = false;
             viewportRuler = new GameObject("Viewport measurement aid", typeof(RectTransform)).AddComponent<ViewerViewportRuler>();
             viewportRuler.Initialize(canvas, app.Display.GetComponent<Camera>(), app.Display.Calibration, font);
@@ -197,7 +197,7 @@ namespace Manhattan.Viewer
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
                 app.Flight.CityPosition.x, app.Flight.CityPosition.y, app.Flight.CityPosition.z,
                 app.Benchmark.CpuMemoryBytes / 1048576f, app.Benchmark.GpuMemoryBytes / 1048576f,
-                ViewerTrackingDiagnostics.Format(app.Display),
+                ViewerTrackingDiagnostics.Format(app.Display) + "\n" + ViewerTrackingDiagnostics.FormatNear(app.Streamer.GetNearDiagnostics()),
                 app.Benchmark.Recording ? "\nRecording benchmark…" : "") : "";
         }
 
