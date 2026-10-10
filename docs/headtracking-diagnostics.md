@@ -88,3 +88,39 @@ The PR remains draft. Passing synthetic tests does not establish actual webcam b
 ### Existing package edge case
 
 Stale tracking is rejected before the calibration mutator, which the stale-capture test covers. Separately, a usable observation with a calculated eye span of at most 1 pixel can mutate in-memory reference fields before `DisplayCalibration.CaptureReference` returns false. The UI therefore reports failure without promising the previous reference remained unchanged, and does not save on false. Atomic capture failure would require a separate package change.
+
+## Manual viewport rulers and follow-up validation, 2026-10-10
+
+This follow-up adds a **measurement aid**, not a completed physical calibration. Historical 63/63 EditMode and 25/25 PlayMode results above refer to authored source `df12acb183746aab50af6c48c728923edfce828b`. The new results below cover that source plus the reviewed five-file viewport-ruler patch (SHA256 `886ae24b759b66941ea67ecebd8b1562607626474dcb0b51f1f66b6e7f746768`). The remote parent `edc0ab049374a44eea240ab8e1a73c492938c2be` changed documentation only.
+
+### Use the measurement aid
+
+1. Open **Settings / Esc**, find **VIEWPORT CHECK**, and explicitly enable **Show manual 10 cm rulers**. The toggle starts OFF on every launch and is not saved as a preference.
+2. Measure both horizontal and vertical spans with a real ruler in the actual content area. The spans use the currently applied screen width/height; compare them after applying your intended values.
+3. Inspect the displayed camera `pixelRect`, last rendered URP target dimensions, and viewport/applied physical aspect ratios. A frame not yet observed is labeled unavailable/awaiting; an offscreen render target is not offered as a physical display ruler.
+4. If measurements disagree, enter the measured content width/height through the existing fields and use the existing explicit **Save physical calibration** action. Also measure eye-to-screen distance separately. The ruler toggle does not apply, capture, correct, or save any values.
+
+Each axis uses `viewportPixels * 0.10 / appliedPhysicalMeters`. Screen endpoints are converted through the actual Canvas transform, so the overlay follows viewport offsets, window dimensions, and Canvas scaling. Rendering at a lower URP render scale does not shorten the physical ruler. EDID and window position do not establish measured screen dimensions. No physical ruler measurement has been completed by this work.
+
+### Follow-up Windows results
+
+- Unity **6000.3.22f1** compilation: **0 errors**.
+- EditMode: **78/78 passed**, **0 failures/skips/inconclusive**, including 15 ruler cases. Recorded UTC interval: **2026-10-10 03:50:08Z–2026-10-10 03:50:17Z**.
+- Existing PlayMode: **25/25 passed**, **0 failures/skips/inconclusive**. Its exact test-name set matches the earlier 25-case run; no temporary harness is counted. Recorded UTC interval: **2026-10-10 03:51:26Z–2026-10-10 03:51:35Z**.
+- Endpoint tests cover both screen coordinates of all four endpoints in offset viewports, lengths, default OFF and ON/OFF active hierarchy, and unchanged calibration. A real `CanvasScaler.ScaleWithScreenSize` case changes camera viewport dimensions/aspect and scaler reference dimensions/aspect.
+- A separate temporary GPU check passed **1/1** for full/offset viewport, Canvas scales 0.7/1.4, and URP render scales 1/0.5. This check asserted RectTransform coordinates and captured PNGs; it was **not** itself an automatic pixel-mask test.
+- A subsequent independent offline accent-color-mask analysis of the two saved PNGs checked line/end-cap positions. Maximum endpoint coordinate error was **0.925 px** for the full viewport and **0.661 px** for the offset viewport. These are raster coordinate errors, not the pixel-area counts from the chamber experiment, nor physical measurement errors.
+- No temporary harness, generated EditorBuildSettings change, personal calibration, XML, private machine path, screenshot, log, build, or license data is committed.
+
+The strengthened PlayMode run used the following precise filter to exclude temporary local harnesses:
+
+```powershell
+$env:HEADTRACKED_CALIBRATION_DIRECTORY = "<RESULTS>/disposable-calibration"
+& "<UNITY_EDITOR>" -projectPath "<PROJECT>" -runTests -testPlatform PlayMode -testFilter "CityStreamerLifecycleTests;HeadTrackingPipelineTests;ViewerCompositionTests" -testResults "<RESULTS>/playmode-test.xml" --no-tracker -logFile "<RESULTS>/playmode-editor.log"
+```
+
+The EditMode run used `-runTests -testPlatform EditMode -assemblyNames Manhattan.Viewer.EditMode` with the same clean-scene/no-tracker/disposable-calibration restrictions. Local Windows Unity results are separate from GitHub portable CI.
+
+### Acceptance still pending
+
+The tool assists real-ruler measurement; it does not prove that applied dimensions or eye distance match the user's physical installation. Actual viewer drawer interaction/layout in the intended player/window, manual measurements, real webcam behavior, real-city rendering/performance, and human depth perception remain pending. Dynamic resolution and multiple displays were not validated. No automatic calibration, city scaling, parallax gain, tracker, package pin, or startup behavior changed. The PR remains draft.

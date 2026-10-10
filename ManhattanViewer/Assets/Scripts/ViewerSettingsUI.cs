@@ -12,7 +12,8 @@ namespace Manhattan.Viewer
         private ManhattanBootstrap app;
         private Font font;
         private GameObject drawer, setup;
-        private UnityEngine.UI.Text diagnostics, message, captureMessage;
+        private UnityEngine.UI.Text diagnostics, message, captureMessage, viewportMessage;
+        private ViewerViewportRuler viewportRuler;
         private float nextDiagnostics;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
@@ -44,6 +45,8 @@ namespace Manhattan.Viewer
             var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(900, 280)); diag.pivot = Vector2.zero;
             diagnostics = Text(diag, "", 14, 0, 0, 900, 280); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
             diagnostics.supportRichText = false;
+            viewportRuler = new GameObject("Viewport measurement aid", typeof(RectTransform)).AddComponent<ViewerViewportRuler>();
+            viewportRuler.Initialize(canvas, app.Display.GetComponent<Camera>(), app.Display.Calibration, font);
             BuildDrawer(canvas.transform); BuildSetup(canvas.transform);
             app.KeyboardInput.EscapePressed += OnEscape;
             bool requiresSetup = !ViewerPersistence.HasCalibration && !ManhattanBootstrap.HasArgument("--benchmark") && !ManhattanBootstrap.HasArgument("--screenshot-out") && !ManhattanBootstrap.HasArgument("--comparison-captures-out") && !ManhattanBootstrap.HasArgument("--fade-proof-out");
@@ -84,6 +87,11 @@ namespace Manhattan.Viewer
             var captureRow = Row(content, 72);
             captureMessage = Text(captureRow, "Capture replaces the face reference and saves calibration.", 14, 0, 0, 380, 72);
             Stretch(captureMessage.rectTransform);
+            Heading(content, "VIEWPORT CHECK");
+            ToggleRow(content, "Show manual 10 cm rulers", false, viewportRuler.SetVisible);
+            var viewportRow = Row(content, 132);
+            viewportMessage = Text(viewportRow, viewportRuler.Describe(), 14, 0, 0, 380, 132);
+            Stretch(viewportMessage.rectTransform);
             Heading(content, "FLIGHT & IMAGE");
             NumericRow(content, "Movement speed (m/s)", app.Flight.Speed, v => { app.Flight.Speed = v; app.Preferences.movementSpeed = app.Flight.Speed; app.SavePreferences(); });
             NumericRow(content, "Mouse sensitivity", app.KeyboardInput.MouseSensitivity, v => { app.KeyboardInput.MouseSensitivity = Mathf.Clamp(v, .01f, 1f); app.Preferences.mouseSensitivity = app.KeyboardInput.MouseSensitivity; app.SavePreferences(); });
@@ -167,6 +175,7 @@ namespace Manhattan.Viewer
         {
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
+            if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe();
             diagnostics.text = app.Preferences.diagnostics ? string.Format(CultureInfo.InvariantCulture,
                 "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}{10}",
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
