@@ -6,7 +6,7 @@ This change adds observability and synthetic regression coverage. It does not es
 
 - `ViewerSettingsUI` retains the existing diagnostics toggle and 250 ms refresh cadence, shows tracking state, freshness, estimator mode, screen geometry, and raw/input/rendered eye values, and reports the result of the explicit reference-capture action.
 - `ViewerTrackingDiagnostics` formats existing public package state without changing calibration, tracking, filtering, or persistence. Projection input is labeled separately from rendered eye position: the package has no independent public filtered-eye getter.
-- Reference feedback distinguishes failed capture, captured-and-saved, and session-only capture when saving fails. First setup and capture/save ordering remain unchanged.
+- The original diagnostic change distinguished failed capture, captured-and-saved, and session-only capture when saving failed. The opt-in workflow below supersedes the settings drawer's combined capture/save action with separate preview, apply, revert and explicit save actions. First physical setup is unchanged.
 - `ViewerTrackingDiagnosticsTests` adds 14 EditMode test methods / 22 NUnit cases.
 - `HeadTrackingPipelineTests` adds 9 PlayMode tests with a synthetic observation source. Coverage includes calibrated basic and rigid XYZ motion, screen corners and cube vertices, freeze/resume with continued filtering and flight, hold/loss/staleness, reference capture, floating-origin rebasing, adaptive filtering, and distance correction.
 - The committed pipeline-test camera does not render. Projection assertions exercise the actual CPU camera matrices against an independent ray/screen oracle; they do not validate GPU rendering or TAA.
@@ -87,7 +87,7 @@ The PR remains draft. Passing synthetic tests does not establish actual webcam b
 
 ### Existing package edge case
 
-Stale tracking is rejected before the calibration mutator, which the stale-capture test covers. Separately, a usable observation with a calculated eye span of at most 1 pixel can mutate in-memory reference fields before `DisplayCalibration.CaptureReference` returns false. The UI therefore reports failure without promising the previous reference remained unchanged, and does not save on false. Atomic capture failure would require a separate package change.
+Stale tracking is rejected before the calibration mutator, which the stale-capture test covers. Separately, a usable observation with a calculated eye span of at most 1 pixel can mutate in-memory reference fields before `DisplayCalibration.CaptureReference` returns false. The original UI therefore did not promise unchanged in-memory values on failure. The workflow below previews capture on a clone, leaving live calibration unchanged on failure; the package mutator remains unchanged.
 
 ## Manual viewport rulers and follow-up validation, 2026-10-10
 
@@ -124,3 +124,52 @@ The EditMode run used `-runTests -testPlatform EditMode -assemblyNames Manhattan
 ### Acceptance still pending
 
 The tool assists real-ruler measurement; it does not prove that applied dimensions or eye distance match the user's physical installation. Actual viewer drawer interaction/layout in the intended player/window, manual measurements, real webcam behavior, real-city rendering/performance, and human depth perception remain pending. Dynamic resolution and multiple displays were not validated. No automatic calibration, city scaling, parallax gain, tracker, package pin, or startup behavior changed. The PR remains draft.
+
+## Opt-in measured tracking workflow and reference preview
+
+This follow-up replaces the drawer's combined face-reference capture/save action. It does not change the tracker, package pin, estimator, city scale or startup. First physical setup still saves only the explicitly entered physical values.
+
+### Ruler declarations and marked holds
+
+1. Match both viewport rulers to a real ruler. Enter the measured eye-to-screen distance and the intended measured RIGHT motion under **MEASURED TRACKING CHECK**. The initial values are suggestions from existing settings, not observations. Optional distance/motion uncertainty is a user declaration; negative values mean **UNKNOWN**, not zero error.
+2. Explicitly confirm the current ruler values and both viewport spans. Confirmation belongs to the applied screen width/height and the actual camera `pixelRect`. A changed physical size or viewport invalidates it. Editing distance, motion or uncertainty cancels the current measurement, clears its holds and discards an unapplied reference preview. Confirm again and begin a new session.
+3. Wait for two seconds of fresh valid steady input, then choose **Start A / B / RETURN check**. Flight input is paused for the session. At A, press **F8** when steady and hold still for five seconds. Move RIGHT by the declared ruler distance while keeping face direction and depth; wait until steady, press F8 at B and hold five seconds. Return LEFT to A, settle and press F8 for a separate five-second RETURN hold. **F9** cancels.
+4. Inspect signed raw/input/rendered XYZ changes, reported pitch/yaw/roll changes, direction, Y/Z contamination and return agreement. The workflow never takes an absolute X ratio to hide a reversed direction and never fits a gain. Missing orientation is **UNKNOWN** and blocks metric interpretation. A/B data alone does not complete a report.
+5. Completed reports are numeric-only local files under `measurement-sessions` beside the normal calibration directory. Names are unique and existing outputs are preserved. A report does not save calibration; no image or face landmarks are recorded or uploaded.
+
+The gate counts only distinct positive observation sequences, not rendered frames. Stale/invalid/non-finite input, a viewing-range boundary, source sequence/time discontinuity, or tracking loss clears prior holds. Calibration/filter-context changes cancel the session. The readiness window is two seconds; a recorded hold is five seconds with at least 20 unique observations. Raw, input and rendered standard deviations must be within 5/5/15 mm in XYZ; supplied orientation must be within 2 degrees per axis. Lateral interpretation also screens Y/Z changes above 10 mm, angular changes above 3 degrees, signed direction and return disagreement above 10 mm. These are engineering diagnostic thresholds, not measured human tolerances or perceptual acceptance criteria.
+
+Reported age is the packet's reported processing age plus elapsed receive age. Exposure timestamps are unavailable; neither true pose age nor motion-to-photon latency is established. User ruler declarations, configured IPD/FOV, estimator output and rendered response remain separate quantities. One lateral pair cannot identify IPD, camera intrinsics and XYZ scale simultaneously. Unknown uncertainty stays unknown. No metric calibration or perceptual pass is inferred from consistent lateral checks.
+
+### Reference preview, apply, revert and save
+
+- **Preview current face reference** requires fresh steady input and confirmed ruler declarations. Capture runs on a clone; failure leaves live settings and the saved file unchanged. The preview shows old/new focal pixels because reference capture can change the shared camera intrinsics supplied to rigid PnP, even though the rigid C# packet conversion applies no direct translation gain. IPD and camera pose remain configured assumptions.
+- **Apply preview for this session** is a separate action. It rejects unconfirmed or changed declared distance, changed calibration or input dimensions, and a discarded preview. Reconfirming after an edit does not resurrect the old candidate. Applying updates session calibration and clears measurement samples, without writing the calibration file.
+- **Revert applied preview** restores its previous session settings only when later calibration edits would not be overwritten. It does not save. Editing declarations retains an already-applied preview for this explicit rollback.
+- **Save physical calibration** is the only drawer action that writes calibration. Unsaved changes disappear on a new launch, which loads the previously saved file. After reverting a saved candidate, explicitly save again if the restored settings should persist.
+
+### Validation scope
+
+The authored tests cover uniqueness, freshness, loss/restart, raw/rendered stability, wrapped and missing orientation, signed direction, Y/Z and rotation contamination, independent return, uncertainty declarations, cloned capture, changed preview context/declaration, explicit persistence and unsaved restart. Synthetic UI lifecycle tests exercise production composition with `--no-tracker`, including local report creation and the three declaration/preview/viewport invalidation regressions. No actual webcam is started by these tests.
+
+Use a clean scene and the earlier safe Editor invocation with `-runTests`, `--no-tracker` and a disposable calibration directory. The new PlayMode filter is:
+
+```text
+CityStreamerLifecycleTests;HeadTrackingPipelineTests;ViewerCompositionTests;MeasurementWorkflowLifecycleTests
+```
+
+The workflow fixture asserts both safety flags and no pre-existing active bootstrap. The local test preparation harness used to create an empty scene is excluded from the public patch. Windows synthetic UI checks do not establish real camera calibration, actual movement distance, human depth perception or real-city performance. GitHub portable CI remains separate from Windows Unity verification.
+
+### Reviewed follow-up Windows results, 2026-10-10
+
+- Unity 6000.3.22f1 EditMode: **119/119 passed**, with 0 failures/skips/inconclusive, recorded **07:30:08Z–07:30:19Z**. The exact prior 78-test set is retained; 41 measurement/reference cases are added.
+- PlayMode: **32/32 passed**, with 0 failures/skips/inconclusive, recorded **07:31:48Z–07:32:53Z**. The exact existing 25-test set is retained; seven synthetic production-UI lifecycle tests are added. They include actual A/B/RETURN sample collection, one numeric report saved once, unchanged calibration until explicit save, and the declaration/preview/viewport invalidation regressions.
+- Existing offline Python pose tests: **5/5 passed**. A separate nine-case canonical-mesh probe used independently known intrinsics, translations and rotations: focal pixels derived from a synthetic eye-span reference recovered the known poses within 10 micrometres. This exact-model diagnostic does not validate real facial proportions, IPD or intrinsics and is not included in the Unity case counts.
+- Portable Windows checks: **74/74 Python tests plus 8/8 PowerShell assertions passed** under the normal user account. A prior sandbox run failed on temporary-file write permissions; its output was preserved and does not constitute a product test failure.
+- Synthetic settings and completed-result screenshots were inspected for wrapping and clipping. This verifies the tested Editor viewport only; intended-player layout and human interaction remain pending.
+- Original tracked source files and saved personal calibration were preserved. Temporary scene-preparation code, generated settings, private calibration, images, logs, result XML, runtime reports and the offline probe are excluded from the public patch. The PR remains draft and this follow-up awaits independent review before publication.
+
+The final targeted review also found a cancelled-session HUD remaining visible after a viewport change with settings closed. Visibility now refreshes before the idle early return. The additional synthetic regression checks cancellation, hidden instructions and restored flight input. The resulting PlayMode run passed **33/33**, with 0 failures/skips/inconclusive, recorded **07:46:24Z–07:47:32Z**; its test-name set retains all 32 cases from the preceding run. This remains a synthetic UI result, without a real webcam.
+
+Final-source EditMode also passed **119/119**, with 0 failures/skips/inconclusive, recorded **07:48:59Z–07:49:07Z** after the HUD fix.
+

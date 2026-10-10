@@ -14,6 +14,7 @@ namespace Manhattan.Viewer
         private GameObject drawer, setup;
         private UnityEngine.UI.Text diagnostics, message, captureMessage, viewportMessage;
         private ViewerViewportRuler viewportRuler;
+        private ViewerMeasurementWorkflow measurement;
         private float nextDiagnostics;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
@@ -47,6 +48,7 @@ namespace Manhattan.Viewer
             diagnostics.supportRichText = false;
             viewportRuler = new GameObject("Viewport measurement aid", typeof(RectTransform)).AddComponent<ViewerViewportRuler>();
             viewportRuler.Initialize(canvas, app.Display.GetComponent<Camera>(), app.Display.Calibration, font);
+            measurement = gameObject.AddComponent<ViewerMeasurementWorkflow>(); measurement.Initialize(app, canvas, font);
             BuildDrawer(canvas.transform); BuildSetup(canvas.transform);
             app.KeyboardInput.EscapePressed += OnEscape;
             bool requiresSetup = !ViewerPersistence.HasCalibration && !ManhattanBootstrap.HasArgument("--benchmark") && !ManhattanBootstrap.HasArgument("--screenshot-out") && !ManhattanBootstrap.HasArgument("--comparison-captures-out") && !ManhattanBootstrap.HasArgument("--fade-proof-out");
@@ -82,10 +84,23 @@ namespace Manhattan.Viewer
             NumericRow(content, "Screen width (cm)", c.screenWidth * 100f, v => { if (v >= 10 && v <= 300) { c.screenWidth = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Screen height (cm)", c.screenHeight * 100f, v => { if (v >= 10 && v <= 200) { c.screenHeight = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Viewing distance (cm)", c.referenceEyeDistanceFromScreen * 100f, v => { if (v >= 25 && v <= 150) { c.referenceEyeDistanceFromScreen = v / 100f; app.UpdateCalibration(); } });
-            ActionRow(content, "Save physical calibration", () => { ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); app.Rendering.ResetHistory(); });
-            ActionRow(content, "Capture current face reference", CaptureFaceReference);
-            var captureRow = Row(content, 72);
-            captureMessage = Text(captureRow, "Capture replaces the face reference and saves calibration.", 14, 0, 0, 380, 72);
+            ActionRow(content, "Save physical calibration", () => { bool saved = ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); measurement.CalibrationSaved(saved); app.Rendering.ResetHistory(); });
+            Heading(content, "MEASURED TRACKING CHECK");
+            TextRow(content, "Use a ruler and match both 10 cm viewport aids first. These declarations do not measure IPD or camera FOV.", 72);
+            NumericRow(content, "Measured eye distance (cm)", measurement.DeclaredDistanceMeters * 100f, v => measurement.DeclaredDistanceMeters = v / 100f);
+            NumericRow(content, "Measured RIGHT motion (cm)", measurement.DeclaredMotionMeters * 100f, v => measurement.DeclaredMotionMeters = v / 100f);
+            TextRow(content, "Optional ruler uncertainty: -1 means UNKNOWN, not zero error.", 44);
+            NumericRow(content, "Distance uncertainty (cm)", -1, v => measurement.DeclaredDistanceUncertaintyMeters = v < 0 ? -1 : v / 100f);
+            NumericRow(content, "Motion uncertainty (cm)", -1, v => measurement.DeclaredMotionUncertaintyMeters = v < 0 ? -1 : v / 100f);
+            ActionRow(content, "Confirm ruler values and viewport match", () => measurement.ConfirmMeasurements());
+            ActionRow(content, "Start A / B / RETURN check", () => { if (measurement.Begin()) ShowDrawer(false); });
+            ActionRow(content, "Cancel measurement / F9", measurement.Cancel);
+            ActionRow(content, "Preview current face reference", CaptureFaceReference);
+            ActionRow(content, "Apply preview for this session", measurement.ApplyReference);
+            ActionRow(content, "Revert applied preview", measurement.RevertReference);
+            var captureRow = Row(content, 260);
+            captureMessage = Text(captureRow, "Reference preview does not apply or save changes.", 14, 0, 0, 380, 260);
+            captureMessage.supportRichText = false;
             Stretch(captureMessage.rectTransform);
             Heading(content, "VIEWPORT CHECK");
             ToggleRow(content, "Show manual 10 cm rulers", false, viewportRuler.SetVisible);
@@ -130,14 +145,8 @@ namespace Manhattan.Viewer
 
         private void CaptureFaceReference()
         {
-            bool captured = app.Display.CaptureReference();
-            bool saved = false;
-            if (captured)
-            {
-                saved = ViewerPersistence.Save(ViewerPersistence.CalibrationFile, app.Display.Calibration);
-                app.Rendering.ResetHistory();
-            }
-            captureMessage.text = ViewerTrackingDiagnostics.FormatCaptureResult(captured, saved);
+            measurement.PreviewReference();
+            captureMessage.text = measurement.Describe();
             // Refresh visible diagnostics after every explicit attempt, including a failed one.
             nextDiagnostics = 0f;
         }
@@ -169,13 +178,20 @@ namespace Manhattan.Viewer
         {
             if (setup != null && setup.activeSelf) return;
             drawer.SetActive(show); app.KeyboardInput.Capture(false);
-            app.KeyboardInput.InputEnabled = !show && !app.Benchmark.Recording;
+            measurement.SetSettingsVisible(show);
+            app.KeyboardInput.InputEnabled = !show && !app.Benchmark.Recording && !measurement.Active;
         }
         private void Update()
         {
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
             if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe();
+            if (captureMessage != null)
+            {
+                captureMessage.text = measurement.Describe();
+                var row = captureMessage.transform.parent.GetComponent<UnityEngine.UI.LayoutElement>();
+                row.minHeight = row.preferredHeight = Mathf.Max(260, captureMessage.preferredHeight + 12);
+            }
             diagnostics.text = app.Preferences.diagnostics ? string.Format(CultureInfo.InvariantCulture,
                 "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}{10}",
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
