@@ -7,6 +7,30 @@ using UnityEngine;
 
 public sealed class CityPolicyTests
 {
+    [TestCase(CityLayer.Core)] [TestCase(CityLayer.Ground)] [TestCase(CityLayer.Near)]
+    [TestCase(CityLayer.Vegetation)] [TestCase(CityLayer.Collision)]
+    public void VisibilityBoundaryRoundTripsRequireLeavingTheExitBand(CityLayer layer)
+    {
+        float enter = CityStreamer.VisibleRadius(layer), exit = CityStreamer.VisibleExitRadius(layer);
+        Assert.That(exit, Is.GreaterThan(enter));
+        Assert.That(exit, Is.LessThan(CityStreamer.LoadRadius(layer)));
+        Assert.That(exit, Is.LessThan(CityStreamer.ReleaseRadius(layer)));
+        bool visible = false;
+        foreach (float distance in new[] { enter + .1f, enter + .01f })
+            Assert.That(visible = CityStreamer.IsVisible(layer, distance, visible), Is.False);
+        Assert.That(visible = CityStreamer.IsVisible(layer, enter, visible), Is.True);
+        foreach (float distance in new[] { enter + .1f, enter - .1f, exit })
+            Assert.That(visible = CityStreamer.IsVisible(layer, distance, visible), Is.True);
+        Assert.That(visible = CityStreamer.IsVisible(layer, exit + .01f, visible), Is.False);
+        Assert.That(CityStreamer.IsVisible(layer, exit - .01f, visible), Is.False);
+        Assert.That(CityStreamer.IsVisible(layer, enter, visible), Is.True);
+    }
+
+    [TestCase(0f, 1f)] [TestCase(120f, 1f)] [TestCase(150f, .5f)]
+    [TestCase(180f, 0f)] [TestCase(190f, 0f)] [TestCase(320f, 0f)]
+    public void NearFadeRetainsPhysicalEndpointsAndZeroOpacityExitBand(float distance, float expected) =>
+        Assert.That(CityStreamer.NearOpacity(distance), Is.EqualTo(expected).Within(.00001f));
+
     [Test]
     public void CurrentWindowsProcessHasRealWorkingSetTelemetry()
     {

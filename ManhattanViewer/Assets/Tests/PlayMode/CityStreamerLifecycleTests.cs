@@ -24,6 +24,7 @@ public sealed class CityStreamerLifecycleTests
         private readonly List<GameObject> assets = new List<GameObject>();
         public int Provides, Releases;
         public bool DeferCompletions;
+        public bool RenderAssets, FailLoads;
         public int Pending => pending.Count;
         public readonly List<int> ReleaseFrames = new List<int>();
         public readonly Dictionary<string, int> ReleasesPerAddress = new Dictionary<string, int>();
@@ -37,7 +38,9 @@ public sealed class CityStreamerLifecycleTests
         }
         private void Complete(ProvideHandle handle)
         {
-            var asset = new GameObject("provided " + handle.Location.PrimaryKey);
+            if (FailLoads) { handle.Complete<GameObject>(null, false, new Exception("Synthetic tile failure")); return; }
+            var asset = RenderAssets ? GameObject.CreatePrimitive(PrimitiveType.Cube) : new GameObject();
+            asset.name = "provided " + handle.Location.PrimaryKey;
             asset.SetActive(false); assets.Add(asset);
             handle.Complete(asset, true, null);
         }
@@ -82,7 +85,7 @@ public sealed class CityStreamerLifecycleTests
         Addressables.AddResourceLocator(locator);
     }
 
-    private void CreateStreamer(int count)
+    private void CreateStreamer(int count, CityLayer layer = CityLayer.Core)
     {
         observer = new GameObject("streaming lifecycle observer");
         flight = observer.AddComponent<FreeFlightController>(); flight.enabled = false;
@@ -94,7 +97,7 @@ public sealed class CityStreamerLifecycleTests
             locator.Add(address, new ResourceLocationBase(address, address, provider.ProviderId, typeof(GameObject)));
             catalog.tiles[i] = new CityTileRecord
             {
-                id = address, address = address, layer = CityLayer.Core, residentBytes = 1024,
+                id = address, address = address, layer = layer, residentBytes = 1024,
                 cityBounds = new Bounds(new Vector3(i * 20, 0, 0), new Vector3(10, 20, 10)),
                 cityOrigin = new Vector3(i * 20, 0, 0)
             };
@@ -119,6 +122,204 @@ public sealed class CityStreamerLifecycleTests
         Assert.That(streamer.LoadedTiles, Is.EqualTo(count));
         Assert.That(streamer.PendingLoads, Is.Zero);
         Assert.That(streamer.EstimatedResidentBytes, Is.EqualTo(count * 1024));
+    }
+
+    private SurfaceDetailComparison EnableSurfaceFeedback()
+    {
+        var surfaces = host.AddComponent<SurfaceDetailComparison>();
+        streamer.surfaces = surfaces;
+        return surfaces;
+    }
+    private float TileOpacity(Transform tile)
+    {
+        var block = new MaterialPropertyBlock();
+        tile.GetComponent<Renderer>().GetPropertyBlock(block);
+        return block.GetFloat(SurfaceDetailComparison.DistanceFadeProperty);
+    }
+    private void PreventCatalogEvaluation() => typeof(CityStreamer).GetField("nextEvaluation", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(streamer, float.PositiveInfinity);
+
+    [UnityTest]
+    public IEnumerator NearFadeFollowsFastMovementBetweenCatalogEvaluationsWithoutChangingBodyVisibility()
+    {
+        provider.RenderAssets = true; CreateStreamer(2, CityLayer.Near);
+        catalog.tiles[1].layer = CityLayer.Core;
+        catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.zero);
+        var surfaces = EnableSurfaceFeedback();
+        flight.SetPose(Vector3.right * 150, Quaternion.identity);
+        yield return WaitLoaded(2);
+        Transform near = host.transform.Find(catalog.tiles[0].id), body = host.transform.Find(catalog.tiles[1].id);
+        Assert.That(TileOpacity(near), Is.EqualTo(.5f).Within(.00001f), "A new tile must receive current distance fade on its first frame.");
+        Assert.That(body.gameObject.activeSelf, Is.True, "Near is additive; its fade must not replace the body.");
+        long scans = streamer.CatalogEvaluations;
+        int requests = provider.Provides;
+        PreventCatalogEvaluation();
+        for (int frame = 1; frame <= 24; frame++)
+        {
+            float distance = 150 + frame * (100f / 60f);
+            flight.SetPose(Vector3.right * distance, Quaternion.identity); Tick();
+            Assert.That(TileOpacity(near), Is.EqualTo(Mathf.Clamp01((180 - distance) / 60)).Within(.00001f));
+            Assert.That(body.gameObject.activeSelf, Is.True);
+            yield return null;
+        }
+        Assert.That(near.gameObject.activeSelf, Is.True, "The exit band retains zero-opacity detail without toggling.");
+        Assert.That(TileOpacity(near), Is.Zero);
+        flight.SetPose(Vector3.right * 201, Quaternion.identity); Tick();
+        Assert.That(near.gameObject.activeSelf, Is.False);
+        flight.SetPose(Vector3.right * 190, Quaternion.identity); Tick();
+        Assert.That(near.gameObject.activeSelf, Is.False, "Re-entry must reach the 180 metre enter boundary.");
+        flight.SetPose(Vector3.right * 170, Quaternion.identity); Tick();
+        Assert.That(near.gameObject.activeSelf, Is.True);
+        Assert.That(TileOpacity(near), Is.EqualTo(1f / 6).Within(.00001f));
+        Assert.That(streamer.CatalogEvaluations, Is.EqualTo(scans));
+        Assert.That(provider.Provides, Is.EqualTo(requests));
+        Assert.That(provider.Releases, Is.Zero);
+        Assert.That(surfaces.OpacityPropertyWrites, Is.GreaterThan(1));
+    }
+
+    [UnityTest]
+    public IEnumerator StationaryNearFeedbackAvoidsPropertyWritesAndManagedAllocations()
+    {
+        provider.RenderAssets = true; CreateStreamer(1, CityLayer.Near);
+        catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.zero);
+        var surfaces = EnableSurfaceFeedback();
+        flight.SetPose(Vector3.right * 150, Quaternion.identity); yield return WaitLoaded(1);
+        PreventCatalogEvaluation();
+        var tick = (Action)UpdateMethod.CreateDelegate(typeof(Action), streamer);
+        for (int i = 0; i < 32; i++) tick();
+        long writes = surfaces.OpacityPropertyWrites, visits = surfaces.OpacityTileVisits, scans = streamer.CatalogEvaluations;
+        long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 512; i++) tick();
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+        Assert.That(surfaces.OpacityPropertyWrites, Is.EqualTo(writes));
+        Assert.That(surfaces.OpacityTileVisits, Is.EqualTo(visits), "An unchanged tile must not traverse its renderer bindings.");
+        Assert.That(streamer.CatalogEvaluations, Is.EqualTo(scans));
+        Assert.That(allocated, Is.Zero, "Warmed stationary resident feedback must not allocate managed memory.");
+        long movingBefore = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 512; i++)
+        {
+            flight.SetPose(Vector3.right * (125 + (i % 31) * 1.6f), Quaternion.identity);
+            tick();
+        }
+        long movingAllocated = GC.GetAllocatedBytesForCurrentThread() - movingBefore;
+        Assert.That(movingAllocated, Is.Zero, "Changing a warmed resident's fade must not allocate managed memory.");
+        Assert.That(surfaces.OpacityPropertyWrites, Is.EqualTo(writes + 512), "One changed tile renderer needs one property write per tick.");
+        Assert.That(surfaces.OpacityTileVisits, Is.EqualTo(visits + 512));
+        Assert.That(streamer.CatalogEvaluations, Is.EqualTo(scans));
+        Assert.That(provider.Provides, Is.EqualTo(1)); Assert.That(provider.Releases, Is.Zero);
+    }
+
+    [UnityTest]
+    public IEnumerator DelayedNearLoadUsesLatestPoseAndRestoresMaterialsOnRelease()
+    {
+        provider.RenderAssets = true; provider.DeferCompletions = true;
+        CreateStreamer(1, CityLayer.Near); catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.zero);
+        var surfaces = EnableSurfaceFeedback();
+        flight.SetPose(Vector3.right * 120, Quaternion.identity); Tick(); yield return null;
+        Assert.That(streamer.PendingLoads, Is.EqualTo(1));
+        PreventCatalogEvaluation();
+        flight.SetPose(Vector3.right * 165, Quaternion.identity); provider.CompletePending(); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.EqualTo(1));
+        var tile = host.transform.Find(catalog.tiles[0].id);
+        Assert.That(TileOpacity(tile), Is.EqualTo(.25f).Within(.00001f));
+        var renderer = tile.GetComponent<Renderer>();
+        var original = surfaces.OriginalMaterialsSnapshot()[0];
+        Assert.That(renderer.sharedMaterial, Is.Not.SameAs(original));
+        foreach (string pass in new[] { "DepthOnly", "DepthNormals", "MotionVectors" })
+            Assert.That(renderer.sharedMaterial.FindPass(pass), Is.GreaterThanOrEqualTo(0), "A freshly registered Near variant must retain its existing " + pass + " pass.");
+        var block = new MaterialPropertyBlock(); block.SetFloat("_UnrelatedTestValue", 42); renderer.SetPropertyBlock(block);
+        flight.SetPose(Vector3.right * 170, Quaternion.identity); Tick();
+        renderer.GetPropertyBlock(block); Assert.That(block.GetFloat("_UnrelatedTestValue"), Is.EqualTo(42));
+        Assert.That(TileOpacity(tile), Is.EqualTo(1f / 6).Within(.00001f));
+        surfaces.EnabledDetails = false; Tick(); Assert.That(TileOpacity(tile), Is.EqualTo(1f / 6).Within(.00001f));
+        surfaces.Unregister(tile.gameObject); Assert.That(renderer.sharedMaterial, Is.SameAs(original));
+        Assert.That(surfaces.RuntimeVariantCount, Is.Zero);
+        MoveAndEvaluate(Vector3.right * 10000); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.Zero); Assert.That(provider.Releases, Is.EqualTo(1));
+    }
+
+    [UnityTest]
+    public IEnumerator FailedNearLoadRetainsSkylineAndDefersHandleRelease()
+    {
+        CreateStreamer(2, CityLayer.Near); catalog.tiles[1].layer = CityLayer.Skyline;
+        // Load the fallback first, then fail just the Near request.
+        catalog.tiles[0].cityBounds = new Bounds(Vector3.right * 10000, Vector3.one);
+        yield return WaitLoaded(1);
+        provider.FailLoads = true; catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.one);
+        LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("Synthetic tile failure"));
+        LogAssert.Expect(LogType.Warning, "City tile failed: " + catalog.tiles[0].id + ". Keeping skyline fallback.");
+        MoveAndEvaluate(Vector3.zero); Tick(); yield return null; Tick(); yield return null;
+        Assert.That(streamer.Failures, Is.EqualTo(1)); Assert.That(streamer.LoadedTiles, Is.EqualTo(1));
+        Assert.That(host.transform.Find(catalog.tiles[1].id).gameObject.activeSelf, Is.True);
+        Tick(); yield return null;
+        Assert.That(streamer.PendingLoads, Is.Zero);
+        Assert.That(streamer.EstimatedResidentBytes, Is.EqualTo(1024));
+    }
+
+    [UnityTest]
+    public IEnumerator NearCanceledCompletionCanReturnWithCurrentFadeBeforeItsQueuedRelease()
+    {
+        provider.RenderAssets = true; provider.DeferCompletions = true;
+        CreateStreamer(1, CityLayer.Near); catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.zero);
+        EnableSurfaceFeedback();
+        flight.SetPose(Vector3.right * 120, Quaternion.identity); Tick(); yield return null;
+        MoveAndEvaluate(Vector3.right * 10000); provider.CompletePending(); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.Zero); Assert.That(streamer.PendingLoads, Is.Zero);
+        Assert.That(provider.Releases, Is.Zero);
+        MoveAndEvaluate(Vector3.right * 165); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.EqualTo(1));
+        Assert.That(TileOpacity(host.transform.Find(catalog.tiles[0].id)), Is.EqualTo(.25f).Within(.00001f));
+        Assert.That(provider.Provides, Is.EqualTo(1)); Assert.That(provider.Releases, Is.Zero);
+        Object.Destroy(host); yield return null; host = null;
+        Assert.That(provider.Releases, Is.EqualTo(1));
+    }
+
+    [UnityTest]
+    public IEnumerator ReloadingNearAtTheSameDistanceInitializesTheNewRendererFade()
+    {
+        provider.RenderAssets = true; CreateStreamer(1, CityLayer.Near);
+        catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.zero); EnableSurfaceFeedback();
+        flight.SetPose(Vector3.right * 150, Quaternion.identity); yield return WaitLoaded(1);
+        Assert.That(TileOpacity(host.transform.Find(catalog.tiles[0].id)), Is.EqualTo(.5f).Within(.00001f));
+        MoveAndEvaluate(Vector3.right * 10000); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.Zero); Assert.That(provider.Releases, Is.EqualTo(1));
+        MoveAndEvaluate(Vector3.right * 150); yield return WaitLoaded(1);
+        Assert.That(TileOpacity(host.transform.Find(catalog.tiles[0].id)), Is.EqualTo(.5f).Within(.00001f), "The prior instance's tile cache must not skip the replacement renderer.");
+        Assert.That(provider.Provides, Is.EqualTo(2)); Assert.That(provider.Releases, Is.EqualTo(1));
+    }
+
+    [UnityTest]
+    public IEnumerator CoreBoundaryJitterKeepsCoverageAndPartialSkylineFallback()
+    {
+        CreateStreamer(3);
+        catalog.tiles[0].cityBounds = catalog.tiles[1].cityBounds = new Bounds(Vector3.zero, Vector3.zero);
+        catalog.tiles[1].layer = catalog.tiles[2].layer = CityLayer.Skyline;
+        catalog.tiles[1].requiredReplacementCount = 1;
+        catalog.tiles[2].requiredReplacementCount = 2;
+        catalog.tiles[0].replaces = new[] { catalog.tiles[1].id, catalog.tiles[2].id };
+        flight.SetPose(Vector3.right * 800, Quaternion.identity); yield return WaitLoaded(3);
+        Transform core = host.transform.Find(catalog.tiles[0].id), covered = host.transform.Find(catalog.tiles[1].id), partial = host.transform.Find(catalog.tiles[2].id);
+        foreach (float distance in new[] { 800.1f, 799.9f, 810f, 820f })
+        {
+            MoveAndEvaluate(Vector3.right * distance);
+            Assert.That(core.gameObject.activeSelf, Is.True);
+            Assert.That(covered.gameObject.activeSelf, Is.False);
+            Assert.That(partial.gameObject.activeSelf, Is.True, "Partial coverage must retain the complete fallback.");
+        }
+        MoveAndEvaluate(Vector3.right * 821);
+        Assert.That(core.gameObject.activeSelf, Is.False); Assert.That(covered.gameObject.activeSelf, Is.True);
+        MoveAndEvaluate(Vector3.right * 810);
+        Assert.That(core.gameObject.activeSelf, Is.False); Assert.That(covered.gameObject.activeSelf, Is.True);
+        MoveAndEvaluate(Vector3.right * 800);
+        Assert.That(core.gameObject.activeSelf, Is.True); Assert.That(covered.gameObject.activeSelf, Is.False);
+        Assert.That(provider.Provides, Is.EqualTo(3)); Assert.That(provider.Releases, Is.Zero);
+    }
+
+    [Test]
+    public void FeedbackExecutionOrderFollowsMotionAndFloatingOrigin()
+    {
+        int Order(Type type) => type.GetCustomAttribute<DefaultExecutionOrder>().order;
+        Assert.That(Order(typeof(FreeFlightController)), Is.LessThan(Order(typeof(FloatingOrigin))));
+        Assert.That(Order(typeof(FloatingOrigin)), Is.LessThan(Order(typeof(CityStreamer))));
     }
 
     [UnityTest]

@@ -7,6 +7,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace Manhattan.Viewer
 {
+    // Run after FreeFlightController (-300) and FloatingOrigin (-200), before rendering.
     [DefaultExecutionOrder(-50)]
     public sealed class CityStreamer : MonoBehaviour
     {
@@ -22,6 +23,7 @@ namespace Manhattan.Viewer
         public long EstimatedResidentBytes { get; private set; }
         public float FrameWorkMilliseconds { get; private set; }
         public int Failures { get; private set; }
+        public long CatalogEvaluations { get; private set; }
 
         private sealed class Residency
         {
@@ -30,6 +32,7 @@ namespace Manhattan.Viewer
             public bool hasHandle, loading, wanted, visible, releaseQueued;
             public GameObject instance;
             public float retryAt, distance, priority;
+            public float appliedNearOpacity = float.NaN;
             public Renderer[] renderers;
             public int residentIndex = -1;
         }
@@ -73,6 +76,11 @@ namespace Manhattan.Viewer
                 default: return 1000f;
             }
         }
+        public static float VisibleExitRadius(CityLayer layer) =>
+            Mathf.Min(VisibleRadius(layer) + 20f, (VisibleRadius(layer) + LoadRadius(layer)) * .5f);
+        public static bool IsVisible(CityLayer layer, float distance, bool wasVisible) =>
+            distance <= (wasVisible ? VisibleExitRadius(layer) : VisibleRadius(layer));
+        public static float NearOpacity(float distance) => 1f - Mathf.InverseLerp(120f, 180f, distance);
         public static float ReleaseRadius(CityLayer layer)
         {
             switch (layer)
@@ -122,6 +130,7 @@ namespace Manhattan.Viewer
                 if (!r.wanted) { QueueRelease(r); continue; }
                 if (workTimer.Elapsed.TotalMilliseconds >= workBudgetMilliseconds) { r.loading = true; PendingLoads++; break; }
                 r.instance = Instantiate(r.handle.Result, transform);
+                r.appliedNearOpacity = float.NaN;
                 r.instance.name = r.tile.id;
                 r.instance.transform.position = r.tile.cityOrigin - (origin != null ? origin.Offset : Vector3.zero);
                 r.instance.transform.rotation = Quaternion.identity;
@@ -145,11 +154,13 @@ namespace Manhattan.Viewer
                 r.residentIndex = residents.Count; residents.Add(r);
                 EstimatedResidentBytes += cost; PendingLoads++; ongoing++;
             }
+            UpdateNearFeedback();
             FrameWorkMilliseconds = (float)workTimer.Elapsed.TotalMilliseconds;
         }
 
         private void Evaluate()
         {
+            CatalogEvaluations++;
             Vector3 position = flight.CityPosition;
             Vector3 predicted = position + flight.Velocity * 2f;
             requests.Clear();
@@ -160,7 +171,7 @@ namespace Manhattan.Viewer
                 bool allowed = r.tile.layer != CityLayer.Collision || CollisionProxiesEnabled;
                 float threshold = r.hasHandle ? ReleaseRadius(r.tile.layer) : LoadRadius(r.tile.layer);
                 r.wanted = allowed && Mathf.Min(r.distance, predictedDistance) <= threshold;
-                r.visible = allowed && r.distance <= VisibleRadius(r.tile.layer);
+                r.visible = allowed && IsVisible(r.tile.layer, r.distance, r.visible);
                 r.priority = r.tile.layer == CityLayer.Skyline ? -100000f : Mathf.Min(r.distance, predictedDistance);
                 if (r.tile.layer == CityLayer.Core || r.tile.layer == CityLayer.Ground) r.priority -= 2000f;
                 if (!r.wanted && r.hasHandle && !r.loading) QueueRelease(r);
@@ -194,8 +205,27 @@ namespace Manhattan.Viewer
                 replacementCounts.TryGetValue(r.tile.id, out int visibleCoreReplacementCount);
                 bool active = r.visible && !CanReplace(r.tile, visibleCoreReplacementCount);
                 if (r.instance.activeSelf != active) r.instance.SetActive(active);
-                if (active && r.tile.layer == CityLayer.Near && surfaces != null)
-                    surfaces.SetOpacity(r.instance, 1f - Mathf.InverseLerp(120f, 180f, r.distance));
+            }
+        }
+
+        private void UpdateNearFeedback()
+        {
+            // Only instantiated Near residents need frame-rate distance feedback. Catalogue scans,
+            // priorities and load/release decisions retain their existing 0.15 second cadence.
+            Vector3 position = flight.CityPosition;
+            foreach (var r in residents)
+            {
+                if (r.instance == null || r.tile.layer != CityLayer.Near) continue;
+                r.distance = DistanceToTile(r.tile.cityBounds, position);
+                r.visible = IsVisible(CityLayer.Near, r.distance, r.visible);
+                if (r.instance.activeSelf != r.visible) r.instance.SetActive(r.visible);
+                // Keep zero opacity through the exit band; re-entry cannot reveal stale full detail.
+                float opacity = NearOpacity(r.distance);
+                if (surfaces != null && r.appliedNearOpacity != opacity)
+                {
+                    surfaces.SetOpacity(r.instance, opacity);
+                    r.appliedNearOpacity = opacity;
+                }
             }
         }
 

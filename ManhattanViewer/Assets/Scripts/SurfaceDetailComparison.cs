@@ -26,6 +26,8 @@ namespace Manhattan.Viewer
         private readonly Dictionary<Material, Variant> regularVariants = new Dictionary<Material, Variant>();
         private readonly Dictionary<Material, Variant> fadeVariants = new Dictionary<Material, Variant>();
         public int RuntimeVariantCount => regularVariants.Count + fadeVariants.Count;
+        public long OpacityPropertyWrites { get; private set; }
+        public long OpacityTileVisits { get; private set; }
         public Material[] OriginalMaterialsSnapshot()
         {
             var materials = new HashSet<Material>();
@@ -127,6 +129,7 @@ namespace Manhattan.Viewer
         public void SetOpacity(GameObject root, float opacity)
         {
             if (!tiles.TryGetValue(root, out var bindings)) return;
+            OpacityTileVisits++;
             opacity = Mathf.Clamp01(opacity);
             if (block == null) block = new MaterialPropertyBlock();
             foreach (var b in bindings)
@@ -135,6 +138,7 @@ namespace Manhattan.Viewer
                 b.renderer.GetPropertyBlock(block);
                 block.SetFloat(DistanceFade, opacity);
                 b.renderer.SetPropertyBlock(block);
+                OpacityPropertyWrites++;
                 b.appliedOpacity = opacity;
             }
         }
