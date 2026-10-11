@@ -45,6 +45,15 @@ with the previous representation retained. Load/radius policy, geometry, materia
 quality and the indivisible publication are unchanged. This does not impose a hard
 deadline on mesh uploads or a large atomic publication.
 
+Ordinary replacement preparation explicitly ends its streaming tick before final
+revalidation and publication, even when some allowance remains. Publication starts on a later
+tick, avoiding the combined preparation and commit costs in one frame. The
+captured renderer/mesh/material state is rechecked after that boundary; a late
+coverage change restores fallback. Mesh pointers and Core activation still
+publish together without yielding, and release still waits for restored fallback.
+Departing/revoked Core coverage and an initially gated late Skyline bypass the
+extra boundary, preserving immediate fallback recovery and its existing tests.
+
 ## Validation limits
 
 Tests compile their small fixture correspondence explicitly before runtime residency. They cover real Addressables provider lifetime, partial replacement, late loads, cancellation, failure, origin rebasing, imported channels/materials, extra overlays, mismatched source identity, missing filters, small root changes and final-owner departure/revisit.

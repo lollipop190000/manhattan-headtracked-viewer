@@ -2,10 +2,83 @@ using System;
 using Manhattan.Viewer;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
+using System.Text.RegularExpressions;
 using Object = UnityEngine.Object;
 
 public sealed class StreamingOwnershipBudgetTests
 {
+    [TestCase(false)]
+    [TestCase(true)]
+    public void PreparedReplacementWaitsForAnotherTickAndRevalidatesBeforePublication(bool revokeCoverage)
+    {
+        var positions = new[] { Vector3.zero, Vector3.right, Vector3.up,
+            Vector3.right * 10, Vector3.right * 11, Vector3.right * 10 + Vector3.up };
+        var original = new Mesh { vertices = positions, triangles = new[] { 0, 1, 2, 3, 4, 5 } };
+        var replacement = new Mesh { vertices = positions, triangles = new[] { 0, 1, 2 } };
+        var material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "Skyline" };
+        material.SetFloat("_Surface", 0); material.SetFloat("_AlphaClip", 0);
+        material.SetFloat("_ZWrite", 1); material.SetFloat("_Cull", 2);
+        var sky = new GameObject("publication fallback");
+        var core = new GameObject("publication Core");
+        sky.AddComponent<MeshFilter>().sharedMesh = original;
+        sky.AddComponent<MeshRenderer>().sharedMaterial = material;
+        core.AddComponent<MeshFilter>().sharedMesh = replacement;
+        var coreRenderer = core.AddComponent<MeshRenderer>();
+        coreRenderer.sharedMaterial = material;
+        var tiles = new[] {
+            new CityTileRecord { id = "sky", layer = CityLayer.Skyline, requiredReplacementCount = 2 },
+            new CityTileRecord { id = "core", layer = CityLayer.Core, replaces = new[] { "sky" } }
+        };
+        using (var ownership = new SkylineGeometryOwnership())
+        {
+            try
+            {
+                OwnershipTestData.Configure(ownership, tiles, new[] { sky, core });
+                ownership.Register(tiles[0], sky); ownership.Register(tiles[1], core);
+                ownership.SetDesired(core, true);
+                ownership.Tick(1000f);
+                Assert.That(ownership.Busy, Is.True);
+                Assert.That(ownership.Publications, Is.Zero, "Preparation cannot spend its remaining allowance on publication.");
+                Assert.That(core.activeSelf, Is.False);
+                Assert.That(sky.GetComponent<MeshFilter>().sharedMesh, Is.SameAs(original));
+
+                if (revokeCoverage)
+                {
+                    coreRenderer.enabled = false; // Revalidation must catch even an unnotified late change.
+                    LogAssert.Expect(LogType.Warning, new Regex("Skyline ownership preparation failed; preserving full geometry"));
+                }
+                ownership.Tick(1000f);
+                Assert.That(ownership.Busy, Is.False);
+                if (revokeCoverage)
+                {
+                    Assert.That(ownership.MaskedTriangles, Is.Zero);
+                    Assert.That(sky.GetComponent<MeshFilter>().sharedMesh, Is.SameAs(original));
+                }
+                else
+                {
+                    Assert.That(ownership.MaskedTriangles, Is.EqualTo(1));
+                    Assert.That(core.activeSelf, Is.True);
+                    ownership.SetDesired(core, false);
+                    ownership.Tick(0f);
+                    Assert.That(core.activeSelf, Is.True, "Keep the published Core until fallback can be committed.");
+                    Assert.That(ownership.CanRelease(core), Is.False);
+                    ownership.Tick(1000f);
+                    Assert.That(core.activeSelf, Is.False);
+                    Assert.That(ownership.CanRelease(core), Is.True);
+                    Assert.That(sky.GetComponent<MeshFilter>().sharedMesh, Is.SameAs(original));
+                }
+                Assert.That(original.triangles, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5 }));
+            }
+            finally
+            {
+                ownership.Dispose();
+                Object.DestroyImmediate(sky); Object.DestroyImmediate(core);
+                Object.DestroyImmediate(original); Object.DestroyImmediate(replacement); Object.DestroyImmediate(material);
+            }
+        }
+    }
+
     [TestCase(.00001f)]
     [TestCase(1.2f)]
     public void DeferredPreparationPreservesBothFacesAndRestoresFallbackBeforeRelease(float budget)
