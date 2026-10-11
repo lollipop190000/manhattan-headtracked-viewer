@@ -3,7 +3,7 @@
 Snapshot: **11 October 2026**. This is a delivery index and offline selection
 check, not a Unity asset catalog or runtime loader. `runtimeReady=false`.
 
-The [machine-readable catalog](model-delivery-catalog.json) records 12 sealed
+The [machine-readable catalog](model-delivery-catalog.json) records 13 sealed
 ZIPs with verified Drive file/folder links, exact bytes, SHA-256, an in-archive
 identity-manifest hash, source-ID selections, dependencies and rollback notes.
 Drive metadata and downloaded remote bytes were checked against the sealed
@@ -47,7 +47,7 @@ portable packaging and passing Python tests do not establish engine readiness.
 
 ## Optional and historical packages
 
-**Block233: blocked against current 580.** Its four source IDs already belong to
+**Block233 R1: blocked against current 580.** Its four source IDs already belong to
 accepted coverage. The sealed replacement contract pins older SoHo candidates.
 Eight target/context hashes differ from the latest selected parents:
 
@@ -63,8 +63,34 @@ generation-associated evidence and are not promised as ZIP members. Archive
 identity, exported-root compatibility and actual scene ownership are separate checks.
 The checker rejects `block233_flat_city_preview` in a current-baseline selection.
 Do not rewrite the sealed package or claim a matching source-ID set fixes this.
-A newly sealed, independently reviewed reconciliation and verified delivery
-would need a separate catalog revision.
+The original R1 entry and archive remain unchanged for traceability. The
+separately sealed and delivered R2 below supersedes only this optional prototype.
+
+**Block233 R2: bounded current-parent optional review.** The new verified
+90,084,709-byte ZIP is recorded as `artifacts.block233_r2`. Its sealed contract
+matches all four target and nine context pins to the current generations. The
+bound parent-inventory manifest records the exact 580 canonical GLBs and 116
+external images; all were rehashed before this catalog update. Grouped block
+exports were reviewed separately for geometry and contacts, not byte equality.
+
+Use `block233_r2_flat_city_preview` only with the full seven-profile baseline and
+no other optional profiles. The checker rejects R1/R2 duplication and untested
+combinations with Block474, facade598463 or any additional optional replacement.
+`block233_r2_source_absolute` is for preview in an otherwise empty, isolated
+scene only. Neither
+profile changes accepted coverage or enables runtime loading.
+
+R2's independent static review covers unchanged historical roof shapes, 169
+rooms/panes and zero newly authored contacts in the reviewed flat composition.
+This is not blanket compatibility or universal aesthetic improvement: Blender
+proofs have noisy glass, changed bay rhythm, simpler storefront trim and sparse
+generic roof equipment. Fine material/interior quality and Unity remain unverified.
+
+Rollback uses the four exact current canonical parents and their relative
+textures bundled under `rollback/current/`, 35 unique files in total. The catalog
+pins each target and the sealed contract containing every image dependency.
+Restore these current-generation files, not the old R1 baseline. Do not mix the
+four R2 bodies with either set of original bodies.
 
 **Block474: optional atomic four-part replacement.** Roof IDs 1074413_0,
 1082144_0 and 841918_0 require companion 797579_0. The companion removes exactly
@@ -124,11 +150,13 @@ python tools/validate_model_delivery_catalog.py --selection historical_four_sour
 
 The checker validates ID uniqueness/disjointness, dependency presence, explicit
 supersession, exclusive/isolated profiles, stale-parent rejection, companion
-membership, positive byte counts, hash formats and Drive link identities.
+membership, exact current rollback pins, untested optional-combination rejection,
+positive byte counts, hash formats and Drive link identities.
 `--archive` streams a supplied local ZIP to verify its complete size and hash;
 it never downloads, extracts, imports, changes materials or modifies a scene.
 For an explicit current-baseline-plus-optional plan, pass all seven baseline
-profile IDs plus the optional profile with `--selection`.
+profile IDs plus the optional profile with `--selection`. R2 requires that complete
+baseline and is the only optional replacement permitted in its selection.
 
 Download into a new staging directory outside Git; check bytes/hash before
 extracting. Retain original archives and complete relative texture folders.

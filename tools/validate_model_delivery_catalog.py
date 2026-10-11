@@ -49,6 +49,10 @@ def validate_catalog(catalog):
                     key + ': Drive link identity')
         manifest = artifact['identityManifest']
         require(relative_path(manifest['path']) and SHA256.fullmatch(manifest['sha256']), key + ': manifest identity')
+        for bound in artifact.get('boundManifests', {}).values():
+            require(relative_path(bound['path']) and SHA256.fullmatch(bound['sha256']), key + ': bound manifest identity')
+        if 'supersedesArtifact' in artifact:
+            require(artifact['supersedesArtifact'] in artifacts and artifact['supersedesArtifact'] != key, key + ': superseded artifact')
         checks = artifact.get('parentAssetChecks', [])
         require(isinstance(checks, list), key + ': parent checks')
         checked_ids = set()
@@ -82,6 +86,18 @@ def validate_catalog(catalog):
             require(unique_strings(profile['requiredContextIds'], key + ' context IDs') == context, key + ': incomplete context checks')
             require(checks and set(targets) == ids, key + ': missing/extra parent target checks')
             require(all(targets[s]['currentProfile'] == supersedes[s] for s in ids), key + ': parent check superseding identity')
+            policy = artifacts[profile['artifact']].get('compositionPolicy', 'catalog_plan')
+            require(policy in {'catalog_plan', 'full_baseline_single_optional'}, key + ': composition policy')
+            require(profile.get('compositionPolicy', 'catalog_plan') == policy, key + ': missing composition policy')
+            if policy == 'full_baseline_single_optional':
+                require(requires == set(catalog['acceptedBaseline']['profileIds']), key + ': complete baseline required')
+                rollback = artifacts[profile['artifact']]['rollbackTargets']
+                rollback_ids = unique_strings([r['sourceId'] for r in rollback], key + ' rollback IDs')
+                require(rollback_ids == ids, key + ': incomplete rollback')
+                for item in rollback:
+                    require(relative_path(item['path']) and item['profile'] == supersedes[item['sourceId']]
+                            and item['sha256'] == targets[item['sourceId']]['currentSha256'], key + ': stale rollback')
+                    require(type(item['externalImageCount']) is int and item['externalImageCount'] >= 0, key + ': rollback images')
             mismatches = any(not c['matches'] for c in checks)
             require(profile['compatibility'] in {'blocked_stale_parent', 'parent_hashes_match_only'}, key + ': compatibility status')
             require(not mismatches or profile['compatibility'] == 'blocked_stale_parent', key + ': stale parent must block')
@@ -116,6 +132,9 @@ def validate_selection(catalog, selected):
         require(p.get('compatibility') != 'blocked_stale_parent', name + ': blocked stale parent')
         if p['kind'] in {'isolated_prototype', 'historical_research'}:
             require(len(selected) == 1, name + ': isolated profile cannot mix with current selection')
+        if p.get('compositionPolicy') == 'full_baseline_single_optional':
+            require(sum(profiles[n]['kind'] == 'optional_replacement' for n in selected) == 1,
+                    name + ': other optional profiles not reviewed')
         group = p.get('exclusiveGroup')
         require(not group or group not in groups, name + ': mutually exclusive profiles')
         if group:

@@ -153,6 +153,58 @@ class DeliveryCatalogTests(unittest.TestCase):
     def test_runtime_ready_cannot_be_enabled(self):
         self.rejected(lambda c: c.update(runtimeReady=True))
 
+    def test_r2_baseline_selection_preserves580_and_r1_block(self):
+        names = self.baseline + ['block233_r2_flat_city_preview']
+        for selected in [names, list(reversed(names))]:
+            result = m.validate_selection(self.catalog, selected)
+            self.assertEqual(result['selectedSourceParts'], 580)
+            self.assertEqual(result['acceptedSourceParts'], 580)
+            self.assertFalse(result['runtimeReady'])
+        self.assertEqual(self.catalog['profiles']['block233_flat_city_preview']['compatibility'], 'blocked_stale_parent')
+        self.assertEqual(self.catalog['artifacts']['block233_r2']['supersedesArtifact'], 'block233')
+
+    def test_r2_rejects_untested_optional_combinations(self):
+        for other in ['block474_flat_city_preview', 'facade598463_r3']:
+            for selected in [self.baseline + ['block233_r2_flat_city_preview', other],
+                             [other, 'block233_r2_flat_city_preview'] + self.baseline]:
+                with self.subTest(other=other), self.assertRaisesRegex(ValueError, 'other optional profiles'):
+                    m.validate_selection(self.catalog, selected)
+
+    def test_r2_requires_entire_baseline(self):
+        names = self.baseline[:-1] + ['block233_r2_flat_city_preview']
+        with self.assertRaisesRegex(ValueError, 'missing dependency'):
+            m.validate_selection(self.catalog, names)
+        self.rejected(lambda c: c['profiles']['block233_r2_flat_city_preview']['requires'].pop())
+
+    def test_r2_cannot_omit_composition_policy(self):
+        self.rejected(lambda c: c['profiles']['block233_r2_flat_city_preview'].pop('compositionPolicy'))
+
+    def test_r2_source_absolute_is_isolated_only(self):
+        name = 'block233_r2_source_absolute'
+        result = m.validate_selection(self.catalog, [name])
+        self.assertEqual(result['selectedSourceParts'], 4)
+        self.assertEqual(result['acceptedSourceParts'], 0)
+        for names in [self.baseline + [name], [name, 'block233_r2_flat_city_preview'],
+                      [name, 'block233_source_absolute']]:
+            with self.subTest(names=names), self.assertRaises(ValueError):
+                m.validate_selection(self.catalog, names)
+
+    def test_r2_rejects_stale_or_incomplete_rollback(self):
+        for mode in ['stale_hash', 'missing_target', 'wrong_parent']:
+            c = copy.deepcopy(self.catalog)
+            rollback = c['artifacts']['block233_r2']['rollbackTargets']
+            if mode == 'stale_hash':
+                rollback[0]['sha256'] = c['artifacts']['block233']['parentAssetChecks'][0]['pinnedSha256']
+            elif mode == 'missing_target':
+                rollback.pop()
+            else:
+                rollback[0]['profile'] = 'soho_expansion_unchanged140'
+            with self.subTest(mode=mode), self.assertRaises(ValueError):
+                m.validate_catalog(c)
+
+    def test_r2_bound_manifest_hash_format(self):
+        self.rejected(lambda c: c['artifacts']['block233_r2']['boundManifests']['current580Parents'].update(sha256='bad'))
+
     def test_downloaded_archive_verification(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'fixture.zip'

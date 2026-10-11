@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogRevision": "2026-10-11-current580-v1",
+  "catalogRevision": "2026-10-11-current580-v2-block233-r2",
   "runtimeReady": false,
   "repositoryBaseCommit": "a6a507ebdd59cb897664d3e5aced473867eb660c",
   "source": {
@@ -491,6 +491,184 @@
         "sha256": "daa0799bb8269b1795d815591e5934bf1a0ff9b1fd2730e52bd53a418f4e74ee"
       },
       "generationNote": "Older 179-profile Mid/Far research; does not match all current R3/R4/current 580 bodies."
+    },
+    "block233_r2": {
+      "filename": "Block233_R2_Latest580_Optional_Review.zip",
+      "bytes": 90084709,
+      "sha256": "7c2648fe84986340d9bb07b7c69ba9d8cec6f7ef3f1e3706dee4c98b6877454e",
+      "fileId": "1ESuhKJ-GDGqtxvdMsE5iqbGUBdzHXXXT",
+      "url": "https://drive.google.com/file/d/1ESuhKJ-GDGqtxvdMsE5iqbGUBdzHXXXT/view?usp=drivesdk",
+      "folderId": "1qZiMHF9ZetdHTcNI-1Pd44-6-FbYWi-p",
+      "folderUrl": "https://drive.google.com/drive/folders/1qZiMHF9ZetdHTcNI-1Pd44-6-FbYWi-p",
+      "remoteReadbackVerified": true,
+      "verifiedOn": "2026-10-11",
+      "identityManifest": {
+        "path": "ACCEPTED_REPLACEMENT_CONTRACT.json",
+        "sha256": "8bd359cae959529e0538d96bcd39d9db403a6ef0b3d629d4f8ce622703e678e3"
+      },
+      "boundManifests": {
+        "current580Parents": {
+          "path": "CURRENT580_PARENT_INVENTORY.json",
+          "sha256": "0636c0f374d2b3f06f741f4968d060ad2cc67ef2e2019763d11234e0cddef4a5"
+        },
+        "flatChoice": {
+          "path": "choices/flat_city_preview.json",
+          "sha256": "205af66abc6969541d51c11bf041aa9ccab51c72de0745ea6fa50b7e18fd3b53"
+        },
+        "sourceAbsoluteChoice": {
+          "path": "choices/source_absolute.json",
+          "sha256": "b267b28fa83944aaaf350595772ec488f8eb4cbb49c5424aeb943d89bf4d738a"
+        },
+        "geometryAcceptance": {
+          "path": "evidence/geometry/FINAL_GEOMETRY_ACCEPTANCE.json",
+          "sha256": "ddb2fca25c77bfb7862c71643d5fe090a9e7dac908ac842c67728e3fbce2ae4a"
+        }
+      },
+      "generationNote": "R2 supersedes only the earlier optional Block233 prototype; original blocked R1 remains recorded. Four existing source IDs, zero coverage growth. Exact current 580 canonical parent selection only.",
+      "supersedesArtifact": "block233",
+      "parentAssetChecks": [
+        {
+          "sourceId": "118578_0",
+          "role": "target",
+          "pinnedSha256": "8f60b62e38022348fd342a42607bcfad73142e3876de8759da433bed78f3d02e",
+          "currentProfile": "regional_identity_r4",
+          "currentSha256": "8f60b62e38022348fd342a42607bcfad73142e3876de8759da433bed78f3d02e",
+          "matches": true
+        },
+        {
+          "sourceId": "166968_0",
+          "role": "target",
+          "pinnedSha256": "074b19d9e9822b9f06ce707a48d479d8d20c23ea99f62d8fb2d98155e26e9630",
+          "currentProfile": "soho_expansion_unchanged140",
+          "currentSha256": "074b19d9e9822b9f06ce707a48d479d8d20c23ea99f62d8fb2d98155e26e9630",
+          "matches": true
+        },
+        {
+          "sourceId": "424380_0",
+          "role": "target",
+          "pinnedSha256": "fdcb97a082dd35d25bb57e4922b9f5043044a2c8b00f8ad6198859a2a8f10d37",
+          "currentProfile": "regional_identity_r4",
+          "currentSha256": "fdcb97a082dd35d25bb57e4922b9f5043044a2c8b00f8ad6198859a2a8f10d37",
+          "matches": true
+        },
+        {
+          "sourceId": "496807_0",
+          "role": "target",
+          "pinnedSha256": "2b66d8e2224d337ec7f23feef2d27b6759511d7846ff74a6fb233ef81af63925",
+          "currentProfile": "regional_identity_r4",
+          "currentSha256": "2b66d8e2224d337ec7f23feef2d27b6759511d7846ff74a6fb233ef81af63925",
+          "matches": true
+        },
+        {
+          "sourceId": "142866_0",
+          "role": "context",
+          "pinnedSha256": "ba43f090d1c5a667f2f9022ddc514e94067fb209eb45ac61b32cde9ea3355c82",
+          "currentProfile": "regional_identity_r4",
+          "currentSha256": "ba43f090d1c5a667f2f9022ddc514e94067fb209eb45ac61b32cde9ea3355c82",
+          "matches": true
+        },
+        {
+          "sourceId": "336310_0",
+          "role": "context",
+          "pinnedSha256": "23a82fef85f3f4f5c355b45f3812419c3cac7bb183820eb688c778fd8b8075b8",
+          "currentProfile": "soho_expansion_unchanged140",
+          "currentSha256": "23a82fef85f3f4f5c355b45f3812419c3cac7bb183820eb688c778fd8b8075b8",
+          "matches": true
+        },
+        {
+          "sourceId": "372093_0",
+          "role": "context",
+          "pinnedSha256": "aad411c1ce385b4db0aeb0df62426b65c78ca67d27da2c0f1a8a0475d8da2b64",
+          "currentProfile": "soho_expansion_unchanged140",
+          "currentSha256": "aad411c1ce385b4db0aeb0df62426b65c78ca67d27da2c0f1a8a0475d8da2b64",
+          "matches": true
+        },
+        {
+          "sourceId": "434031_0",
+          "role": "context",
+          "pinnedSha256": "e0b71287790d6ff86e8c69df63013aaa810e39cab8e63e99f51553bd28627d42",
+          "currentProfile": "regional_identity_r4",
+          "currentSha256": "e0b71287790d6ff86e8c69df63013aaa810e39cab8e63e99f51553bd28627d42",
+          "matches": true
+        },
+        {
+          "sourceId": "470739_0",
+          "role": "context",
+          "pinnedSha256": "3e09dbf99f41dc96ca0be16ba3c7d79c050d48fe1914ea7012e8d797b3e218dc",
+          "currentProfile": "soho_expansion_unchanged140",
+          "currentSha256": "3e09dbf99f41dc96ca0be16ba3c7d79c050d48fe1914ea7012e8d797b3e218dc",
+          "matches": true
+        },
+        {
+          "sourceId": "474251_0",
+          "role": "context",
+          "pinnedSha256": "9f241da76ea8593c7e74262b12ea1f5252b606fb1bc57cf7fa176488f563df38",
+          "currentProfile": "soho_expansion_unchanged140",
+          "currentSha256": "9f241da76ea8593c7e74262b12ea1f5252b606fb1bc57cf7fa176488f563df38",
+          "matches": true
+        },
+        {
+          "sourceId": "4939_0",
+          "role": "context",
+          "pinnedSha256": "7800d7fdde26f352136ecc3dd87eca5ef6581ce0c08926197f25c1a92851c70c",
+          "currentProfile": "howard_h1",
+          "currentSha256": "7800d7fdde26f352136ecc3dd87eca5ef6581ce0c08926197f25c1a92851c70c",
+          "matches": true
+        },
+        {
+          "sourceId": "547_0",
+          "role": "context",
+          "pinnedSha256": "80c1a822ee22d071fff6a636d90fdbfbfd2c6caa7096f137426a955d86e4412d",
+          "currentProfile": "howard_h1",
+          "currentSha256": "80c1a822ee22d071fff6a636d90fdbfbfd2c6caa7096f137426a955d86e4412d",
+          "matches": true
+        },
+        {
+          "sourceId": "730170_0",
+          "role": "context",
+          "pinnedSha256": "19608b7dbb1106f1e1bfff72c378d7d161113793ce6379a411dfa50f76cb7740",
+          "currentProfile": "regional_identity_r4",
+          "currentSha256": "19608b7dbb1106f1e1bfff72c378d7d161113793ce6379a411dfa50f76cb7740",
+          "matches": true
+        }
+      ],
+      "parentAssetHashScope": "Per-source canonical authoring GLBs checked against the sealed R2 contract. The four exact current rollback GLBs and relative image dependencies are inside this ZIP. Grouped exports have separate serialization and were reviewed separately; no live Unity scene is implied.",
+      "current580ParentCount": 580,
+      "current580ExternalImageCount": 116,
+      "rollbackUniqueFileCount": 35,
+      "rollbackTargets": [
+        {
+          "sourceId": "118578_0",
+          "profile": "regional_identity_r4",
+          "path": "rollback/current/new_version2_regional_identity/candidate/118578_0/asset.glb",
+          "sha256": "8f60b62e38022348fd342a42607bcfad73142e3876de8759da433bed78f3d02e",
+          "externalImageCount": 15
+        },
+        {
+          "sourceId": "166968_0",
+          "profile": "soho_expansion_unchanged140",
+          "path": "rollback/current/new_version2_soho_expansion/candidate/166968_0/asset.glb",
+          "sha256": "074b19d9e9822b9f06ce707a48d479d8d20c23ea99f62d8fb2d98155e26e9630",
+          "externalImageCount": 16
+        },
+        {
+          "sourceId": "424380_0",
+          "profile": "regional_identity_r4",
+          "path": "rollback/current/new_version2_regional_identity/candidate/424380_0/asset.glb",
+          "sha256": "fdcb97a082dd35d25bb57e4922b9f5043044a2c8b00f8ad6198859a2a8f10d37",
+          "externalImageCount": 13
+        },
+        {
+          "sourceId": "496807_0",
+          "profile": "regional_identity_r4",
+          "path": "rollback/current/new_version2_regional_identity/candidate/496807_0/asset.glb",
+          "sha256": "2b66d8e2224d337ec7f23feef2d27b6759511d7846ff74a6fb233ef81af63925",
+          "externalImageCount": 13
+        }
+      ],
+      "geometryReview": "Bounded independent static review against the exact current580 canonical selection and current grouped block context. Other optional combinations were not tested.",
+      "visualLimits": "Qualified Blender proof only: family-level adaptation, changed bay rhythm, simpler storefront trim, sparse generic roof equipment and noisy 16-sample glass; no universal aesthetic improvement or fine-material/interior approval.",
+      "compositionPolicy": "full_baseline_single_optional"
     }
   },
   "profiles": {
@@ -1505,6 +1683,66 @@
       "activeByDefault": false,
       "compatibility": "older_parent_profile_only",
       "rollback": "Discard isolated research preview. Do not substitute these Mid/Far files for current 580 generations."
+    },
+    "block233_r2_flat_city_preview": {
+      "artifact": "block233_r2",
+      "kind": "optional_replacement",
+      "sourceIds": [
+        "118578_0",
+        "166968_0",
+        "424380_0",
+        "496807_0"
+      ],
+      "requires": [
+        "soho_expansion_unchanged140",
+        "legacy_full15_r3",
+        "howard_h1",
+        "regional_identity_r4",
+        "north162_b_r2",
+        "north118_c",
+        "east121_d3"
+      ],
+      "acceptedCoverageContribution": 0,
+      "placement": "flat_city_preview",
+      "exclusiveGroup": "block233",
+      "activeByDefault": false,
+      "rollback": "Remove all four R2 bodies, then restore the exact four current-generation originals plus their relative textures from this archive rollback/current tree. Do not restore old R1 parent bodies.",
+      "supersedes": {
+        "118578_0": "regional_identity_r4",
+        "166968_0": "soho_expansion_unchanged140",
+        "424380_0": "regional_identity_r4",
+        "496807_0": "regional_identity_r4"
+      },
+      "requiredCompanionIds": [],
+      "requiredContextIds": [
+        "142866_0",
+        "336310_0",
+        "372093_0",
+        "434031_0",
+        "470739_0",
+        "474251_0",
+        "4939_0",
+        "547_0",
+        "730170_0"
+      ],
+      "compatibility": "parent_hashes_match_only",
+      "compositionPolicy": "full_baseline_single_optional"
+    },
+    "block233_r2_source_absolute": {
+      "artifact": "block233_r2",
+      "kind": "isolated_prototype",
+      "sourceIds": [
+        "118578_0",
+        "166968_0",
+        "424380_0",
+        "496807_0"
+      ],
+      "requires": [],
+      "acceptedCoverageContribution": 0,
+      "placement": "source_absolute",
+      "exclusiveGroup": "block233",
+      "activeByDefault": false,
+      "rollback": "Remove all four R2 bodies, then restore the exact four current-generation originals plus their relative textures from this archive rollback/current tree. Do not restore old R1 parent bodies."
     }
   }
 }
