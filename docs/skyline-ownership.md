@@ -37,6 +37,14 @@ Prepare masks and private mesh variants incrementally. The final validation, mes
 
 After the final owner leaves a group, its private native mesh variants and decoded staging/index arrays are released. The compact correspondence itself remains available for later residency. Mesh copy/read/upload calls and final atomic publication are indivisible, so the configured streaming budget is a scheduling target, not a hard maximum for every frame.
 
+The streamer schedules ownership against 70% of its total work budget, less work
+already spent that frame. The remaining headroom accounts for an indivisible
+preparation step and the visibility update after publication; ownership previously
+consumed the entire remainder before that update. A cohort can wait more frames,
+with the previous representation retained. Load/radius policy, geometry, materials,
+quality and the indivisible publication are unchanged. This does not impose a hard
+deadline on mesh uploads or a large atomic publication.
+
 ## Validation limits
 
 Tests compile their small fixture correspondence explicitly before runtime residency. They cover real Addressables provider lifetime, partial replacement, late loads, cancellation, failure, origin rebasing, imported channels/materials, extra overlays, mismatched source identity, missing filters, small root changes and final-owner departure/revisit.
