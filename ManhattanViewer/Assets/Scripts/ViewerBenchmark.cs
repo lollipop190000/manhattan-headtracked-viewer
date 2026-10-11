@@ -7,6 +7,7 @@ using HeadTracked.Display;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.Rendering.Universal;
 
 namespace Manhattan.Viewer
 {
@@ -24,6 +25,9 @@ namespace Manhattan.Viewer
         public int width, height, frameCount, streamingFailures;
         public int renderWidth, renderHeight, displayModeWidth, displayModeHeight, completedMeasuredCircuits;
         public string fullscreenMode;
+        public string cameraAntiAliasing;
+        public int vSyncCount, targetFrameRate;
+        public bool frameTimingStatisticsEnabled, trackerRequested;
         public float routeDistanceMeters, routeDurationSeconds, measuredRouteCoverageFraction;
         public bool translationConstrained;
         public string viewerRevision, technologyRevision, sourceManifestSha256, buildUtc;
@@ -229,6 +233,11 @@ namespace Manhattan.Viewer
                 renderWidth = camera.scaledPixelWidth, renderHeight = camera.scaledPixelHeight,
                 displayModeWidth = Screen.currentResolution.width, displayModeHeight = Screen.currentResolution.height,
                 fullscreenMode = Screen.fullScreenMode.ToString(),
+                cameraAntiAliasing = camera.TryGetComponent<UniversalAdditionalCameraData>(out var cameraData)
+                    ? cameraData.antialiasing.ToString() : "Unavailable",
+                vSyncCount = QualitySettings.vSyncCount, targetFrameRate = Application.targetFrameRate,
+                frameTimingStatisticsEnabled = FrameTimingManager.IsFeatureEnabled(),
+                trackerRequested = !ManhattanBootstrap.HasArgument("--no-tracker"),
                 routeDistanceMeters = routeDistance, routeDurationSeconds = routeDuration,
                 completedMeasuredCircuits = Mathf.Max(0, measuredCycleEvents - 1),
                 measuredRouteCoverageFraction = flight.TranslationConstraint != null || measuredStartRouteTime < 0f ? -1f :

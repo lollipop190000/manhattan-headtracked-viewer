@@ -18,6 +18,7 @@ public sealed class BenchmarkSpeedLifecycleTests
         string directory = Path.Combine(Path.GetTempPath(), "benchmark-speed-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("HEADTRACKED_CALIBRATION_DIRECTORY", directory);
         GameObject root = null;
+        int priorVSync = QualitySettings.vSyncCount, priorTargetRate = Application.targetFrameRate;
         try
         {
             Assert.That(ViewerPersistence.Save(ViewerPersistence.PreferencesFile, new ViewerPreferences { movementSpeed = 17 }), Is.True);
@@ -35,11 +36,22 @@ public sealed class BenchmarkSpeedLifecycleTests
             for (int i = 0; i < 5; i++) yield return null;
             float elapsed = Time.unscaledTime - started;
             Assert.That(Vector3.Distance(start, app.Flight.CityPosition) / elapsed, Is.EqualTo(100).Within(1));
+            app.Rendering.SetTemporalAA(false);
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
             // Speed/report lifecycle does not require a rendered screenshot. The live GPU test covers rendering.
             BenchmarkReport report = app.Benchmark.Finish(captureScreenshot: false);
             Assert.That(report.requestedSpeed, Is.EqualTo(100));
             Assert.That(report.actualRouteSpeed, Is.EqualTo(100));
             Assert.That(report.speed, Is.EqualTo(100));
+            Assert.That(report.cameraAntiAliasing, Is.EqualTo("None"));
+            Assert.That(report.vSyncCount, Is.Zero);
+            Assert.That(report.targetFrameRate, Is.EqualTo(30));
+            Assert.That(report.trackerRequested, Is.False);
+            Assert.That(report.frameTimingStatisticsEnabled, Is.EqualTo(FrameTimingManager.IsFeatureEnabled()));
+            var serialized = JsonUtility.FromJson<BenchmarkReport>(File.ReadAllText(app.Benchmark.LastReportPath));
+            Assert.That(serialized.cameraAntiAliasing, Is.EqualTo("None"));
+            Assert.That(serialized.vSyncCount, Is.Zero);
+            Assert.That(serialized.targetFrameRate, Is.EqualTo(30));
             Assert.That(app.Flight.InputSource, Is.SameAs(priorInput));
             Assert.That(app.Flight.Speed, Is.EqualTo(17));
             CollectionAssert.AreEqual(saved, File.ReadAllBytes(path));
@@ -49,6 +61,7 @@ public sealed class BenchmarkSpeedLifecycleTests
         finally
         {
             if (root != null) Object.DestroyImmediate(root);
+            QualitySettings.vSyncCount = priorVSync; Application.targetFrameRate = priorTargetRate;
             Environment.SetEnvironmentVariable("HEADTRACKED_CALIBRATION_DIRECTORY", prior);
             if (Directory.Exists(directory)) Directory.Delete(directory, true);
         }

@@ -67,6 +67,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/lollipop190000/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
 
+벤치마크의 `benchmark.json`은 실행 마지막의 카메라 AA 설정, VSync,
+목표 프레임률, Frame Timing 통계 기능 상태와 추적기 요청 여부도 기록합니다.
+`cameraAntiAliasing`, `vSyncCount`, `targetFrameRate`,
+`frameTimingStatisticsEnabled`, `trackerRequested`를 원본 보고서와 함께 보존합니다.
+이 값들은 종료 시점의 설정이며 실행 내내 설정이 같았다는 증거나 달성한 FPS가
+아닙니다. 설정한 AA가 실제 모든 렌더 패스에서 사용됐는지는 별도 렌더 검사가
+필요합니다. CPU/GPU 프레임 시간, 관측 유효율과 화면 품질도 각각 확인합니다.
+
 ## 배포 ZIP에 포함할 파일
 
 배포 준비자는 아래 항목만 빌드 폴더에서 복사하고, 이 가이드를 ZIP 루트의 `README-Windows.md`로 함께 넣습니다.
