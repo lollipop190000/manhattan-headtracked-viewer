@@ -204,7 +204,7 @@ namespace Manhattan.Viewer
             if (BenchmarkStatistics.MeasuredSeconds(Time.unscaledTimeAsDouble, warmupUntil) >= duration) Finish();
         }
 
-        public BenchmarkReport Finish()
+        public BenchmarkReport Finish(bool captureScreenshot = true)
         {
             if (!recording) return null;
             recording = false; flight.InputSource = previousInput;
@@ -254,7 +254,7 @@ namespace Manhattan.Viewer
             Directory.CreateDirectory(outputDirectory);
             LastReportPath = Path.Combine(outputDirectory, "benchmark.json");
             File.WriteAllText(LastReportPath, JsonUtility.ToJson(report, true));
-            ScreenCapture.CaptureScreenshot(Path.Combine(outputDirectory, "screenshot.png"));
+            if (captureScreenshot) ScreenCapture.CaptureScreenshot(Path.Combine(outputDirectory, "screenshot.png"));
             Debug.Log("Benchmark saved: " + LastReportPath);
             if (quitWhenDone) Invoke(nameof(QuitAfterCapture), 1f);
             return report;

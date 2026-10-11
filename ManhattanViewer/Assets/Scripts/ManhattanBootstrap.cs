@@ -19,6 +19,7 @@ namespace Manhattan.Viewer
         public AfternoonRenderProfile Rendering { get; private set; }
         public ViewerBenchmark Benchmark { get; private set; }
         public ViewerPreferences Preferences { get; private set; }
+        public ViewerWindowViewport WindowViewport { get; private set; }
         private Camera renderCamera;
         private Material frameMaterial;
         private Transform plane;
@@ -57,6 +58,8 @@ namespace Manhattan.Viewer
             if (!HasArgument("--no-tracker")) source = gameObject.AddComponent<PythonBridgeSource>();
             Display = cameraObject.AddComponent<HeadTrackedDisplay>();
             ViewerPersistence.RestoreCalibration(Display.Calibration); Display.Configure(plane, source);
+            WindowViewport = gameObject.AddComponent<ViewerWindowViewport>(); WindowViewport.Configure(Display);
+            WindowViewport.SetPanelMapping(Preferences.fullPanelDimensions);
             Frame = gameObject.AddComponent<ScreenWindowFrame>();
             var frameTemplate = windowFrameMaterial != null ? windowFrameMaterial : Resources.Load<Material>("WindowFrameMaterial");
             if (frameTemplate == null) throw new InvalidOperationException("Window frame material is missing. Run Manhattan/Create viewer scene and render settings before building.");

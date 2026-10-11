@@ -35,7 +35,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 ## 실측 입력과 개인 보정
 
-화면의 실제 표시 영역 너비·높이를 재고, 평소 정면을 보는 자세에서 눈과 화면 평면 사이의 거리를 입력합니다. 화면 베젤 크기나 해상도 픽셀 수를 물리 길이 대신 입력하지 않습니다. 기본 전체 화면에서는 표시 패널의 물리 크기를 사용하고, 창 모드로 변경했다면 게임 화면이 차지하는 실제 너비·높이에 맞춰 다시 보정합니다.
+화면의 실제 표시 영역 너비·높이를 재고, 평소 정면을 보는 자세에서 눈과 화면 평면 사이의 거리를 입력합니다. 화면 베젤 크기나 해상도 픽셀 수를 물리 길이 대신 입력하지 않습니다. 기본 모드의 치수와 웹캠 위치는 게임 전체 표시 영역과 그 중심 기준입니다. 창을 옮기거나 크기를 바꾸면 두 10 cm ruler와 웹캠 중심 기준을 다시 확인합니다.
+
+패널 전체 치수를 입력하고 창 모드에서도 사용하려면 Settings → Viewport check의 **Dimensions are full monitor panel**을 켭니다. 치수·웹캠 위치·눈 좌표의 기준은 패널 중심입니다. Windows Player는 물리 픽셀 기준 client 위치와 크기를 측정하고 `Camera.rect`를 한 번 더 반영합니다. 창 전체가 한 패널 안에 있어야 하며 최소화·다른 모니터·오프스크린 렌더링이면 상태 메시지를 해결한 뒤 다시 확인합니다. 이 옵션은 viewer preference이며 기존 physical calibration을 자동 수정하거나 저장하지 않습니다.
 
 오른쪽 `Settings`에서 `Screen width (cm)`, `Screen height (cm)`, `Viewing distance (cm)`를 수정한 뒤 `Save physical calibration`으로 저장합니다. 웹캠을 켠 상태에서 정면 기준 자세를 잡고 `Capture current face reference`를 누릅니다. IPD·웹캠 위치·카메라 보정과 필터는 같은 설정창의 상세 항목에 있습니다.
 

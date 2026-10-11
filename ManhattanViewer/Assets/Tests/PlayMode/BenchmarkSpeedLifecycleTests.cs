@@ -35,7 +35,8 @@ public sealed class BenchmarkSpeedLifecycleTests
             for (int i = 0; i < 5; i++) yield return null;
             float elapsed = Time.unscaledTime - started;
             Assert.That(Vector3.Distance(start, app.Flight.CityPosition) / elapsed, Is.EqualTo(100).Within(1));
-            BenchmarkReport report = app.Benchmark.Finish();
+            // Speed/report lifecycle does not require a rendered screenshot. The live GPU test covers rendering.
+            BenchmarkReport report = app.Benchmark.Finish(captureScreenshot: false);
             Assert.That(report.requestedSpeed, Is.EqualTo(100));
             Assert.That(report.actualRouteSpeed, Is.EqualTo(100));
             Assert.That(report.speed, Is.EqualTo(100));
@@ -43,8 +44,7 @@ public sealed class BenchmarkSpeedLifecycleTests
             Assert.That(app.Flight.Speed, Is.EqualTo(17));
             CollectionAssert.AreEqual(saved, File.ReadAllBytes(path));
             Assert.That(File.ReadAllText(Path.Combine(directory, "run", "frames.csv")), Does.Contain("city_x,city_y,city_z,route_cycles,route_elapsed_seconds"));
-            // Finish requests a generic scene screenshot; allow its write to complete before fixture cleanup.
-            yield return new WaitForEndOfFrame(); yield return null;
+            Assert.That(File.Exists(Path.Combine(directory, "run", "screenshot.png")), Is.False);
         }
         finally
         {

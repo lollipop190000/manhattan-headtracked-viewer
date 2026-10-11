@@ -4,6 +4,12 @@ Status: **source inspection and immutable staging are runnable; Unity import/bak
 material conversion, and live replacement are not implemented by this patch.**
 Every generated plan deliberately says `runtimeReady: false`.
 
+Source and staging path checks reject POSIX symlinks and Windows reparse points,
+including directory junctions in ancestor directories. Windows junction rejection
+is exercised using real junctions without requiring symbolic-link privileges.
+Symbolic-link tests report a skip when Windows denies that privilege; the payload
+boundary remains enforced.
+
 This additive proposal targets viewer PR #2 at
 `6a2e0c50710ca86a3ee24757457ec5f3e116b97b`. The tracking package remains pinned to
 `960d5de55037a3fe2739ed055c8de091b8c54aed`. Existing CityBake, CityCatalog,

@@ -2,9 +2,11 @@ import base64
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import struct
 import sys
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -240,7 +242,7 @@ class ModelImportTests(unittest.TestCase):
         payload = self.source / "shared_textures/albedo.png"
         outside = self.root / "outside.png"
         payload.rename(outside)
-        payload.symlink_to(outside)
+        self.make_symlink(payload, outside)
         with self.assertRaisesRegex(ValueError, "Symlink payload"):
             self.inspect()
 
@@ -248,9 +250,47 @@ class ModelImportTests(unittest.TestCase):
         real = self.root / "real"
         real.mkdir()
         link = self.root / "link"
-        link.symlink_to(real, target_is_directory=True)
+        self.make_symlink(link, real, target_is_directory=True)
         with self.assertRaisesRegex(ValueError, "Symlink staging"):
             adapter.stage(self.manifest_path, self.sha, self.source, link)
+        self.assertEqual([], list(real.iterdir()))
+
+    def make_symlink(self, link, target, **kwargs):
+        try:
+            link.symlink_to(target, **kwargs)
+        except OSError as error:
+            if os.name == "nt" and error.winerror == 1314:
+                self.skipTest("Windows symlink privilege unavailable; real junction rejection is tested separately")
+            raise
+
+    def make_junction(self, link, target):
+        result = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)], capture_output=True)
+        self.assertEqual(0, result.returncode, result.stderr.decode(errors="replace"))
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction test")
+    def test_junction_source_payload_rejected(self):
+        textures = self.source / "shared_textures"
+        outside = self.root / "outside-textures"
+        textures.rename(outside)
+        self.make_junction(textures, outside)
+        try:
+            with self.assertRaisesRegex(ValueError, "payload"):
+                self.inspect()
+        finally:
+            textures.rmdir()  # Remove only the junction, never the target directory.
+        self.assertTrue((outside / "albedo.png").is_file())
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction test")
+    def test_junction_destination_ancestor_rejected(self):
+        real = self.root / "real"
+        real.mkdir()
+        link = self.root / "junction"
+        self.make_junction(link, real)
+        try:
+            with self.assertRaisesRegex(ValueError, "staging"):
+                adapter.stage(self.manifest_path, self.sha, self.source, link / "new-child")
+        finally:
+            link.rmdir()
         self.assertEqual([], list(real.iterdir()))
 
     def test_stage_idempotent_but_tampering_fails_closed(self):

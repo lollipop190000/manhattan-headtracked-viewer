@@ -133,6 +133,20 @@ public sealed class MeasurementWorkflowLifecycleTests
         camera.rect = new Rect(0, 0, 1, 1); workflow.MeasurementsConfirmed = true;
         Assert.That(Session.Phase, Is.EqualTo(MeasurementPhase.Idle));
     }
+    [UnityTest] public IEnumerator PhysicalWindowMoveInvalidatesConfirmationWithoutChangingCalibration()
+    {
+        yield return WaitReady(); workflow.MeasurementsConfirmed = true;
+        Assert.That(workflow.MeasurementsConfirmed, Is.True);
+        string calibration = JsonUtility.ToJson(app.Display.Calibration);
+        Rect pixels = app.Display.GetComponent<Camera>().pixelRect;
+        app.Display.DisplayViewport = new Rect(.1f, .2f, .7f, .6f);
+        Assert.That(app.Display.GetComponent<Camera>().pixelRect, Is.EqualTo(pixels));
+        Assert.That(workflow.MeasurementsConfirmed, Is.False, "A window move changes physical aperture even at the same render resolution");
+        Assert.That(JsonUtility.ToJson(app.Display.Calibration), Is.EqualTo(calibration));
+        app.WindowViewport.SetPanelMapping(true); // Editor cannot claim a valid native Player mapping.
+        Assert.That(workflow.ConfirmMeasurements(), Is.False);
+    }
+
     [UnityTest] public IEnumerator ViewportChangeWithSettingsClosedCancelsAndHidesMeasurementHUD()
     {
         yield return WaitReady(); workflow.MeasurementsConfirmed = true; Assert.That(workflow.Begin(), Is.True); ShowSettings(false);

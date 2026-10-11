@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.headtracked.display": {
-      "version": "https://github.com/lollipop190000/head-tracked-display.git?path=/Packages/com.headtracked.display#960d5de55037a3fe2739ed055c8de091b8c54aed",
+      "version": "https://github.com/lollipop190000/head-tracked-display.git?path=/Packages/com.headtracked.display#2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329",
       "depth": 0,
       "source": "git",
       "dependencies": {
@@ -9,7 +9,7 @@
         "com.unity.modules.jsonserialize": "1.0.0",
         "com.unity.modules.physics": "1.0.0"
       },
-      "hash": "960d5de55037a3fe2739ed055c8de091b8c54aed"
+      "hash": "2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329"
     },
     "com.unity.addressables": {
       "version": "2.7.6",

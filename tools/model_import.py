@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import struct
+import stat
 import tempfile
 from urllib.parse import urlsplit, unquote
 
@@ -74,16 +75,26 @@ def plain_path(value):
     return path
 
 
+def redirected_path(path):
+    """Reject Windows junctions and other reparse points as well as POSIX symlinks."""
+    if path.is_symlink():
+        return True
+    try:
+        return bool(getattr(path.lstat(), "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+    except FileNotFoundError:
+        return False
+
+
 def local_file(root, relative):
     """No symlinks, including parent components. Paths stay in the trusted root."""
     root = Path(root).absolute()
     for parent in [root, *root.parents]:
-        if parent.is_symlink():
+        if redirected_path(parent):
             raise ValueError("Symlink source/staging root is not supported: " + str(parent))
     current = root
     for part in plain_path(relative).parts:
         current = current / part
-        if current.is_symlink():
+        if redirected_path(current):
             raise ValueError("Symlink payload is not supported: " + relative)
     if not current.is_file():
         raise ValueError("Missing payload: " + relative)
@@ -375,11 +386,11 @@ def stage(manifest, expected_sha256, source_root, destination):
     destination = Path(destination).absolute()
     # Check existing ancestors before creating any directory through a symlink.
     for path in [destination, *destination.parents]:
-        if path.is_symlink():
+        if redirected_path(path):
             raise ValueError("Symlink staging destination is not supported")
     target = destination / plan["datasetId"] / plan["version"] / expected_sha256
     for path in [target, *target.parents]:
-        if path.is_symlink():
+        if redirected_path(path):
             raise ValueError("Symlink staging path is not supported")
     plan_bytes = canonical(plan) + b"\n"
     if target.exists():

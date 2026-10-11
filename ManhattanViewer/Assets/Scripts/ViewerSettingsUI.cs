@@ -103,9 +103,12 @@ namespace Manhattan.Viewer
             captureMessage.supportRichText = false;
             Stretch(captureMessage.rectTransform);
             Heading(content, "VIEWPORT CHECK");
+            TextRow(content, "Default: width/height measure the whole game render surface. Full panel mode uses the entire monitor panel and maps the player window automatically. Webcam offsets use that same centre.", 100);
+            ToggleRow(content, "Dimensions are full monitor panel", app.Preferences.fullPanelDimensions, value =>
+            { app.Preferences.fullPanelDimensions = value; app.WindowViewport.SetPanelMapping(value); app.Frame.Refresh(); app.Rendering.ResetHistory(); app.SavePreferences(); });
             ToggleRow(content, "Show manual 10 cm rulers", false, viewportRuler.SetVisible);
-            var viewportRow = Row(content, 132);
-            viewportMessage = Text(viewportRow, viewportRuler.Describe(), 14, 0, 0, 380, 132);
+            var viewportRow = Row(content, 240);
+            viewportMessage = Text(viewportRow, viewportRuler.Describe(), 14, 0, 0, 380, 240);
             Stretch(viewportMessage.rectTransform);
             Heading(content, "FLIGHT & IMAGE");
             NumericRow(content, "Movement speed (m/s)", app.Flight.Speed, v => { app.Flight.Speed = v; app.Preferences.movementSpeed = app.Flight.Speed; app.SavePreferences(); });
@@ -185,7 +188,7 @@ namespace Manhattan.Viewer
         {
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
-            if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe();
+            if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe() + "\n" + app.WindowViewport.Status;
             if (captureMessage != null)
             {
                 captureMessage.text = measurement.Describe();

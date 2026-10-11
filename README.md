@@ -1,5 +1,5 @@
 > **WIP shared branch; do not merge as a release.**
-> Textured facade/roof restoration is retained; only dirty Skyline masks are prepared with fresh coverage/publication guards. Final Unity tests119/119 Play and178/178 Edit. Current short streamingP95=2.1380ms still exceeds2ms. Real webcam/global flicker acceptance remain pending. See [current status](docs/ownership-wip-status.md).
+> Tests and performance measurements belong to their recorded source revisions. Historical streaming P95=2.1380ms exceeds the 2ms target. Real webcam/global flicker acceptance remains pending. See [ownership status](docs/ownership-wip-status.md) and [current integration checks](docs/physical-viewport-validation.md).
 
 # Manhattan Head Tracked Viewer
 
@@ -7,7 +7,7 @@
 
 Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~50m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
-현재 고정된 기술 커밋은 [`960d5de55037a3fe2739ed055c8de091b8c54aed`](https://github.com/lollipop190000/head-tracked-display/commit/960d5de55037a3fe2739ed055c8de091b8c54aed)입니다. 패키지 데모와 URP 없는 최소 소비 프로젝트의 투영·보정·수명주기 검사, 런타임 전용 Windows smoke와 공용 런처 검사를 통과했습니다. 맨해튼 전체 도시 Windows 빌드와 실제 GPU의 비교·창문 디테일 검증도 실행했습니다. 첫 Midtown 50m/s 측정에서는 프레임 P95 16.683ms, P99 16.684ms, 50ms 이상 정지 0회를 기록했습니다. **전체 경로의 웹캠 성능 합격과 실제 머리 이동 확인은 아직 완료되지 않았습니다.** [검증 기록](docs/validation.md)은 실제 측정과 미확인 항목을 구분합니다.
+현재 기술 패키지는 [`2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`](https://github.com/lollipop190000/head-tracked-display/commit/2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했지만, 실제 웹캠·도시 전체 렌더링·성능 합격은 별도 검증이 필요합니다. 이전 도시 성능 수치를 이 커밋의 결과로 해석하지 않습니다. [현재 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
 
 ## Windows 배포본 실행
 
@@ -71,7 +71,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 | Esc / Settings | 포인터 해제·오른쪽 설정창 |
 | Alt+F4 | 플레이어 종료·추적기 정리 |
 
-첫 실행에서 실제 화면 **너비·높이·관찰 거리**를 입력합니다. 머리 이동은 실측 단위 그대로 투영하며, 먼 스카이라인보다 가까운 창틀·창문·건물 모서리에서 효과를 확인하기 쉽습니다. 상세 카메라 보정·IPD·이동 속도·진단은 오른쪽 Settings에 있습니다.
+첫 실행에서 실제 화면 **너비·높이·관찰 거리**를 입력합니다. 머리 이동은 실측 단위 그대로 투영하며, 먼 스카이라인보다 가까운 창틀·창문·건물 모서리에서 효과를 확인하기 쉽습니다. 상세 카메라 보정·IPD·이동 속도·진단은 오른쪽 Settings에 있습니다. 기본 치수는 게임 전체 표시 영역의 실측값입니다. 패널 전체 치수로 창 모드까지 사용하려면 Settings → Viewport check의 **Dimensions are full monitor panel**을 켜고 패널 중심 기준으로 웹캠 위치를 확인합니다. Windows Player가 창 위치·크기와 카메라 영역을 함께 반영하며, 기존 개인 보정 파일은 자동 변환하지 않습니다.
 
 자동 벤치마크·비교 캡처는 시작 입력창을 생략하므로, 먼저 일반 실행에서 실측 보정을 저장합니다. 개인 파일을 별도 경로에서 관리하려면 일반 실행과 벤치마크에 같은 `-CalibrationDirectory '<private calibration directory>'`를 전달합니다. 해당 경로의 보정·설정·북마크는 Git이나 자산 Release에 올리지 않습니다.
 

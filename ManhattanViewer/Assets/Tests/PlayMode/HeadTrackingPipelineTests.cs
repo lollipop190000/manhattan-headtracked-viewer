@@ -378,6 +378,32 @@ public sealed class HeadTrackingPipelineTests
         AssertScreenCorners();
     }
 
+    [UnityTest]
+    public IEnumerator CroppedCameraUsesItsPhysicalApertureThroughTheObservationPipeline()
+    {
+        var c = display.Calibration;
+        string before = JsonUtility.ToJson(c);
+        source.RigidPose = true;
+        camera.rect = new Rect(.10f, .20f, .60f, .50f);
+        yield return Settle(new Vector3(.08f, -.025f, -.5f));
+        var depths = new[] { -.10f, 0f, .10f, 1f, 100f };
+        foreach (float depth in depths)
+        {
+            Vector3 point = new Vector3(.015f, -.01f, depth);
+            Vector3 eye = display.EyePositionMeters;
+            // Independent ray/screen oracle, normalized to the physical camera aperture.
+            float hitX = (-eye.z * point.x + point.z * eye.x) / (point.z - eye.z);
+            float hitY = (-eye.z * point.y + point.z * eye.y) / (point.z - eye.z);
+            float left = (camera.rect.xMin - .5f) * c.screenWidth;
+            float bottom = (camera.rect.yMin - .5f) * c.screenHeight;
+            var expected = new Vector2((hitX - left) / (camera.rect.width * c.screenWidth),
+                (hitY - bottom) / (camera.rect.height * c.screenHeight));
+            Assert.That(Vector2.Distance(Project(plane.TransformPoint(point)), expected), Is.LessThan(.0001f),
+                "Synthetic observation: depth " + depth + " uses cropped physical aperture");
+        }
+        Assert.That(JsonUtility.ToJson(c), Is.EqualTo(before));
+    }
+
     private Vector2 Project(Vector3 world)
     {
         Vector4 clip = unjitteredProjection * view * new Vector4(world.x, world.y, world.z, 1);
