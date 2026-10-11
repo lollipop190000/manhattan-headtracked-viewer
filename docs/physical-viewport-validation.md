@@ -46,6 +46,9 @@ confirmation requires a valid mapping and is invalidated by an aperture change,
 even when camera pixel dimensions are unchanged. Return to the calibrated monitor
 or explicitly remeasure and re-enable panel mode on the new panel. Calibration
 values, observer pose and comparison preferences are not rewritten by these reads.
+Monitor binding lasts for the current enabled session; it is not a persisted
+hardware identity. Recheck the chosen panel and rulers after restarting or changing
+hardware. The saved panel-mode preference does not certify those physical checks.
 
 This adapter covers the normal Windows client and `Camera.rect`. A future internal
 letterbox/render-texture compositor must explicitly supply its actual aperture;
@@ -64,11 +67,11 @@ different files. They were not copied wholesale into this branch.
 |---|---|
 | Unmodified PR #4, absolute viewer project path | EditMode 210/210 passed, including the 32 source-replacement gate cases |
 | Updated viewer and published package pin | EditMode 220/220 passed, zero skips |
-| Updated viewer, live GPU Editor, synthetic observations | PlayMode 122/122 passed, zero skips, including rendered opaque-distance-fade coverage |
+| Updated viewer, live GPU Editor, synthetic observations | PlayMode 126/126 passed, zero skips, including rendered opaque-distance-fade coverage, deferred-ownership coverage/rollback and publication-boundary revalidation |
 | Package in minimal consumer without URP/demo | EditMode 53/53 and PlayMode 12/12 passed, zero skips |
 | Technology demo EditMode | 53/53 passed, zero skips |
 | Runtime-only consumer, no URP/demo/test framework | Windows standalone build and visible synthetic projection probe exited 0 |
-| Portable viewer checks | 149 Python cases: 147 passed, 2 skipped for unavailable Windows symlink privilege; 8 PowerShell assertions passed |
+| Portable viewer checks | 150 Python cases: 148 passed, 2 skipped for unavailable Windows symlink privilege; 8 PowerShell assertions passed |
 | Real Windows source/destination junctions | Both rejected; external target contents preserved |
 | Actual built Midtown Skyline/Core cohort | 10 exact built prefabs loaded; partial mask → fallback → reentry → unregister round trip passed |
 | Visible Windows Player, isolated 10-tile cohort | 1920×1200, D3D11, RTX 4070 Laptop, TAA ON; all eight comparison combinations and restoration passed recorded invariants |
@@ -90,11 +93,10 @@ The production benchmark's default screenshot behavior is retained. Original NUn
 and fingerprints are retained locally in ignored verification storage. Captures,
 large city assets, logs and personal calibration are not part of this PR.
 
-## Remaining acceptance work
+## Built-asset ownership and comparison evidence
 
-There is no new full-city catalog, full-city ownership sidecar or full-city Player bake
-in this integration. Original main's generated catalog and bundles were fingerprinted;
-its ownership sidecar was absent. A separate project compiled just `Skyline_2_7`
+Original main's generated catalog and bundles were fingerprinted and remain unchanged;
+its ownership sidecar was absent. An initial separate project compiled just `Skyline_2_7`
 from its exact built catalog and nine related Core prefabs. The compiled mapping
 contained 1,690 matching triangle ordinals across five Core owners. With only
 `Core_Manhattan_Core_2_7` presented, runtime ownership masked its 1,605 matching
@@ -107,9 +109,13 @@ This is a real built-asset check with synthetic resident state transitions. The
 initial offline compiler encountered an unrelated missing default Editor
 initialization location before loading the explicitly supplied built catalog;
 the follow-up runtime round trip used that catalog's explicit initialization data.
-It is not a full-city bake, normal-window moving render or proof that every
-reported roof/side artifact is resolved. Old performance records do not validate
-this branch.
+This initial one-group check is not proof that every reported roof/side artifact
+is resolved. Subsequent full-city diagnostic builds reuse the exact immutable
+catalog and bundles with a separately generated 260-group ownership sidecar;
+their measurements and moving-media scope are recorded in
+[current streaming validation](current-streaming-validation.md). Original city
+meshes, textures and bundles were not rebaked. Historical performance records
+do not validate this branch.
 
 A subsequent private Windows diagnostic Player used production viewer source
 `34fb631165c941b7cdaed05b817874d7ed677eb8`, the new package pin and the exact
@@ -129,17 +135,20 @@ ownership. All nine Core replacements were present in those poses, so the
 complete cohort correctly retired all 6,862 eligible Skyline hull triangles.
 The earlier one-Core partial test is separate from this complete-cohort result.
 
-These stills were inspected for gross missing/pink materials and roof/side
+Representative wall, street, roof, air-down and far stills were inspected for gross missing/pink materials and roof/side
 geometry. They cannot establish temporal flicker, head-motion perception, general
 city coverage, frame-rate targets or the new source-ID replacement loader. The
 group contains existing Core/Skyline assets and excludes additive Near, Ground,
 Vegetation and the 580-part new delivery. Binary/image/metadata fingerprints are
 retained privately with the captures; no large assets, captures or logs are tracked.
 
+## Remaining acceptance work
+
 Real webcam freshness, physical head-motion perception, moving-head TAA/flicker,
-identification of the user's specific offending surfaces, paired full-city
-1920×1200 performance runs and the
-actual source-ID model replacement pilot remain open. The historical streaming
+identification of the user's specific offending surfaces, the complete regional
+speed/proxy acceptance matrix and the actual source-ID model replacement pilot
+remain open. Current full-city 1920×1200 no-tracker diagnostic measurements are
+separate from those acceptance requirements. The historical streaming
 P95 of 2.1380ms exceeded the 2ms target and is not a measurement of this branch.
 The delivery catalog still represents 580 source parts; `runtimeReady` remains
 false. No model was regenerated or automatically activated.

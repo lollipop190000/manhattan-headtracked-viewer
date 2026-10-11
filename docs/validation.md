@@ -4,7 +4,7 @@ The acceptance target is a webcam-enabled standalone Windows player on RTX 4070 
 
 ## Automated checks
 
-Current integration results and incomplete checks are recorded in [physical viewport validation](physical-viewport-validation.md). Earlier measurements below remain historical and do not certify the current package pin. For a live Windows GPU test run, use `tools/test.ps1 -EditorPlayMode -PythonExe '<Python 3.13 executable>'`; it opens the isolated test Game View, uses `-runTests --no-tracker`, and keeps personal calibration separate. Batch-mode results cannot certify frame-end rendering tests.
+Current integration results and incomplete checks are recorded in [physical viewport validation](physical-viewport-validation.md) and [current streaming validation](current-streaming-validation.md). Earlier measurements below remain historical and do not certify the current package pin. For a live Windows GPU test run, use `tools/test.ps1 -EditorPlayMode -PythonExe '<Python 3.13 executable>'`; it opens the isolated test Game View, uses `-runTests --no-tracker`, and keeps personal calibration separate. Batch-mode results cannot certify frame-end rendering tests.
 
 `tools/test.ps1 -DataOnly` runs Python data tests using only the standard library, plus eight PowerShell assertions for GPU CSV and environment metadata. These cover source integrity/extraction, catalog/fixture/notice invariants, build preflight and measured-report analysis. GitHub Actions also verifies technology/UPM revision agreement and prevents tracked downloads, personal calibration, build output or generated city files.
 

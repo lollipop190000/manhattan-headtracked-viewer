@@ -1,13 +1,15 @@
 > **WIP shared branch; do not merge as a release.**
-> Tests and performance measurements belong to their recorded source revisions. Historical streaming P95=2.1380ms exceeds the 2ms target. Real webcam/global flicker acceptance remains pending. See [ownership status](docs/ownership-wip-status.md) and [current integration checks](docs/physical-viewport-validation.md).
+> Tests and performance measurements belong to their recorded source revisions. Current scoped no-tracker Windows measurements and earlier failed runs are in [streaming validation](docs/current-streaming-validation.md). Real webcam/global flicker and release acceptance remain pending. See [ownership status](docs/ownership-wip-status.md) and [viewport integration checks](docs/physical-viewport-validation.md).
 
 # Manhattan Head Tracked Viewer
 
 맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
 
-Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~50m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
+Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~100m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
-현재 기술 패키지는 [`2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`](https://github.com/lollipop190000/head-tracked-display/commit/2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했지만, 실제 웹캠·도시 전체 렌더링·성능 합격은 별도 검증이 필요합니다. 이전 도시 성능 수치를 이 커밋의 결과로 해석하지 않습니다. [현재 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
+현재 기술 패키지는 [`2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`](https://github.com/lollipop190000/head-tracked-display/commit/2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했습니다. [현재 투영 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
+
+일반적인 스트리밍 준비 완료와 실제 표시 전환을 다른 프레임으로 나누는 작업 경계를 추가했습니다. 기존 표시를 복구해야 하는 경우에는 즉시 처리합니다. 기존 catalog/bundle을 그대로 읽은 1920×1200·100m/s·웹캠 없는 진단에서 Midtown 반복 streaming P95는 1.8049/1.8441ms였습니다. 작업이 활발한 구간의 P95는 여전히 2ms를 넘으며, 실제 웹캠·전체 지역·지붕 번쩍임·배포본 합격은 별도 검증이 필요합니다. 측정한 정확한 소스, 실패했던 중간 정책, CPU/GPU 시간과 남은 한계는 [현재 스트리밍 검증 기록](docs/current-streaming-validation.md)에 있습니다.
 
 ## Windows 배포본 실행
 
