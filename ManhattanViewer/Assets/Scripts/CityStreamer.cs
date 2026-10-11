@@ -295,7 +295,7 @@ namespace Manhattan.Viewer
             // after publication. Spending the entire remaining budget before that work
             // consistently exceeded the 2ms scheduling target. Existing coverage stays
             // published while a cohort waits; mesh uploads/publication remain atomic.
-            ownership.Tick(Mathf.Max(0f, workBudgetMilliseconds * .7f - (float)workTimer.Elapsed.TotalMilliseconds));
+            ownership.Tick(Mathf.Max(0f, workBudgetMilliseconds * .6f - (float)workTimer.Elapsed.TotalMilliseconds));
             if (ownership.Publications != previousPublication) UpdateVisibility();
             FrameWorkMilliseconds = (float)workTimer.Elapsed.TotalMilliseconds;
         }

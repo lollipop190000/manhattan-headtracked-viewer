@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 public sealed class StreamingOwnershipBudgetTests
 {
     [TestCase(.00001f)]
-    [TestCase(1.4f)]
+    [TestCase(1.2f)]
     public void DeferredPreparationPreservesBothFacesAndRestoresFallbackBeforeRelease(float budget)
     {
         var positions = new[] { Vector3.zero, Vector3.right, Vector3.up,
