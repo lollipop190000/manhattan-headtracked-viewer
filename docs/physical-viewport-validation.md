@@ -71,6 +71,7 @@ different files. They were not copied wholesale into this branch.
 | Portable viewer checks | 149 Python cases: 147 passed, 2 skipped for unavailable Windows symlink privilege; 8 PowerShell assertions passed |
 | Real Windows source/destination junctions | Both rejected; external target contents preserved |
 | Actual built Midtown Skyline/Core cohort | 10 exact built prefabs loaded; partial mask → fallback → reentry → unregister round trip passed |
+| Visible Windows Player, isolated 10-tile cohort | 1920×1200, D3D11, RTX 4070 Laptop, TAA ON; all eight comparison combinations and restoration passed recorded invariants |
 
 The visible standalone probe used synthetic eye coordinates, a synthetic physical
 screen and an independent ray/screen intersection oracle. Windowed, cropped-camera
@@ -91,7 +92,7 @@ large city assets, logs and personal calibration are not part of this PR.
 
 ## Remaining acceptance work
 
-There is no new full-city catalog, full-city ownership sidecar or city Player bake
+There is no new full-city catalog, full-city ownership sidecar or full-city Player bake
 in this integration. Original main's generated catalog and bundles were fingerprinted;
 its ownership sidecar was absent. A separate project compiled just `Skyline_2_7`
 from its exact built catalog and nine related Core prefabs. The compiled mapping
@@ -110,8 +111,34 @@ It is not a full-city bake, normal-window moving render or proof that every
 reported roof/side artifact is resolved. Old performance records do not validate
 this branch.
 
+A subsequent private Windows diagnostic Player used production viewer source
+`34fb631165c941b7cdaed05b817874d7ed677eb8`, the new package pin and the exact
+built bundles. Its catalog deliberately contained only this one Skyline plus
+nine related Core records; its identity marks it dirty/experimental. This explicit
+subset never replaced production assets or changed normal startup. It rendered
+at actual 1920×1200 output and camera resolution, Windowed, D3D11, RTX 4070 Laptop,
+TAA ON and VSync 1, with the tracker disabled and a neutral synthetic eye.
+
+The baseline, eight Tracking/Window/Surface combinations and restored baseline
+produced ten PNGs at one fixed wall pose. All recorded scene/rig/calibration,
+lighting, rendering-policy and source-material invariants passed; preferences
+were unchanged and original comparison states restored. Separate street, roof,
+air-down and far fixed-pose PNGs also completed. Each of these five pose records
+had 10 loaded tiles, zero pending loads/failures/unsupported meshes and settled
+ownership. All nine Core replacements were present in those poses, so the
+complete cohort correctly retired all 6,862 eligible Skyline hull triangles.
+The earlier one-Core partial test is separate from this complete-cohort result.
+
+These stills were inspected for gross missing/pink materials and roof/side
+geometry. They cannot establish temporal flicker, head-motion perception, general
+city coverage, frame-rate targets or the new source-ID replacement loader. The
+group contains existing Core/Skyline assets and excludes additive Near, Ground,
+Vegetation and the 580-part new delivery. Binary/image/metadata fingerprints are
+retained privately with the captures; no large assets, captures or logs are tracked.
+
 Real webcam freshness, physical head-motion perception, moving-head TAA/flicker,
-fixed-pose city surface identification, paired 1920×1200 performance runs and the
+identification of the user's specific offending surfaces, paired full-city
+1920×1200 performance runs and the
 actual source-ID model replacement pilot remain open. The historical streaming
 P95 of 2.1380ms exceeded the 2ms target and is not a measurement of this branch.
 The delivery catalog still represents 580 source parts; `runtimeReady` remains
