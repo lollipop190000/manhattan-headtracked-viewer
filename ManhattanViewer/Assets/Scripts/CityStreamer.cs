@@ -87,6 +87,7 @@ namespace Manhattan.Viewer
         private readonly HashSet<string> jointCoreIds = new HashSet<string>();
         private readonly Stopwatch workTimer = new Stopwatch();
         private readonly SkylineGeometryOwnership ownership = new SkylineGeometryOwnership();
+        private readonly SkylineFallbackDepth fallbackDepth = new SkylineFallbackDepth();
         /// <summary>Notify after a resident tile root's relation, renderer/material or mesh pointer changes.
         /// Pass null to invalidate every group. Shared mesh vertex/index contents remain immutable.
         /// Call before the next streaming tick; this does not grant support for mutable shared geometry.</summary>
@@ -274,6 +275,7 @@ namespace Manhattan.Viewer
                 if (r.tile.layer == CityLayer.Collision) SetLayer(r.instance.transform, 30);
                 r.renderers = r.instance.GetComponentsInChildren<Renderer>(true);
                 ownership.Register(r.tile, r.instance, r.handle.Result);
+                fallbackDepth.Register(r.tile, r.instance);
                 if (surfaces != null) surfaces.Register(r.instance, r.tile.layer == CityLayer.Near);
                 LoadedTiles++;
                 UpdateVisibility();
@@ -428,6 +430,7 @@ namespace Manhattan.Viewer
             {
                 ownership.Unregister(r.instance);
                 if (surfaces != null) surfaces.Unregister(r.instance);
+                fallbackDepth.Unregister(r.instance);
                 Destroy(r.instance); r.instance = null; LoadedTiles--;
             }
             if (r.hasHandle)

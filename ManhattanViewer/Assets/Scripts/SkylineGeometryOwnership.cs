@@ -531,7 +531,8 @@ namespace Manhattan.Viewer
             if(cache==null||!cache.TryGetValue(material,out contract))
             {
                 contract=new MaterialContract();
-                contract.opaque=material.shader!=null&&material.shader.name=="Universal Render Pipeline/Lit"&&
+                contract.opaque=material.shader!=null&&(material.shader.name=="Universal Render Pipeline/Lit"||
+                    material.shader.name==SkylineFallbackDepth.ShaderName)&&
                     material.HasProperty("_Surface")&&material.GetFloat("_Surface")==0&&
                     material.HasProperty("_AlphaClip")&&material.GetFloat("_AlphaClip")==0&&
                     !material.IsKeywordEnabled("_ALPHATEST_ON")&&!material.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT")&&
@@ -541,7 +542,7 @@ namespace Manhattan.Viewer
                 contract.legacyFallback=contract.opaque&&material.GetFloat("_Cull")==2&&LegacyHullMaterial(material,true);
                 if(cache!=null)cache.Add(material,contract);
             }
-            return contract.opaque&&(!fallback||contract.legacyFallback)&&
+            return contract.opaque&&(fallback ? contract.legacyFallback : material.shader.name=="Universal Render Pipeline/Lit")&&
                 (fallback ? renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.Off||renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.On :
                  renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.On||renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.TwoSided);
         }

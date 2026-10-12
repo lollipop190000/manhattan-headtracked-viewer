@@ -85,6 +85,19 @@ verification rejects safely.
 
 Only imported, untextured legacy `Skyline` URP Lit hulls are eligible. Intentional materials, textures, extra material overlays on the last submesh, alpha/displaced/custom surfaces, incompatible culling and shadow coverage retain fallback. Eligibility is captured before Surface OFF creates its comparison materials, so that switch cannot turn a textured imported surface into removable hull geometry.
 
+Partial walls can remain at the outer residency boundary even after a one-hop
+partner load. The retained opaque, untextured legacy hull uses a private
+`SkylineFallbackLit` material with `Offset 0, 8`: detailed geometry wins a
+near-coplanar depth tie while uncovered hull pixels remain. The bias has no
+slope term and is measured in device-dependent depth-buffer units, not metres.
+It is preserved in both Surface states. Original materials are restored on
+unregister; shadow, Meta and 2D passes have zero offset. Textured/transparent/
+cutout/custom materials and extra overlays are excluded. This rendering tie
+break does not establish geometry ownership or justify removing any triangle.
+The shader follows the pinned URP Lit source; its attribution is in
+`Assets/Shaders/NOTICE.md`. Native validation currently covers D3D11 on RTX 4070
+Laptop; other graphics APIs need their own depth-priority checks.
+
 Imported shared meshes are immutable while ownership is active. Replacing a source mesh, removing a required filter, or changing the bound transform revokes the prepared mask. External code that edits shared mesh buffers in place must first revoke ownership. The legacy correspondence assumes axis-aligned roots in metres; exact root rotation/scale checks reject changed frames, while a common floating-origin translation remains valid.
 
 Prepare masks and private mesh variants incrementally. The final validation, mesh-pointer changes and Core activation share one no-yield publication. Shared material contracts are cached only inside that publication and cleared on every Tick exit. Late Skyline is gated until coverage is coherent. Cancellation, failure and unload restore fallback before releasing Core; failed preparation also publishes the visibility change in the same streamer tick.
@@ -95,8 +108,8 @@ The streamer schedules ownership against 60% of its total work budget, less work
 already spent that frame. The remaining headroom accounts for an indivisible
 preparation step and the visibility update after publication; ownership previously
 consumed the entire remainder before that update. A cohort can wait more frames,
-with the previous representation retained. Load/radius policy, geometry, materials,
-quality and the indivisible publication are unchanged. This does not impose a hard
+with the previous representation retained. That scheduling change does not alter geometry or quality. The joint-partner
+residency policy and private hull depth variants described above are separate. This does not impose a hard
 deadline on mesh uploads or a large atomic publication.
 
 Ordinary replacement preparation explicitly ends its streaming tick before final

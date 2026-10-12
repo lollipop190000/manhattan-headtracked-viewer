@@ -1,5 +1,13 @@
 # City detail shader attribution
 
+`Assets/Scripts/Resources/SkylineFallbackLit.shader` is also adapted from the
+same pinned `Lit.shader`, under the same Unity Companion License below. It
+retains the stock passes and introduces `Offset 0, 8` for camera depth ties on
+private legacy Skyline hull variants. Shadow, Meta and 2D passes explicitly
+retain zero offset. No slope bias is used. The depth unit is GPU dependent;
+it is not a fixed distance in metres. Repeat native depth-priority and material
+round-trip tests after changing Unity, URP, graphics API or depth format.
+
 `CityDetailLit.shader` and `CityDetailLitInput.hlsl` are adapted from `Shaders/Lit.shader` and `Shaders/LitInput.hlsl` in Unity's `com.unity.render-pipelines.universal` **17.3.0**, as installed with Unity **6000.3.22f1**. The package's original license notice is retained verbatim in `LICENSE-Unity-URP.md`. These adapted Unity sources are governed by the [Unity Companion License](https://unity.com/legal/licenses/unity-companion-license), separately from this repository's MIT code.
 
 Copyright (c) 2020 Unity Technologies ApS.

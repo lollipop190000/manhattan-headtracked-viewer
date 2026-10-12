@@ -61,6 +61,7 @@ public sealed class SkylineSidecarRegressionTests
     public void JointWallRetiresOnlyWithBothOwnersAndRestoresBeforeEitherDeparts(bool surfaceOff)
     {
         PrepareJointWall();
+        using var fallbackDepth=new SkylineFallbackDepth();fallbackDepth.Register(skyTile,sky);
         var surfaces=sky.AddComponent<SurfaceDetailComparison>();surfaces.EnabledDetails=!surfaceOff;surfaces.Register(sky);
         for(int cycle=0;cycle<2;cycle++)
         {
@@ -77,6 +78,7 @@ public sealed class SkylineSidecarRegressionTests
             ownership.SetDesired(core,false);Drain();
         }
         surfaces.Unregister(sky);
+        fallbackDepth.Unregister(sky);
         Assert.That(original.triangles,Is.EqualTo(new[]{0,1,2,0,2,3,4,5,6}));
         Assert.That(source.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{0,1,3}));
         Assert.That(jointSource.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{1,2,3}));
