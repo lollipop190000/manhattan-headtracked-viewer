@@ -10,17 +10,25 @@ Near remains additional facade/window detail over the Core building. This change
 
 The derived `Resources/CityOwnership.json` and `CityOwnershipHash.txt` are ignored by Git. Rebuild both when the city content changes. The sidecar binds source version, asset location/provider/type, bundle dependency content hashes, mesh layout and local transforms. Startup verifies the JSON digest; residency checks also require the loaded source-prefab mesh references. Missing, ambiguous or mismatched identity preserves the full fallback.
 
-The current rule is `legacy-flat-hull-v5-tolerance-checked`, still using schema 2.
-The offline compiler discovers nearby triangle candidates through 1mm centroid
-cells, then requires each corresponding raw vertex to be within 1mm Euclidean
-distance, cyclic winding and a positive normal dot product. Buckets alone never
-establish correspondence. This handles tiny built-mesh differences across a
-rounding boundary while rejecting a >1mm diagonal even inside one old rounded
-cell. Tile relationships and material eligibility still apply. No vertex is
-moved, no texture is rewritten and no geometry matching is added to runtime loads.
+The current rule is `legacy-flat-hull-v6-coplanar-coverage`, still using schema 2.
+The offline compiler retains the vertex-wise 1mm, cyclic-winding match as a fast
+path. Remaining hull triangles are tested against the union of coplanar opaque
+Core triangles belonging to the same catalog replacement. A spatial index only
+finds candidates; positive winding, plane distance and complete polygon coverage
+establish ownership. This handles different wall subdivisions and diagonals at
+partial-cohort boundaries. Overlapping providers are not counted twice, and
+uncovered interior holes remain fallback.
 
-**Rebuild the correspondence after updating from v4.** The runtime rejects that
-old rule and retains fallback until an explicit v5 rebuild. Recompiling this
+Double-precision polygon subtraction retains every uncovered convex fragment.
+Rounding slivers are accepted only when every vertex of a fragment is within
+1mm Euclidean 3D distance of one provider triangle. Convex distance bounds the
+entire fragment, rather than inferring coverage from samples or total area.
+Excessive fragmentation fails conservatively. Tile relationships and material
+eligibility still apply. No vertex is moved, no texture is rewritten and no
+geometry matching is added to runtime loads.
+
+**Rebuild the correspondence after updating from v4 or v5.** The runtime rejects
+those old rules and retains fallback until an explicit v6 rebuild. Recompiling this
 derived sidecar from existing exact built bundles does not require a source mesh,
 texture or Addressables bundle rebake. Keep a copy of prior diagnostics outside
 the project if they need to remain reproducible.

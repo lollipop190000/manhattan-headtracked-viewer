@@ -3,6 +3,10 @@
 Recorded on 2026-10-12. This is scoped Windows diagnostic evidence, not a release
 or real-head-motion acceptance record.
 
+For the later v6 partial-cohort wall fix, see [aerial overlap validation](aerial-overlap-validation.md).
+The measurements below retain their original source/map identities; they do not
+measure the v6 sidecar.
+
 The performance/media tables below belong to `338c090` and its recorded v4
 correspondence. The later `747170e` correction uses v5 correspondence and needs
 separate rebuilt-input validation; those earlier numbers do not certify the

@@ -1,5 +1,10 @@
 # Textured wall hidden by a coincident Skyline hull
 
+This is the historical v5 fix for one static street-level wall. It did not fix
+the later aerial report where the Skyline and Core subdivide the same wall
+differently. That case requires the v6 coplanar coverage rule described in
+[Skyline ownership](skyline-ownership.md); see [aerial validation](aerial-overlap-validation.md).
+
 The reported left-rear tall beige building had a narrow textured strip and a
 large flat face. The texture was present in the original Core asset. The flat
 Skyline face was slightly nearer and covered it.

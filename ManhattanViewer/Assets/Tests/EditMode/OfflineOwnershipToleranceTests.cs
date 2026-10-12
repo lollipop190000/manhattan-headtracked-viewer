@@ -131,6 +131,17 @@ public sealed class OfflineOwnershipToleranceTests
     }
 
     [Test]
+    public void PartialCohortMapsCoveredRetriangulationWithoutClaimingAdjacentFallback()
+    {
+        var skyVertices = new[] { Vector3.zero, Vector3.right, Vector3.one-Vector3.forward,
+            new Vector3(2,0,0),new Vector3(3,0,0),new Vector3(3,1,0) };
+        var coreVertices = new[] { Vector3.zero,Vector3.right,Vector3.up,new Vector3(1,1,0) };
+        var group = Compile(Sky(),Root("retessellated fallback",skyVertices,new[]{0,1,2,3,4,5}),
+            Core(),Root("covering quad",coreVertices,new[]{0,1,2,1,3,2}));
+        Assert.That(Ordinals(group,"core"),Is.EqualTo(new[]{0}));
+    }
+
+    [Test]
     public void GeometricCoincidenceCannotInventAnUnrelatedCatalogReplacement()
     {
         var triangle = new[] { Vector3.zero, Vector3.right, Vector3.up };

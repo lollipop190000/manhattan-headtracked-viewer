@@ -190,6 +190,7 @@ namespace Manhattan.Viewer
             {
                 if(e.removed||e.root==null||e.tile.layer!=CityLayer.Core||e.coreGeneration==skylineGeneration)continue;
                 e.matches.Clear();
+                var coverage = new CoplanarTriangleCoverage();
                 foreach(var filter in e.root.GetComponentsInChildren<MeshFilter>(true))
                 {
                     var mesh=filter.sharedMesh;if(mesh==null)continue;
@@ -203,9 +204,19 @@ namespace Manhattan.Viewer
                         for(int i=0;i<indices.Length;i+=3)
                         {
                             MatchTriangle(e,new Triangle(points[indices[i]],points[indices[i+1]],points[indices[i+2]]));
+                            coverage.Add(points[indices[i]].position,points[indices[i+1]].position,points[indices[i+2]].position);
                             if(i%768==0)yield return null;
                         }
                     }
+                }
+                // Partial cohorts need geometric coverage even when the flat hull subdivides
+                // an edge differently or uses another diagonal from its detailed provider.
+                foreach(var first in triangles.Values)for(var slot=first;slot!=null;slot=slot.next)
+                {
+                    if(!e.matches.Contains(slot)&&!slot.part.entry.removed&&
+                       Array.IndexOf(e.tile.replaces,slot.part.entry.tile.id)>=0&&
+                       coverage.Covers(slot.triangle.a,slot.triangle.b,slot.triangle.c))e.matches.Add(slot);
+                    yield return null;
                 }
                 e.coreGeneration=skylineGeneration;e.indexed=true;yield return null;
             }
@@ -351,7 +362,7 @@ namespace Manhattan.Viewer
         }
         private readonly struct Triangle
         {
-            private readonly Vector3 a,b,c;
+            public readonly Vector3 a,b,c;
             public Triangle(Point x,Point y,Point z){a=x.position;b=y.position;c=z.position;}
             public CentroidBucket Bucket=>new CentroidBucket(a,b,c);
             public bool Matches(Triangle other)

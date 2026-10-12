@@ -13,7 +13,7 @@ namespace Manhattan.Viewer
 {
     [Serializable] public sealed class SkylineOwnershipData
     {
-        public const string CurrentRuleVersion = "legacy-flat-hull-v5-tolerance-checked";
+        public const string CurrentRuleVersion = "legacy-flat-hull-v6-coplanar-coverage";
         public int schema = 2;
         public string ruleVersion = CurrentRuleVersion;
         public string sourceVersion;
