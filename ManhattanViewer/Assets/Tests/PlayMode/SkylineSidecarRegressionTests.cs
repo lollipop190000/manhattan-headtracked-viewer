@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Manhattan.Viewer;
@@ -14,6 +15,7 @@ public sealed class SkylineSidecarRegressionTests
     private readonly List<Object> objects=new List<Object>();
     private SkylineGeometryOwnership ownership;private GameObject sky,core,source;private Mesh original;
     private CityTileRecord skyTile,coreTile;private SkylineOwnershipData data;
+    private GameObject jointOther,jointSource;private CityTileRecord jointTile;
     private GameObject Root(string name,int[] indices,Material material)
     {
         var root=new GameObject(name);objects.Add(root);
@@ -36,6 +38,65 @@ public sealed class SkylineSidecarRegressionTests
         ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);
     }
     private void Drain(){for(int i=0;i<1000&&ownership.Busy;i++)ownership.Tick(1000);Assert.That(ownership.Busy,Is.False);}
+    private void PrepareJointWall()
+    {
+        var vertices=new[]{Vector3.zero,Vector3.right,Vector3.right+Vector3.up,Vector3.up,
+            Vector3.right*10,Vector3.right*11,Vector3.right*10+Vector3.up};
+        original.Clear();original.vertices=vertices;original.triangles=new[]{0,1,2,0,2,3,4,5,6};
+        var first=source.GetComponent<MeshFilter>().sharedMesh;first.Clear();first.vertices=vertices;first.triangles=new[]{0,1,3};
+        jointSource=Root("joint source",new[]{0,1,2},source.GetComponent<MeshRenderer>().sharedMaterial);
+        var second=jointSource.GetComponent<MeshFilter>().sharedMesh;second.Clear();second.vertices=vertices;second.triangles=new[]{1,2,3};
+        jointOther=Object.Instantiate(jointSource);objects.Add(jointOther);
+        jointTile=new CityTileRecord {id="other",address="other-address",layer=CityLayer.Core,replaces=new[]{"sky"}};
+        skyTile.requiredReplacementCount=3;
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);
+        catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile,jointTile};
+        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core,jointOther});
+        Assert.That(data.groups.Single().parts.Single().owners.Single().requiredCoreIds,Is.EqualTo(new[]{"core","other"}));
+        ownership.Configure(data,"fixture",_=>"fixture-content",catalog);
+        ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.Register(jointTile,jointOther,jointSource);
+    }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void JointWallRetiresOnlyWithBothOwnersAndRestoresBeforeEitherDeparts(bool surfaceOff)
+    {
+        PrepareJointWall();
+        var surfaces=sky.AddComponent<SurfaceDetailComparison>();surfaces.EnabledDetails=!surfaceOff;surfaces.Register(sky);
+        for(int cycle=0;cycle<2;cycle++)
+        {
+            ownership.SetDesired(core,true);Drain();Assert.That(ownership.MaskedTriangles,Is.Zero);
+            ownership.SetDesired(jointOther,true);Drain();Assert.That(ownership.MaskedTriangles,Is.EqualTo(2));
+            Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{4,5,6}));
+            ownership.SetDesired(core,false);Assert.That(ownership.CanRelease(core),Is.False);Drain();
+            Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+            Assert.That(core.activeSelf,Is.False);Assert.That(jointOther.activeSelf,Is.True);
+            ownership.SetDesired(core,true);Drain();Assert.That(ownership.MaskedTriangles,Is.EqualTo(2));
+            ownership.SetDesired(jointOther,false);Assert.That(ownership.CanRelease(jointOther),Is.False);Drain();
+            Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(jointOther.activeSelf,Is.False);
+            ownership.Unregister(jointOther);ownership.Register(jointTile,jointOther,jointSource);
+            ownership.SetDesired(core,false);Drain();
+        }
+        surfaces.Unregister(sky);
+        Assert.That(original.triangles,Is.EqualTo(new[]{0,1,2,0,2,3,4,5,6}));
+        Assert.That(source.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{0,1,3}));
+        Assert.That(jointSource.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{1,2,3}));
+    }
+    [TestCase("mesh")]
+    [TestCase("relation")]
+    public void JointOwnerMutationBeforePublicationKeepsFallback(string mutation)
+    {
+        PrepareJointWall();ownership.SetDesired(core,true);ownership.SetDesired(jointOther,true);
+        var flags=BindingFlags.Instance|BindingFlags.NonPublic;
+        var entries=(IDictionary)typeof(SkylineGeometryOwnership).GetField("entries",flags).GetValue(ownership);
+        var snapshot=(IList)typeof(SkylineGeometryOwnership).GetField("snapshot",flags).GetValue(ownership);foreach(var entry in entries.Values)snapshot.Add(entry);
+        var work=(IEnumerator)typeof(SkylineGeometryOwnership).GetMethod("Reconcile",flags).Invoke(ownership,null);
+        typeof(SkylineGeometryOwnership).GetField("work",flags).SetValue(ownership,work);
+        for(int i=0;i<1000&&ownership.RuntimeMeshCount==0;i++)Assert.That(work.MoveNext(),Is.True);
+        Assert.That(ownership.RuntimeMeshCount,Is.EqualTo(1));
+        if(mutation=="mesh")jointOther.GetComponent<MeshFilter>().sharedMesh=null;else jointTile.replaces=Array.Empty<string>();
+        LogAssert.Expect(LogType.Warning,new Regex("Core coverage changed during preparation|Primitive owner changed during preparation"));Drain();
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(ownership.MaskedTriangles,Is.Zero);
+    }
     [TestCase(false)]
     [TestCase(true)]
     public void SubMillimetreBoundaryMatchRetiresOnlyCoveredWallAndRestoresBeforeDeparture(bool surfaceOff)

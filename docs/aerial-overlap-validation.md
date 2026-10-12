@@ -23,30 +23,42 @@ texture or a failed asset load.
 
 ## Correction
 
-V6 proves complete coverage by the union of coplanar, correctly wound opaque
-triangles from each catalog-linked Core provider. The distance proof applies to
+V7 proves complete coverage by the union of coplanar, correctly wound opaque
+triangles from catalog-linked Core providers. The distance proof applies to
 the bounded overlap, including every corner of projected intersections, so
 remote provider vertices do not reject a short rounded hull edge. A projected
 intersection with a real depth gap cannot claim coverage. Exact vertex matching remains
 a fast path. Conservative polygon subtraction handles different diagonals and
 edge subdivisions while retaining real holes, missing providers and unsupported
 surfaces. Euclidean 1mm tolerance covers import rounding without snapping source
-geometry. The runtime still publishes the existing masks and Core activation
-atomically; no new runtime geometry search or material/depth bias is introduced.
+geometry. Empty projected intersections remain no-ops, avoiding artificial
+polygon fragmentation from unrelated faces.
+
+A remaining wall in `Skyline_0_6` needs both `Core_Manhattan_Core_0_6` and
+`Core_Manhattan_Core_1_6`: the source wall's two triangles are stored in different
+Core tiles. Hull ordinal 398 crosses their diagonal. V7 records both as required
+providers instead of assigning full ownership to either half. Runtime checks
+their bindings, coverage and relationships again before atomic publication;
+fallback returns before either half departs. No geometry search occurs at runtime.
 
 Rebuild `CityOwnership.json` and its digest through the normal build, or use
-`tools/bake_ownership.ps1` with the existing built catalog. V5 maps cannot be used
-with the V6 runtime. Meshes, UVs, materials, source packs, original bundles,
+`tools/bake_ownership.ps1` with the existing built catalog. V5/V6 maps cannot be used
+with the V7 runtime. Meshes, UVs, materials, source packs, original bundles,
 lighting, visibility distances and comparison controls are unchanged.
 
 ## Validation
 
-- 258 EditMode checks passed with graphics enabled; no failures or skips.
+- 259 EditMode and 159 PlayMode checks passed with graphics enabled; no failures
+  or skips. These include split-wall conjunctions, departure/reload round trips
+  with Surface ON/OFF, and a provider mesh or relationship changing immediately
+  before publication.
 - Tests include the measured aerial wall, different diagonals/subdivisions,
   duplicate overlap, interior holes, reversed winding, Euclidean corner distance,
   plane separation, catalog ownership, no-op disjoint candidates and preservation
   of adjacent fallback.
-- Native full-city V6 comparison and lifecycle checks are in progress.
+- Portable checks passed: 153 Python tests, two skips, plus five GPU-results
+  parser checks and three benchmark-environment checks.
+- Native full-city V7 comparisons are in progress.
 
 The fixed-pose test uses synthetic observations to reproduce geometry. It does
 not measure webcam distance accuracy or certify every moving-head rendering issue.

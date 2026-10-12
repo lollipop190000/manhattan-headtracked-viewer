@@ -27,7 +27,12 @@ namespace Manhattan.Viewer
                 path=SkylineOwnershipBinding.Path(part.filter.transform,sky.root.transform),
                 owners=entries.Values.Where(e=>e.tile.layer==CityLayer.Core).Select(core=>new SkylineOwnershipOwner {
                     coreId=core.tile.id,ordinals=core.matches.Where(slot=>slot.part==part).Select(slot=>slot.ordinal).Distinct().OrderBy(i=>i).ToArray()
-                }).Where(owner=>owner.ordinals.Length>0).OrderBy(owner=>owner.coreId,StringComparer.Ordinal).ToArray()
+                }).Where(owner=>owner.ordinals.Length>0).Concat(jointMatches.Where(j=>j.slot.part==part)
+                    .GroupBy(j=>string.Concat(j.providers.Select(p=>p.tile.id.Length+":"+p.tile.id)))
+                    .Select(group=>new SkylineOwnershipOwner {coreId=group.First().providers[0].tile.id,
+                        requiredCoreIds=group.First().providers.Select(p=>p.tile.id).ToArray(),
+                        ordinals=group.Select(j=>j.slot.ordinal).Distinct().OrderBy(i=>i).ToArray()}))
+                    .OrderBy(owner=>owner.coreId,StringComparer.Ordinal).ThenBy(owner=>string.Join("/",owner.requiredCoreIds),StringComparer.Ordinal).ToArray()
             }).Where(part=>part.owners.Length>0).ToArray();
             return result;
         }
@@ -37,6 +42,7 @@ namespace Manhattan.Viewer
             public CityTileRecord tile; public GameObject root;
             public bool desired, committed, indexed, presented, removed;
             public int coreGeneration=-1;
+            public CoplanarTriangleCoverage coverage;
             public readonly HashSet<Slot> matches=new HashSet<Slot>();
             public readonly List<Part> parts=new List<Part>();
             public readonly Dictionary<MeshFilter,bool[]> originalHullEligibility=new Dictionary<MeshFilter,bool[]>();
@@ -47,6 +53,8 @@ namespace Manhattan.Viewer
             public int[][] indices; public bool[] matchable, current, staged;
         }
         private sealed class Slot {public Part part;public int ordinal;public Triangle triangle;public Slot next;}
+        private sealed class JointMatch {public Slot slot;public Entry[] providers;}
+        private readonly List<JointMatch> jointMatches=new List<JointMatch>();
         private readonly Dictionary<GameObject,Entry> entries=new Dictionary<GameObject,Entry>();
         // Buckets discover candidates only. Raw cyclic vertex distances establish coverage;
         // independent millimetre rounding both misses close faces and accepts cube diagonals.
@@ -190,7 +198,7 @@ namespace Manhattan.Viewer
             {
                 if(e.removed||e.root==null||e.tile.layer!=CityLayer.Core||e.coreGeneration==skylineGeneration)continue;
                 e.matches.Clear();
-                var coverage = new CoplanarTriangleCoverage();
+                var coverage = e.coverage = new CoplanarTriangleCoverage();
                 foreach(var filter in e.root.GetComponentsInChildren<MeshFilter>(true))
                 {
                     var mesh=filter.sharedMesh;if(mesh==null)continue;
@@ -220,12 +228,38 @@ namespace Manhattan.Viewer
                 }
                 e.coreGeneration=skylineGeneration;e.indexed=true;yield return null;
             }
+            // A wall can be split between Core tiles at triangle boundaries. Record
+            // conjunctions rather than treating either partial provider as sufficient.
+            jointMatches.Clear();
+            var individuallyOwned=new HashSet<Slot>();
+            foreach(var core in snapshot)if(!core.removed)individuallyOwned.UnionWith(core.matches);
+            var providersBySky=new Dictionary<Entry,List<Entry>>();
+            foreach(var sky in snapshot)if(!sky.removed&&sky.tile.layer==CityLayer.Skyline)
+                providersBySky[sky]=snapshot.Where(e=>!e.removed&&e.root!=null&&e.tile.layer==CityLayer.Core&&e.coverage!=null&&
+                    Array.IndexOf(e.tile.replaces,sky.tile.id)>=0).OrderBy(e=>e.tile.id,StringComparer.Ordinal).ToList();
+            foreach(var first in triangles.Values)for(var slot=first;slot!=null;slot=slot.next)
+            {
+                if(slot.part.entry.removed||individuallyOwned.Contains(slot))continue;
+                var providers=new List<Entry>(providersBySky[slot.part.entry]);
+                if(providers.Count<2)continue;
+                bool Covered(List<Entry> entries)=>new CoplanarTriangleCoverage(entries.Select(e=>e.coverage))
+                    .Covers(slot.triangle.a,slot.triangle.b,slot.triangle.c);
+                if(!Covered(providers))continue;
+                for(int i=providers.Count-1;i>=0&&providers.Count>1;i--)
+                {
+                    var candidate=new List<Entry>(providers);candidate.RemoveAt(i);
+                    if(Covered(candidate))providers=candidate;
+                }
+                jointMatches.Add(new JointMatch {slot=slot,providers=providers.ToArray()});
+                yield return null;
+            }
             // Capture desired visibility after indexing. Later changes are queued for a fresh
             // cohort, rather than repeatedly cancelling work during continuous flight.
             var active=new HashSet<Entry>();
             foreach(var e in snapshot)if(!e.removed&&e.root!=null&&e.tile.layer==CityLayer.Core&&e.indexed&&e.desired)active.Add(e);
             foreach(var e in snapshot)if(!e.removed)foreach(var p in e.parts)Array.Clear(p.staged,0,p.staged.Length);
             foreach(var e in active)foreach(var slot in e.matches)if(!slot.part.entry.removed)slot.part.staged[slot.ordinal]=true;
+            foreach(var joint in jointMatches)if(joint.providers.All(active.Contains))joint.slot.part.staged[joint.slot.ordinal]=true;
             long masked=0;
             foreach(var e in snapshot)
             {
@@ -351,7 +385,7 @@ namespace Manhattan.Viewer
         {
             if(disposed)return;disposed=true;(work as IDisposable)?.Dispose();work=null;
             foreach(var e in entries.Values)foreach(var p in e.parts)ReleasePart(p);
-            entries.Clear();triangles.Clear();snapshot.Clear();MaskedTriangles=0;
+            entries.Clear();triangles.Clear();jointMatches.Clear();snapshot.Clear();MaskedTriangles=0;
         }
         private const float PositionTolerance=.001f;
         private const double PositionToleranceSquared=(double)PositionTolerance*PositionTolerance;

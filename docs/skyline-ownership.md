@@ -10,7 +10,7 @@ Near remains additional facade/window detail over the Core building. This change
 
 The derived `Resources/CityOwnership.json` and `CityOwnershipHash.txt` are ignored by Git. Rebuild both when the city content changes. The sidecar binds source version, asset location/provider/type, bundle dependency content hashes, mesh layout and local transforms. Startup verifies the JSON digest; residency checks also require the loaded source-prefab mesh references. Missing, ambiguous or mismatched identity preserves the full fallback.
 
-The current rule is `legacy-flat-hull-v6-coplanar-coverage`, still using schema 2.
+The current rule is `legacy-flat-hull-v7-joint-coverage`, still using schema 2.
 The offline compiler retains the vertex-wise 1mm, cyclic-winding match as a fast
 path. Remaining hull triangles are tested against the union of coplanar opaque
 Core triangles belonging to the same catalog replacement. A spatial index only
@@ -18,6 +18,16 @@ finds candidates; positive winding, plane distance and complete polygon coverage
 establish ownership. This handles different wall subdivisions and diagonals at
 partial-cohort boundaries. Overlapping providers are not counted twice, and
 uncovered interior holes remain fallback.
+
+Some walls also split their triangles across different Core tiles. When no one
+provider covers a hull triangle, the compiler proves coverage by the combined
+linked providers and removes unnecessary members from that set. A joint owner
+record contains `requiredCoreIds`: **every** listed Core must cover before its
+ordinals may retire. Empty or missing `requiredCoreIds` means the single `coreId`.
+The first required ID is the canonical `coreId`; unknown or duplicate IDs reject
+the sidecar. Runtime rechecks every required provider at atomic publication and
+restores the hull before either provider departs. This preserves partial-cohort
+fallback without waiting for unrelated neighboring tiles.
 
 Double-precision polygon subtraction retains every uncovered convex fragment.
 Each projected intersection must also pass a 3D distance check at every corner;
@@ -31,8 +41,8 @@ from unrelated faces. Excessive fragmentation fails conservatively. Tile relatio
 eligibility still apply. No vertex is moved, no texture is rewritten and no
 geometry matching is added to runtime loads.
 
-**Rebuild the correspondence after updating from v4 or v5.** The runtime rejects
-those old rules and retains fallback until an explicit v6 rebuild. Recompiling this
+**Rebuild the correspondence after updating from v4, v5 or v6.** The runtime rejects
+those old rules and retains fallback until an explicit v7 rebuild. Recompiling this
 derived sidecar from existing exact built bundles does not require a source mesh,
 texture or Addressables bundle rebake. Keep a copy of prior diagnostics outside
 the project if they need to remain reproducible.
@@ -95,4 +105,6 @@ Tests compile their small fixture correspondence explicitly before runtime resid
 
 Hidden CPU route diagnostics separate application startup/warmup from the measured repeated route. Filesystem/driver caches are not forcibly flushed. All-frame P95 contains many idle frames; active-work subsets and worst work intervals must also be inspected. Whole-process managed heap and working-set counters are not ownership-only live allocations. Hidden runs with zero GPU/draw counters do not establish visible 60fps performance or moving-camera rendering quality.
 
-The original reported aerial flicker and real webcam head motion still require their own reproduction. A fixed-pose geometry A/B and synthetic observations cannot certify those behaviors.
+See [aerial overlap validation](aerial-overlap-validation.md) for the reproduced
+wall overlap and its native Player comparisons. Fixed poses and synthetic
+observations do not certify every moving-head artifact or webcam calibration.

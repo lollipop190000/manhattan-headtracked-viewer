@@ -40,7 +40,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -DataOnly
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1
 ```
 
-브랜치 출력이 `codex/city-overlap-20261012`인지 확인합니다. 도시 원본은 수 GB이고 첫 다운로드·변환·빌드에는 시간이 걸립니다. setup은 고정 기술 커밋과 추적기를 준비하고, bake는 도시 타일을 생성합니다. build는 Addressables와 현재 v6 면 대응 자료까지 생성한 뒤 실행 파일을 만듭니다. 빌드 중에는 같은 프로젝트를 Unity Editor에서 열지 않습니다. 기존 v5 자료를 복사해서 재사용하지 않습니다.
+브랜치 출력이 `codex/city-overlap-20261012`인지 확인합니다. 도시 원본은 수 GB이고 첫 다운로드·변환·빌드에는 시간이 걸립니다. setup은 고정 기술 커밋과 추적기를 준비하고, bake는 도시 타일을 생성합니다. build는 Addressables와 현재 v7 면 대응 자료까지 생성한 뒤 실행 파일을 만듭니다. 빌드 중에는 같은 프로젝트를 Unity Editor에서 열지 않습니다. 기존 v5/v6 자료를 복사해서 재사용하지 않습니다.
 
 다른 Python이 기본값이라면 setup에 `-PythonExe 'C:\Path\To\Python313\python.exe'`를 추가합니다. Unity가 기본 설치 위치에 없다면 setup과 build에 `-EditorPath 'C:\Path\To\Editor\Unity.exe'`를 추가합니다. 테스트에서 오류가 나면 해당 출력과 단계명을 공유하고, 성공한 것으로 간주하지 않습니다.
 

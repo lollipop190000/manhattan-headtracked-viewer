@@ -13,7 +13,7 @@ namespace Manhattan.Viewer
 {
     [Serializable] public sealed class SkylineOwnershipData
     {
-        public const string CurrentRuleVersion = "legacy-flat-hull-v6-coplanar-coverage";
+        public const string CurrentRuleVersion = "legacy-flat-hull-v7-joint-coverage";
         public int schema = 2;
         public string ruleVersion = CurrentRuleVersion;
         public string sourceVersion;
@@ -46,6 +46,9 @@ namespace Manhattan.Viewer
     [Serializable] public sealed class SkylineOwnershipOwner
     {
         public string coreId;
+        // Empty means the single coreId. Otherwise every listed Core is required;
+        // coreId is the first member, preserving a canonical owner/sort key.
+        public string[] requiredCoreIds = Array.Empty<string>();
         // Flat triangle ordinals in original submesh order, preserving winding and all channels.
         public int[] ordinals;
     }

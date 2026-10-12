@@ -16,6 +16,10 @@ namespace Manhattan.Viewer
         const double CellSize = 32;
         readonly Dictionary<(int, int), List<Face>> cells = new Dictionary<(int, int), List<Face>>();
         readonly List<Face> largeFaces = new List<Face>();
+        readonly List<CoplanarTriangleCoverage> sources;
+        public CoplanarTriangleCoverage() { }
+        public CoplanarTriangleCoverage(IEnumerable<CoplanarTriangleCoverage> providers)
+        { sources=new List<CoplanarTriangleCoverage>(providers); }
 
         sealed class Face
         {
@@ -73,12 +77,11 @@ namespace Manhattan.Viewer
             if(!(length>1e-10))return false;
             V3 n=target.normal*(1/length),u=(target.b-target.a)*(1/Math.Sqrt((target.b-target.a).Squared)),v=V3.Cross(n,u);
             P2 Project(V3 p) { var d=p-target.a;return new P2(V3.Dot(d,u),V3.Dot(d,v)); }
-            var candidates=new HashSet<Face>(largeFaces);
+            var candidates=new HashSet<Face>();
             int x0=Cell(target.min.x-Tolerance),x1=Cell(target.max.x+Tolerance);
             int z0=Cell(target.min.z-Tolerance),z1=Cell(target.max.z+Tolerance);
             if((long)(x1-x0+1)*(z1-z0+1)>4096)return false;
-            for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++)
-                if(cells.TryGetValue((x,z),out var list))foreach(var face in list)candidates.Add(face);
+            Collect(candidates,x0,x1,z0,z1);
             var projected=new List<Projected>();
             foreach(var face in candidates)
             {
@@ -124,6 +127,13 @@ namespace Manhattan.Viewer
                 if(!near)return false;
             }
             return true;
+        }
+        void Collect(HashSet<Face> result,int x0,int x1,int z0,int z1)
+        {
+            foreach(var face in largeFaces)result.Add(face);
+            for(int x=x0;x<=x1;x++)for(int z=z0;z<=z1;z++)
+                if(cells.TryGetValue((x,z),out var list))foreach(var face in list)result.Add(face);
+            if(sources!=null)foreach(var source in sources)source.Collect(result,x0,x1,z0,z1);
         }
         static double Side(P2 p,P2 a,P2 b) => (b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);
         static List<P2> Clip(List<P2> polygon,P2 a,P2 b,bool inside)
