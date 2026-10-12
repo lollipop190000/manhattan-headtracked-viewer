@@ -3,6 +3,8 @@
 
 # Manhattan Head Tracked Viewer
 
+팀원이 `codex/physical-projection-audit-20261012` 버전을 실행하려면 [브랜치 지정 실행 안내](docs/team-quickstart.md)를 따릅니다. 저장소와 도시 원본 Release는 공개되어 있습니다. 기존 Windows preview 초안은 다른 커밋이므로 이 브랜치의 실행 파일로 사용하지 않습니다.
+
 맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
 
 Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~100m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
@@ -32,11 +34,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 ## 복제 → 준비 → 빌드 → 실행
 
-Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`), Unity **6000.3.22f1**와 Windows 빌드 모듈을 설치합니다. GitHub 계정은 이 비공개 저장소와 자산 Release에 접근할 수 있어야 합니다. Unity 라이선스도 활성화되어 있어야 합니다.
+Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`), Unity **6000.3.22f1**와 Windows 빌드 모듈을 설치합니다. 저장소와 자산 Release는 공개되어 있습니다. 현재 setup 도구는 `gh auth status`를 확인하므로 GitHub CLI에 로그인합니다. Unity 라이선스도 활성화되어 있어야 합니다.
 
 ```powershell
 gh auth login
-git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git clone --branch codex/physical-projection-audit-20261012 https://github.com/lollipop190000/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs install --local
 git lfs pull
@@ -83,7 +85,7 @@ Head Tracking OFF는 현재 머리 오프셋을 유지하고 관측·필터링�
 
 ## 팀 개발
 
-`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [비공개 source Release](https://github.com/lollipop190000/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
+`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [공개 source Release](https://github.com/lollipop190000/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
 
 - [자산 버전·재현 방법](docs/assets.md)
 - [입력·충돌·게임 요소 연결](docs/architecture.md)

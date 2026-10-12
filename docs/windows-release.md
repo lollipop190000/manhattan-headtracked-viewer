@@ -16,7 +16,7 @@ Windows x64 배포 ZIP을 전부 압축 해제하면 Unity Editor 설치나 도�
 
 ## 웹캠 추적기 준비와 실행
 
-이 비공개 저장소를 읽을 수 있는 GitHub 계정, Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다.
+공개 저장소를 복제할 Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다. `codex/physical-projection-audit-20261012` 소스를 직접 실행하려면 [브랜치 지정 실행 안내](team-quickstart.md)를 따릅니다.
 
 ```powershell
 git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
