@@ -32,6 +32,47 @@ public sealed class CoplanarTriangleCoverageTests
             new Vector3(733.9140014648438f,203.95399475097656f,3102.43994140625f)),Is.True);
     }
     [Test]
+    public void RemoteProviderVerticesDoNotRejectFullyCoveredShortHullEdge()
+    {
+        var c=new CoplanarTriangleCoverage();
+        c.Add(P(-100,0,.005f),P(100,0,-.005f),P(0,100));
+        Assert.That(c.Covers(P(-1,.5f),P(1,.5f),P(0,1.5f)),Is.True);
+    }
+    [Test]
+    public void ProjectedOverlapCannotHideAnAngledDepthGap()
+    {
+        var c=new CoplanarTriangleCoverage();
+        c.Add(P(0,0,-.01f),P(1,0,.01f),P(0,1,-.01f));
+        Assert.That(c.Covers(P(0,0),P(1,0),P(0,1)),Is.False);
+    }
+    [TestCase(0)]
+    [TestCase(1)]
+    public void MeasuredResidualDownViewWallUsesOnlyItsBoundedProviderOverlap(int sample)
+    {
+        var c=new CoplanarTriangleCoverage();
+        Vector3 a,b,e,ha,hb,hc;
+        if(sample==0)
+        {
+            a=new Vector3(617.5745849609375f,.22f,3325.391845703125f);
+            b=new Vector3(a.x,46.09795379638672f,a.z);
+            e=new Vector3(601.394287109375f,b.y,3334.08349609375f);
+            ha=new Vector3(617.5750122070312f,.22f,3325.39208984375f);
+            hb=new Vector3(ha.x,46.097999572753906f,ha.z);
+            hc=new Vector3(612.8099975585938f,hb.y,3327.950927734375f);
+        }
+        else
+        {
+            a=new Vector3(511.1460266113281f,.22f,3416.6904296875f);
+            b=new Vector3(a.x,37.21303176879883f,a.z);
+            e=new Vector3(484.337158203125f,b.y,3431.260498046875f);
+            ha=new Vector3(495.7340087890625f,.22f,3425.06689453125f);
+            hb=new Vector3(ha.x,37.2130012512207f,ha.z);
+            hc=new Vector3(484.3370361328125f,hb.y,3431.260009765625f);
+        }
+        c.Add(a,b,e);c.Add(a,e,new Vector3(e.x,a.y,e.z));
+        Assert.That(c.Covers(ha,hb,hc),Is.True);
+    }
+    [Test]
     public void DuplicateOverlapDoesNotCountTwiceOrCoverMissingHalf()
     {
         var c=new CoplanarTriangleCoverage();

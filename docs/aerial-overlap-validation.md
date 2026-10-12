@@ -24,7 +24,10 @@ texture or a failed asset load.
 ## Correction
 
 V6 proves complete coverage by the union of coplanar, correctly wound opaque
-triangles from each catalog-linked Core provider. Exact vertex matching remains
+triangles from each catalog-linked Core provider. The distance proof applies to
+the bounded overlap, including every corner of projected intersections, so
+remote provider vertices do not reject a short rounded hull edge. A projected
+intersection with a real depth gap cannot claim coverage. Exact vertex matching remains
 a fast path. Conservative polygon subtraction handles different diagonals and
 edge subdivisions while retaining real holes, missing providers and unsupported
 surfaces. Euclidean 1mm tolerance covers import rounding without snapping source
@@ -38,7 +41,7 @@ lighting, visibility distances and comparison controls are unchanged.
 
 ## Validation
 
-- 253 EditMode checks passed with graphics enabled; no failures or skips.
+- 257 EditMode checks passed with graphics enabled; no failures or skips.
 - Tests include the measured aerial wall, different diagonals/subdivisions,
   duplicate overlap, interior holes, reversed winding, Euclidean corner distance,
   plane separation, catalog ownership and preservation of adjacent fallback.

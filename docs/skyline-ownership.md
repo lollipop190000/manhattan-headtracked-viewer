@@ -20,7 +20,10 @@ partial-cohort boundaries. Overlapping providers are not counted twice, and
 uncovered interior holes remain fallback.
 
 Double-precision polygon subtraction retains every uncovered convex fragment.
-Rounding slivers are accepted only when every vertex of a fragment is within
+Each projected intersection must also pass a 3D distance check at every corner;
+projection alone cannot hide an angled depth gap. This tests the bounded overlap,
+not remote provider vertices beyond a short hull edge. Rounding slivers are
+accepted only when every vertex of a fragment is within
 1mm Euclidean 3D distance of one provider triangle. Convex distance bounds the
 entire fragment, rather than inferring coverage from samples or total area.
 Excessive fragmentation fails conservatively. Tile relationships and material

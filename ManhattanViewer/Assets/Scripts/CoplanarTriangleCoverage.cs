@@ -86,9 +86,14 @@ namespace Manhattan.Viewer
                    face.max.y<target.min.y-Tolerance||face.min.y>target.max.y+Tolerance||
                    face.max.z<target.min.z-Tolerance||face.min.z>target.max.z+Tolerance||
                    V3.Dot(n,face.normal)<=0)continue;
-                if(Math.Abs(V3.Dot(face.a-target.a,n))>Tolerance||
-                   Math.Abs(V3.Dot(face.b-target.a,n))>Tolerance||
-                   Math.Abs(V3.Dot(face.c-target.a,n))>Tolerance)continue;
+                // Test the bounded overlap below. A long provider can extend beyond
+                // the plane of a short rounded hull edge while covering that edge
+                // everywhere within 1mm; testing its remote vertices rejects it.
+                double normalLength=Math.Sqrt(face.normal.Squared);
+                double da=V3.Dot(target.a-face.a,face.normal)/normalLength;
+                double db=V3.Dot(target.b-face.a,face.normal)/normalLength;
+                double dc=V3.Dot(target.c-face.a,face.normal)/normalLength;
+                if(Math.Min(da,Math.Min(db,dc))>Tolerance||Math.Max(da,Math.Max(db,dc))<-Tolerance)continue;
                 projected.Add(new Projected {face=face,points=new[]{Project(face.a),Project(face.b),Project(face.c)}});
             }
             if(projected.Count==0)return false;
@@ -96,7 +101,7 @@ namespace Manhattan.Viewer
             foreach(var cover in projected)
             {
                 var next=new List<List<P2>>();
-                foreach(var piece in remaining)Subtract(piece,cover.points,next);
+                foreach(var piece in remaining)Subtract(piece,cover,target.a,u,v,next);
                 remaining=next;
                 if(remaining.Count==0)return true;
                 // Pathological data fails conservatively instead of unbounded fragmentation.
@@ -112,10 +117,7 @@ namespace Manhattan.Viewer
                 bool near=false;
                 foreach(var cover in projected)
                 {
-                    bool all=true;
-                    foreach(var p in piece)
-                        if(DistanceSquared(target.a+u*p.x+v*p.y,cover.face)>ToleranceSquared+1e-15){all=false;break;}
-                    if(all){near=true;break;}
+                    if(WithinTolerance(piece,cover.face,target.a,u,v)){near=true;break;}
                 }
                 if(!near)return false;
             }
@@ -141,15 +143,29 @@ namespace Manhattan.Viewer
             }
             return result;
         }
-        static void Subtract(List<P2> polygon,P2[] triangle,List<List<P2>> output)
+        static bool WithinTolerance(List<P2> polygon,Face face,V3 origin,V3 u,V3 v)
         {
+            foreach(var p in polygon)
+                if(DistanceSquared(origin+u*p.x+v*p.y,face)>ToleranceSquared+1e-15)return false;
+            return true;
+        }
+        static void Subtract(List<P2> polygon,Projected cover,V3 origin,V3 u,V3 v,List<List<P2>> output)
+        {
+            var triangle=cover.points;
             var remainder=polygon;
+            var outsidePieces=new List<List<P2>>();
             for(int edge=0;edge<3&&remainder.Count>=3;edge++)
             {
                 var outside=Clip(remainder,triangle[edge],triangle[(edge+1)%3],false);
-                if(Area(outside)>1e-12)output.Add(outside);
+                if(Area(outside)>1e-12)outsidePieces.Add(outside);
                 remainder=Clip(remainder,triangle[edge],triangle[(edge+1)%3],true);
             }
+            // Projected overlap alone cannot prove depth coverage. Convex distance
+            // bounds every point of this intersection by its vertices, including
+            // small angular differences introduced by independent import rounding.
+            if(Area(remainder)>1e-12&&!WithinTolerance(remainder,cover.face,origin,u,v))
+            {output.Add(polygon);return;}
+            output.AddRange(outsidePieces);
         }
         static double Area(List<P2> points)
         {
