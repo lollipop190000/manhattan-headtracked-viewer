@@ -14,6 +14,7 @@ namespace Manhattan.Viewer
         public FreeFlightController Flight { get; private set; }
         public FloatingOrigin Origin { get; private set; }
         public KeyboardMotionInput KeyboardInput { get; private set; }
+        public ControllerMotionInput ControllerInput { get; private set; }
         public SurfaceDetailComparison Surfaces { get; private set; }
         public CityStreamer Streamer { get; private set; }
         public AfternoonRenderProfile Rendering { get; private set; }
@@ -43,6 +44,11 @@ namespace Manhattan.Viewer
             Origin = gameObject.AddComponent<FloatingOrigin>(); Origin.observer = rig.transform;
             KeyboardInput = gameObject.AddComponent<KeyboardMotionInput>(); KeyboardInput.MouseSensitivity = Preferences.mouseSensitivity;
             Flight = rig.AddComponent<FreeFlightController>(); Flight.Origin = Origin; Flight.InputSource = KeyboardInput; Flight.Speed = Preferences.movementSpeed;
+            if (!HasArgument("--no-controller"))
+            {
+                ControllerInput = gameObject.AddComponent<ControllerMotionInput>(); ControllerInput.Keyboard = KeyboardInput;
+                Flight.InputSource = ControllerInput;
+            }
             Flight.SetPose(catalog != null ? catalog.initialEyePosition : new Vector3(1225, 1.85f, 3585),
                 Quaternion.Euler(catalog != null ? catalog.initialEulerAngles : new Vector3(0, -151.5f, 0)));
             plane = new GameObject("Physical Screen Plane").transform; plane.SetParent(rig.transform, false);
