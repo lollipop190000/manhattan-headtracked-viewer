@@ -43,6 +43,7 @@ namespace Manhattan.Viewer
         private readonly Dictionary<GameObject,Entry> entries=new Dictionary<GameObject,Entry>();
         private readonly Dictionary<string,SkylineOwnershipTile> bindings=new Dictionary<string,SkylineOwnershipTile>();
         private readonly Dictionary<string,SkylineOwnershipGroup> groups=new Dictionary<string,SkylineOwnershipGroup>();
+        private readonly Dictionary<string,HashSet<string>> jointPartners=new Dictionary<string,HashSet<string>>();
         // The catalog's complete replacement contract is separate from primitive coincidence.
         // Legacy hull and detailed Core can use different triangulation, so a complete, bound
         // replacement cohort must retire the eligible hull even when exact ordinals miss it.
@@ -71,13 +72,28 @@ namespace Manhattan.Viewer
         public void Configure(SkylineOwnershipData data,string sourceVersion,Func<string,string> resolver=null,CityCatalog catalog=null)
         {
             if(entries.Count!=0)throw new InvalidOperationException("Configure ownership before residency loads");
-            bindings.Clear();groups.Clear();replacementCohorts.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();DecodedMappingBytes=0;
+            bindings.Clear();groups.Clear();jointPartners.Clear();replacementCohorts.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();DecodedMappingBytes=0;
             resolveBinding=resolver??SkylineOwnershipBinding.BundleSignature;
             if(data==null||data.schema!=2||data.ruleVersion!=SkylineOwnershipData.CurrentRuleVersion||data.sourceVersion!=sourceVersion)return;
             try
             {
                 foreach(var tile in data.tiles)bindings.Add(tile.id,tile);
-                foreach(var group in data.groups){groups.Add(group.skylineId,group);foreach(var part in group.parts)foreach(var owner in part.owners)DecodedMappingBytes+=owner.ordinals.LongLength*4;}
+                foreach(var group in data.groups)
+                {
+                    groups.Add(group.skylineId,group);
+                    foreach(var part in group.parts)foreach(var owner in part.owners)
+                    {
+                        if(string.IsNullOrEmpty(owner.coreId)||!bindings.ContainsKey(owner.coreId))throw new InvalidOperationException("Unknown primitive owner");
+                        if(owner.requiredCoreIds!=null&&owner.requiredCoreIds.Length>0)
+                        {
+                            var ids=new HashSet<string>(StringComparer.Ordinal);
+                            if(owner.requiredCoreIds[0]!=owner.coreId)throw new InvalidOperationException("Noncanonical joint owner");
+                            foreach(string id in owner.requiredCoreIds)
+                                if(string.IsNullOrEmpty(id)||!bindings.ContainsKey(id)||!ids.Add(id))throw new InvalidOperationException("Invalid joint owner");
+                        }
+                        DecodedMappingBytes+=owner.ordinals.LongLength*4;
+                    }
+                }
                 if(catalog!=null&&catalog.sourceVersion==sourceVersion)
                     foreach(var sky in catalog.tiles)
                     {
@@ -88,8 +104,35 @@ namespace Manhattan.Viewer
                                 if(!bindings.ContainsKey(core.id)||!ids.Add(core.id))valid=false;
                         if(valid&&ids.Count==sky.requiredReplacementCount){var expected=new string[ids.Count];ids.CopyTo(expected);replacementCohorts.Add(sky.id,expected);}
                     }
+                if(catalog!=null&&catalog.sourceVersion==sourceVersion)
+                    foreach(var group in data.groups)foreach(var part in group.parts)foreach(var owner in part.owners)
+                    {
+                        var ids=owner.requiredCoreIds;if(ids==null||ids.Length<2)continue;
+                        bool valid=true;
+                        foreach(string id in ids)
+                        {
+                            int found=0;
+                            foreach(var tile in catalog.tiles)if(tile!=null&&tile.id==id)
+                            {found++;if(tile.layer!=CityLayer.Core||tile.replaces==null||Array.IndexOf(tile.replaces,group.skylineId)<0)valid=false;}
+                            if(found!=1)valid=false;
+                        }
+                        if(!valid)continue;
+                        foreach(string id in ids)
+                        {
+                            if(!jointPartners.TryGetValue(id,out var partners))jointPartners.Add(id,partners=new HashSet<string>());
+                            foreach(string other in ids)if(other!=id)partners.Add(other);
+                        }
+                    }
             }
-            catch(Exception){bindings.Clear();groups.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;}
+            catch(Exception){bindings.Clear();groups.Clear();jointPartners.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;}
+        }
+        // Only ordinary visible Core tiles seed this one-hop request. Partners must
+        // never seed another expansion, or a connected city would stay resident forever.
+        public void CollectJointCorePartners(HashSet<string> visibleCoreIds,HashSet<string> result)
+        {
+            result.Clear();
+            foreach(string id in visibleCoreIds)if(jointPartners.TryGetValue(id,out var partners))
+                foreach(string partner in partners)if(!visibleCoreIds.Contains(partner))result.Add(partner);
         }
         private readonly List<Entry> snapshot=new List<Entry>();
         private struct MaterialContract {public bool opaque, legacyFallback;}
@@ -305,6 +348,7 @@ namespace Manhattan.Viewer
                 yield return null;
             }
             var complete=new HashSet<Entry>();
+            var claims=new List<(Entry sky,SkylineOwnershipOwner owner)>();
             foreach(var e in snapshot)if(!e.removed&&e.tile.layer==CityLayer.Skyline&&CompleteCohort(e,active,covers))complete.Add(e);
             foreach(var e in affected)if(!e.removed)foreach(var p in e.parts)Array.Clear(p.staged,0,p.staged.Length);
             foreach(var e in snapshot)
@@ -317,9 +361,9 @@ namespace Manhattan.Viewer
                     // still use every original primitive correspondence.
                     if(!complete.Contains(e))foreach(var owner in part.ownership.owners)
                     {
-                        Entry core=null;foreach(var candidate in active)if(candidate.tile.id==owner.coreId&&candidate.bound&&Array.IndexOf(candidate.tile.replaces,e.tile.id)>=0){core=candidate;break;}
-                        if(core==null||!covers.Contains(core)||!SameOriginSpace(e,core))continue;
+                        if(!OwnerCovers(owner,e,active,covers))continue;
                         foreach(int ordinal in owner.ordinals)part.staged[ordinal]=true;
+                        claims.Add((e,owner));
                         yield return null;
                     }
                     int first=0;
@@ -390,6 +434,7 @@ namespace Manhattan.Viewer
             // contracts are read once, while renderer/pointer/transform state is rechecked.
             publicationMaterials.Clear();
             foreach(var core in covers)if(!CoreCovers(core,publicationMaterials))throw new InvalidOperationException("Core coverage changed during preparation");
+            foreach(var claim in claims)if(!OwnerCovers(claim.owner,claim.sky,active,covers))throw new InvalidOperationException("Primitive owner changed during preparation");
             foreach(var sky in complete)if(!CompleteCohort(sky,active,covers))throw new InvalidOperationException("Complete replacement cohort changed during preparation");
             foreach(var e in snapshot)if(!e.removed&&e.tile.layer==CityLayer.Skyline)foreach(var p in e.parts)
             {
@@ -438,6 +483,21 @@ namespace Manhattan.Viewer
             for(int i=0;i<mesh.subMeshCount;i++)if(mesh.GetTopology(i)!=MeshTopology.Triangles)return false;
             return true;
         }
+        private bool OwnerCovers(SkylineOwnershipOwner owner,Entry sky,HashSet<Entry> active,HashSet<Entry> covers)
+        {
+            var required=owner.requiredCoreIds;
+            int count=required!=null&&required.Length>0?required.Length:1;
+            for(int i=0;i<count;i++)
+            {
+                string id=required!=null&&required.Length>0?required[i]:owner.coreId;
+                Entry found=null;
+                foreach(var core in active)if(!core.removed&&core.root!=null&&core.tile.id==id)
+                {if(found!=null)return false;found=core;}
+                if(found==null||!found.bound||!covers.Contains(found)||found.tile.replaces==null||
+                   Array.IndexOf(found.tile.replaces,sky.tile.id)<0||!SameOriginSpace(sky,found))return false;
+            }
+            return true;
+        }
         private bool CompleteCohort(Entry sky,HashSet<Entry> active,HashSet<Entry> covers)
         {
             if(!sky.bound||!replacementCohorts.TryGetValue(sky.tile.id,out var expected)||sky.tile.requiredReplacementCount!=expected.Length)return false;
@@ -471,7 +531,8 @@ namespace Manhattan.Viewer
             if(cache==null||!cache.TryGetValue(material,out contract))
             {
                 contract=new MaterialContract();
-                contract.opaque=material.shader!=null&&material.shader.name=="Universal Render Pipeline/Lit"&&
+                contract.opaque=material.shader!=null&&(material.shader.name=="Universal Render Pipeline/Lit"||
+                    material.shader.name==SkylineFallbackDepth.ShaderName)&&
                     material.HasProperty("_Surface")&&material.GetFloat("_Surface")==0&&
                     material.HasProperty("_AlphaClip")&&material.GetFloat("_AlphaClip")==0&&
                     !material.IsKeywordEnabled("_ALPHATEST_ON")&&!material.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT")&&
@@ -481,7 +542,7 @@ namespace Manhattan.Viewer
                 contract.legacyFallback=contract.opaque&&material.GetFloat("_Cull")==2&&LegacyHullMaterial(material,true);
                 if(cache!=null)cache.Add(material,contract);
             }
-            return contract.opaque&&(!fallback||contract.legacyFallback)&&
+            return contract.opaque&&(fallback ? contract.legacyFallback : material.shader.name=="Universal Render Pipeline/Lit")&&
                 (fallback ? renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.Off||renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.On :
                  renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.On||renderer.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.TwoSided);
         }
@@ -490,6 +551,7 @@ namespace Manhattan.Viewer
         {
             // Baker's imported flat hull only; runtime clones never establish provenance.
             if(material==null||(material.name!="Skyline"&&(!allowRuntimeVariant||material.name!="Skyline (surface off)")))return false;
+            if(!allowRuntimeVariant&&(material.shader==null||material.shader.name!="Universal Render Pipeline/Lit"))return false;
             foreach(string map in HullMaps)if(material.HasProperty(map)&&material.GetTexture(map)!=null)return false;
             return true;
         }
@@ -558,7 +620,7 @@ namespace Manhattan.Viewer
         {
             if(disposed)return;disposed=true;(work as IDisposable)?.Dispose();work=null;
             foreach(var e in entries.Values)foreach(var p in e.parts)ReleasePart(p);
-            entries.Clear();bindings.Clear();groups.Clear();replacementCohorts.Clear();snapshot.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();publicationMaterials.Clear();preparationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
+            entries.Clear();bindings.Clear();groups.Clear();jointPartners.Clear();replacementCohorts.Clear();snapshot.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();publicationMaterials.Clear();preparationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
         }
     }
 }

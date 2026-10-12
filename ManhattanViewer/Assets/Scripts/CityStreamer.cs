@@ -71,7 +71,7 @@ namespace Manhattan.Viewer
         {
             public CityTileRecord tile;
             public AsyncOperationHandle<GameObject> handle;
-            public bool hasHandle, loading, wanted, visible, releaseQueued;
+            public bool hasHandle, loading, wanted, visible, jointVisible, releaseQueued;
             public GameObject instance;
             public float retryAt, distance, priority;
             public float appliedNearOpacity = float.NaN;
@@ -83,8 +83,11 @@ namespace Manhattan.Viewer
         private readonly List<Residency> requests = new List<Residency>();
         private readonly Queue<Residency> deferredReleases = new Queue<Residency>();
         private readonly Dictionary<string, int> replacementCounts = new Dictionary<string, int>();
+        private readonly HashSet<string> visibleCoreIds = new HashSet<string>();
+        private readonly HashSet<string> jointCoreIds = new HashSet<string>();
         private readonly Stopwatch workTimer = new Stopwatch();
         private readonly SkylineGeometryOwnership ownership = new SkylineGeometryOwnership();
+        private readonly SkylineFallbackDepth fallbackDepth = new SkylineFallbackDepth();
         /// <summary>Notify after a resident tile root's relation, renderer/material or mesh pointer changes.
         /// Pass null to invalidate every group. Shared mesh vertex/index contents remain immutable.
         /// Call before the next streaming tick; this does not grant support for mutable shared geometry.</summary>
@@ -272,6 +275,7 @@ namespace Manhattan.Viewer
                 if (r.tile.layer == CityLayer.Collision) SetLayer(r.instance.transform, 30);
                 r.renderers = r.instance.GetComponentsInChildren<Renderer>(true);
                 ownership.Register(r.tile, r.instance, r.handle.Result);
+                fallbackDepth.Register(r.tile, r.instance);
                 if (surfaces != null) surfaces.Register(r.instance, r.tile.layer == CityLayer.Near);
                 LoadedTiles++;
                 UpdateVisibility();
@@ -306,9 +310,24 @@ namespace Manhattan.Viewer
             Vector3 position = flight.CityPosition;
             Vector3 predicted = position + flight.Velocity * 2f;
             requests.Clear();
+            visibleCoreIds.Clear();
             foreach (var r in all)
             {
                 EvaluateTile(r, position, predicted, CollisionProxiesEnabled);
+                r.jointVisible=false;
+                if(r.tile.layer==CityLayer.Core&&r.visible&&!string.IsNullOrEmpty(r.tile.id))visibleCoreIds.Add(r.tile.id);
+            }
+            ownership.CollectJointCorePartners(visibleCoreIds,jointCoreIds);
+            foreach (var r in all)
+            {
+                if(r.tile.layer==CityLayer.Core&&jointCoreIds.Contains(r.tile.id))
+                {
+                    r.jointVisible=true;r.wanted=true;
+                    // A proven wall partner can lie outside the radius fast-rejection
+                    // band. Keep finite request priority and the ordinary byte budget.
+                    if(float.IsPositiveInfinity(r.distance))r.distance=DistanceToTile(r.tile.cityBounds,position);
+                    r.priority=Mathf.Min(r.priority,r.distance-2000f);
+                }
                 if (!r.wanted && r.hasHandle && !r.loading) QueueRelease(r);
                 // A completed load can become useful again before its queued release runs.
                 // Put it back through the existing one-instance-per-frame completion path.
@@ -341,7 +360,7 @@ namespace Manhattan.Viewer
                 if (r.instance == null) continue;
                 if (r.tile.layer == CityLayer.Core && ownership.Manages(r.instance))
                 {
-                    ownership.SetDesired(r.instance, r.visible);
+                    ownership.SetDesired(r.instance, r.visible||r.jointVisible);
                     continue;
                 }
                 replacementCounts.TryGetValue(r.tile.id, out int visibleCoreReplacementCount);
@@ -411,6 +430,7 @@ namespace Manhattan.Viewer
             {
                 ownership.Unregister(r.instance);
                 if (surfaces != null) surfaces.Unregister(r.instance);
+                fallbackDepth.Unregister(r.instance);
                 Destroy(r.instance); r.instance = null; LoadedTiles--;
             }
             if (r.hasHandle)

@@ -131,6 +131,35 @@ public sealed class OfflineOwnershipToleranceTests
     }
 
     [Test]
+    public void SplitWallRequiresOnlyTheTwoCoreProvidersThatCoverIt()
+    {
+        var quad=new[]{Vector3.zero,Vector3.right,Vector3.right+Vector3.up,Vector3.up};
+        var sky=Root("hull",quad,new[]{0,1,2,0,2,3});
+        var first=Root("first half",quad,new[]{0,1,3});
+        var second=Root("second half",quad,new[]{1,2,3});
+        var unused=Root("distant provider",new[]{Vector3.right*10,Vector3.right*11,Vector3.right*10+Vector3.up},new[]{0,1,2});
+        using(var compiler=new OfflineOwnershipGroupCompiler())
+        {
+            compiler.Register(Sky(),sky);compiler.Register(Core("first"),first);
+            compiler.Register(Core("second"),second);compiler.Register(Core("unused"),unused);
+            compiler.Tick(100000);Assert.That(compiler.Busy,Is.False);
+            var owner=compiler.ExportGroup("sky").parts.Single().owners.Single();
+            Assert.That(owner.requiredCoreIds,Is.EqualTo(new[]{"first","second"}));
+            Assert.That(owner.coreId,Is.EqualTo("first"));Assert.That(owner.ordinals,Is.EqualTo(new[]{0,1}));
+        }
+    }
+    [Test]
+    public void PartialCohortMapsCoveredRetriangulationWithoutClaimingAdjacentFallback()
+    {
+        var skyVertices = new[] { Vector3.zero, Vector3.right, Vector3.one-Vector3.forward,
+            new Vector3(2,0,0),new Vector3(3,0,0),new Vector3(3,1,0) };
+        var coreVertices = new[] { Vector3.zero,Vector3.right,Vector3.up,new Vector3(1,1,0) };
+        var group = Compile(Sky(),Root("retessellated fallback",skyVertices,new[]{0,1,2,3,4,5}),
+            Core(),Root("covering quad",coreVertices,new[]{0,1,2,1,3,2}));
+        Assert.That(Ordinals(group,"core"),Is.EqualTo(new[]{0}));
+    }
+
+    [Test]
     public void GeometricCoincidenceCannotInventAnUnrelatedCatalogReplacement()
     {
         var triangle = new[] { Vector3.zero, Vector3.right, Vector3.up };

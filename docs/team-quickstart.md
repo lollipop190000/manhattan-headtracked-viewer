@@ -14,7 +14,9 @@ git push -u origin HEAD
 
 GitHub에서 `codex/physical-projection-audit-20261012`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
 
-실행 대상은 공개 저장소의 **`codex/physical-projection-audit-20261012`** 브랜치입니다. 이 안내를 추가하기 전의 실행 코드 커밋은 `3b2984f849e2de864e6a96fb72d958d48beb8455`입니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
+항공 시점의 외벽 겹침 수정까지 확인할 실행 대상은 공개 저장소의 **`codex/city-overlap-20261012`** 브랜치입니다. 기존 공유 브랜치 `codex/physical-projection-audit-20261012`에서 분리한 수정이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [외벽 겹침 검증 기록](aerial-overlap-validation.md), [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
+
+현재 수정은 [PR #6](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/6)에서 검토할 수 있습니다. 겹치는 면의 대응 판정과 로딩 경계의 깊이 우선순위를 함께 수정했으며 Surface 비교는 그대로 사용할 수 있습니다. 상세 모델이 아직 로딩되지 않은 먼 건물의 단색 대체 면은 남을 수 있습니다.
 
 ## 처음 한 번 준비
 
@@ -30,7 +32,7 @@ PowerShell에서 아래 명령을 순서대로 실행합니다. 각 단계가 �
 ```powershell
 gh auth login
 git lfs install
-git clone --branch codex/physical-projection-audit-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch codex/city-overlap-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs pull
 git branch --show-current
@@ -40,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -DataOnly
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1
 ```
 
-브랜치 출력이 `codex/physical-projection-audit-20261012`인지 확인합니다. 도시 원본은 수 GB이고 첫 다운로드·변환·빌드에는 시간이 걸립니다. setup은 고정 기술 커밋과 추적기를 준비하고, bake는 도시 타일을 생성합니다. build는 Addressables와 현재 v5 면 대응 자료까지 생성한 뒤 실행 파일을 만듭니다. 빌드 중에는 같은 프로젝트를 Unity Editor에서 열지 않습니다.
+브랜치 출력이 `codex/city-overlap-20261012`인지 확인합니다. 도시 원본은 수 GB이고 첫 다운로드·변환·빌드에는 시간이 걸립니다. setup은 고정 기술 커밋과 추적기를 준비하고, bake는 도시 타일을 생성합니다. build는 Addressables와 현재 v7 면 대응 자료까지 생성한 뒤 실행 파일을 만듭니다. 빌드 중에는 같은 프로젝트를 Unity Editor에서 열지 않습니다. 기존 v5/v6 자료를 복사해서 재사용하지 않습니다.
 
 다른 Python이 기본값이라면 setup에 `-PythonExe 'C:\Path\To\Python313\python.exe'`를 추가합니다. Unity가 기본 설치 위치에 없다면 setup과 build에 `-EditorPath 'C:\Path\To\Editor\Unity.exe'`를 추가합니다. 테스트에서 오류가 나면 해당 출력과 단계명을 공유하고, 성공한 것으로 간주하지 않습니다.
 

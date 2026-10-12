@@ -10,17 +10,48 @@ Near remains additional facade/window detail over the Core building. This change
 
 The derived `Resources/CityOwnership.json` and `CityOwnershipHash.txt` are ignored by Git. Rebuild both when the city content changes. The sidecar binds source version, asset location/provider/type, bundle dependency content hashes, mesh layout and local transforms. Startup verifies the JSON digest; residency checks also require the loaded source-prefab mesh references. Missing, ambiguous or mismatched identity preserves the full fallback.
 
-The current rule is `legacy-flat-hull-v5-tolerance-checked`, still using schema 2.
-The offline compiler discovers nearby triangle candidates through 1mm centroid
-cells, then requires each corresponding raw vertex to be within 1mm Euclidean
-distance, cyclic winding and a positive normal dot product. Buckets alone never
-establish correspondence. This handles tiny built-mesh differences across a
-rounding boundary while rejecting a >1mm diagonal even inside one old rounded
-cell. Tile relationships and material eligibility still apply. No vertex is
-moved, no texture is rewritten and no geometry matching is added to runtime loads.
+The current rule is `legacy-flat-hull-v7-joint-coverage`, still using schema 2.
+The offline compiler retains the vertex-wise 1mm, cyclic-winding match as a fast
+path. Remaining hull triangles are tested against the union of coplanar opaque
+Core triangles belonging to the same catalog replacement. A spatial index only
+finds candidates; positive winding, plane distance and complete polygon coverage
+establish ownership. This handles different wall subdivisions and diagonals at
+partial-cohort boundaries. Overlapping providers are not counted twice, and
+uncovered interior holes remain fallback.
 
-**Rebuild the correspondence after updating from v4.** The runtime rejects that
-old rule and retains fallback until an explicit v5 rebuild. Recompiling this
+Some walls also split their triangles across different Core tiles. When no one
+provider covers a hull triangle, the compiler proves coverage by the combined
+linked providers and removes unnecessary members from that set. A joint owner
+record contains `requiredCoreIds`: **every** listed Core must cover before its
+ordinals may retire. Empty or missing `requiredCoreIds` means the single `coreId`.
+The first required ID is the canonical `coreId`; unknown or duplicate IDs reject
+the sidecar. Runtime rechecks every required provider at atomic publication and
+restores the hull before either provider departs. This preserves partial-cohort
+fallback without waiting for unrelated neighboring tiles.
+
+At the streaming radius boundary, one half of a split wall may otherwise remain
+unrequested forever. Ordinary visible Core tiles now request their directly
+required joint partners, even outside the base radius. This is one hop only:
+secondary partners never become new visibility seeds. Their visibility flag is
+separate from ordinary radius hysteresis; they leave with the normal release
+rules after no seed needs them. The existing request concurrency and residency
+byte budget still apply. Missing or failed providers retain fallback until ready.
+Surface/Tracking/Window comparison switches do not change these requests.
+
+Double-precision polygon subtraction retains every uncovered convex fragment.
+Each projected intersection must also pass a 3D distance check at every corner;
+projection alone cannot hide an angled depth gap. This tests the bounded overlap,
+not remote provider vertices beyond a short hull edge. Rounding slivers are
+accepted only when every vertex of a fragment is within
+1mm Euclidean 3D distance of one provider triangle. Convex distance bounds the
+entire fragment, rather than inferring coverage from samples or total area.
+Disjoint intersections leave the original polygon intact, avoiding arbitrary cuts
+from unrelated faces. Excessive fragmentation fails conservatively. Tile relationships and material
+eligibility still apply. No vertex is moved, no texture is rewritten and no
+geometry matching is added to runtime loads.
+
+**Rebuild the correspondence after updating from v4, v5 or v6.** The runtime rejects
+those old rules and retains fallback until an explicit v7 rebuild. Recompiling this
 derived sidecar from existing exact built bundles does not require a source mesh,
 texture or Addressables bundle rebake. Keep a copy of prior diagnostics outside
 the project if they need to remain reproducible.
@@ -54,6 +85,19 @@ verification rejects safely.
 
 Only imported, untextured legacy `Skyline` URP Lit hulls are eligible. Intentional materials, textures, extra material overlays on the last submesh, alpha/displaced/custom surfaces, incompatible culling and shadow coverage retain fallback. Eligibility is captured before Surface OFF creates its comparison materials, so that switch cannot turn a textured imported surface into removable hull geometry.
 
+Partial walls can remain at the outer residency boundary even after a one-hop
+partner load. The retained opaque, untextured legacy hull uses a private
+`SkylineFallbackLit` material with `Offset 0, 8`: detailed geometry wins a
+near-coplanar depth tie while uncovered hull pixels remain. The bias has no
+slope term and is measured in device-dependent depth-buffer units, not metres.
+It is preserved in both Surface states. Original materials are restored on
+unregister; shadow, Meta and 2D passes have zero offset. Textured/transparent/
+cutout/custom materials and extra overlays are excluded. This rendering tie
+break does not establish geometry ownership or justify removing any triangle.
+The shader follows the pinned URP Lit source; its attribution is in
+`Assets/Shaders/NOTICE.md`. Native validation currently covers D3D11 on RTX 4070
+Laptop; other graphics APIs need their own depth-priority checks.
+
 Imported shared meshes are immutable while ownership is active. Replacing a source mesh, removing a required filter, or changing the bound transform revokes the prepared mask. External code that edits shared mesh buffers in place must first revoke ownership. The legacy correspondence assumes axis-aligned roots in metres; exact root rotation/scale checks reject changed frames, while a common floating-origin translation remains valid.
 
 Prepare masks and private mesh variants incrementally. The final validation, mesh-pointer changes and Core activation share one no-yield publication. Shared material contracts are cached only inside that publication and cleared on every Tick exit. Late Skyline is gated until coverage is coherent. Cancellation, failure and unload restore fallback before releasing Core; failed preparation also publishes the visibility change in the same streamer tick.
@@ -64,8 +108,8 @@ The streamer schedules ownership against 60% of its total work budget, less work
 already spent that frame. The remaining headroom accounts for an indivisible
 preparation step and the visibility update after publication; ownership previously
 consumed the entire remainder before that update. A cohort can wait more frames,
-with the previous representation retained. Load/radius policy, geometry, materials,
-quality and the indivisible publication are unchanged. This does not impose a hard
+with the previous representation retained. That scheduling change does not alter geometry or quality. The joint-partner
+residency policy and private hull depth variants described above are separate. This does not impose a hard
 deadline on mesh uploads or a large atomic publication.
 
 Ordinary replacement preparation explicitly ends its streaming tick before final
@@ -83,4 +127,6 @@ Tests compile their small fixture correspondence explicitly before runtime resid
 
 Hidden CPU route diagnostics separate application startup/warmup from the measured repeated route. Filesystem/driver caches are not forcibly flushed. All-frame P95 contains many idle frames; active-work subsets and worst work intervals must also be inspected. Whole-process managed heap and working-set counters are not ownership-only live allocations. Hidden runs with zero GPU/draw counters do not establish visible 60fps performance or moving-camera rendering quality.
 
-The original reported aerial flicker and real webcam head motion still require their own reproduction. A fixed-pose geometry A/B and synthetic observations cannot certify those behaviors.
+See [aerial overlap validation](aerial-overlap-validation.md) for the reproduced
+wall overlap and its native Player comparisons. Fixed poses and synthetic
+observations do not certify every moving-head artifact or webcam calibration.
