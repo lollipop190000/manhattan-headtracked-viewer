@@ -32,6 +32,18 @@ public sealed class CoplanarTriangleCoverageTests
             new Vector3(733.9140014648438f,203.95399475097656f,3102.43994140625f)),Is.True);
     }
     [Test]
+    public void DisjointCandidateEdgesDoNotFragmentAnEventuallyCoveredHull()
+    {
+        var c=new CoplanarTriangleCoverage();
+        for(int i=0;i<800;i++)
+        {
+            float x=.1f+i*.001f;
+            c.Add(P(x,1.1f-x),P(2,1.1f-x),P(x,2));
+        }
+        Quad(c,0,0,1,1);
+        Assert.That(c.Covers(P(0,0),P(1,0),P(0,1)),Is.True);
+    }
+    [Test]
     public void RemoteProviderVerticesDoNotRejectFullyCoveredShortHullEdge()
     {
         var c=new CoplanarTriangleCoverage();

@@ -26,7 +26,8 @@ not remote provider vertices beyond a short hull edge. Rounding slivers are
 accepted only when every vertex of a fragment is within
 1mm Euclidean 3D distance of one provider triangle. Convex distance bounds the
 entire fragment, rather than inferring coverage from samples or total area.
-Excessive fragmentation fails conservatively. Tile relationships and material
+Disjoint intersections leave the original polygon intact, avoiding arbitrary cuts
+from unrelated faces. Excessive fragmentation fails conservatively. Tile relationships and material
 eligibility still apply. No vertex is moved, no texture is rewritten and no
 geometry matching is added to runtime loads.
 

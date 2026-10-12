@@ -89,6 +89,8 @@ namespace Manhattan.Viewer
                 // Test the bounded overlap below. A long provider can extend beyond
                 // the plane of a short rounded hull edge while covering that edge
                 // everywhere within 1mm; testing its remote vertices rejects it.
+                double pa=V3.Dot(face.a-target.a,n),pb=V3.Dot(face.b-target.a,n),pc=V3.Dot(face.c-target.a,n);
+                if(Math.Min(pa,Math.Min(pb,pc))>Tolerance+1e-9||Math.Max(pa,Math.Max(pb,pc))<-Tolerance-1e-9)continue;
                 double normalLength=Math.Sqrt(face.normal.Squared);
                 double da=V3.Dot(target.a-face.a,face.normal)/normalLength;
                 double db=V3.Dot(target.b-face.a,face.normal)/normalLength;
@@ -163,7 +165,9 @@ namespace Manhattan.Viewer
             // Projected overlap alone cannot prove depth coverage. Convex distance
             // bounds every point of this intersection by its vertices, including
             // small angular differences introduced by independent import rounding.
-            if(Area(remainder)>1e-12&&!WithinTolerance(remainder,cover.face,origin,u,v))
+            // An empty intersection is a no-op. Keeping its outside partitions would
+            // accumulate arbitrary cuts from unrelated faces and exhaust the guard.
+            if(Area(remainder)<=1e-12||!WithinTolerance(remainder,cover.face,origin,u,v))
             {output.Add(polygon);return;}
             output.AddRange(outsidePieces);
         }

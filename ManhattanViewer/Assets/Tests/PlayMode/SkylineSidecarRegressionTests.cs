@@ -72,17 +72,49 @@ public sealed class SkylineSidecarRegressionTests
     }
     [TestCase(1,true)]
     [TestCase(2,false)]
-    public void CompleteReplacementRetiresSameQuadWithDifferentDiagonalOnlyForExactCatalogCohort(int required,bool complete)
+    public void CompleteReplacementWithoutPrimitiveMapRequiresExactCatalogCohort(int required,bool complete)
     {
         var quad=new[]{Vector3.zero,Vector3.right,Vector3.right+Vector3.up,Vector3.up};
         original.Clear();original.vertices=quad;original.triangles=new[]{0,1,2,0,2,3};
         var detailed=source.GetComponent<MeshFilter>().sharedMesh;detailed.Clear();detailed.vertices=quad;detailed.triangles=new[]{0,1,3,1,2,3};
         skyTile.requiredReplacementCount=required;var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile};
-        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core});Assert.That(data.groups[0].parts,Is.Empty,"Different diagonals share no complete triangle");
+        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core});
+        Assert.That(data.groups[0].parts,Is.Not.Empty,"V6 proves coverage across different diagonals.");
+        // Isolate the complete-cohort contract even when primitive correspondence is absent.
+        data.groups[0].parts=Array.Empty<SkylineOwnershipPart>();
         ownership.Configure(data,"fixture",_=>"fixture-content",catalog);ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);Drain();
         Assert.That(ownership.MaskedTriangles,Is.EqualTo(complete?2:0));Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.GetIndexCount(0),Is.EqualTo(complete?0:6));
         Assert.That(original.triangles,Is.EqualTo(new[]{0,1,2,0,2,3}));Assert.That(core.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(detailed));
         ownership.SetDesired(core,false);Drain();Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(core.activeSelf,Is.False);
+    }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void PartialCohortRetriangulatedWallPreservesAdjacentFallbackAcrossDepartureAndReload(bool surfaceOff)
+    {
+        var vertices=new[]{Vector3.zero,Vector3.right,Vector3.right+Vector3.up,Vector3.up,
+            Vector3.right*10,Vector3.right*11,Vector3.right*10+Vector3.up};
+        original.Clear();original.vertices=vertices;original.triangles=new[]{0,1,2,0,2,3,4,5,6};
+        var detailed=source.GetComponent<MeshFilter>().sharedMesh;
+        detailed.Clear();detailed.vertices=vertices;detailed.triangles=new[]{0,1,3,1,2,3};
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();objects.Add(catalog);
+        catalog.sourceVersion="fixture";catalog.tiles=new[]{skyTile,coreTile};
+        data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core});
+        ownership.Configure(data,"fixture",_=>"fixture-content",catalog);
+        ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);
+        var surfaces=sky.AddComponent<SurfaceDetailComparison>();surfaces.EnabledDetails=!surfaceOff;surfaces.Register(sky);
+        for(int cycle=0;cycle<2;cycle++)
+        {
+            ownership.SetDesired(core,true);Drain();
+            Assert.That(ownership.MaskedTriangles,Is.EqualTo(2));
+            Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{4,5,6}));
+            Assert.That(core.activeSelf,Is.True);
+            ownership.SetDesired(core,false);Assert.That(ownership.CanRelease(core),Is.False);Drain();
+            Assert.That(ownership.CanRelease(core),Is.True);Assert.That(core.activeSelf,Is.False);
+            Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+        }
+        surfaces.Unregister(sky);
+        Assert.That(original.vertices,Is.EqualTo(vertices));Assert.That(original.triangles,Is.EqualTo(new[]{0,1,2,0,2,3,4,5,6}));
+        Assert.That(detailed.triangles,Is.EqualTo(new[]{0,1,3,1,2,3}));
     }
     [TestCase("mesh")]
     [TestCase("material")]

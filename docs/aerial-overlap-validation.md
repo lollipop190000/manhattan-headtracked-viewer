@@ -41,10 +41,11 @@ lighting, visibility distances and comparison controls are unchanged.
 
 ## Validation
 
-- 257 EditMode checks passed with graphics enabled; no failures or skips.
+- 258 EditMode checks passed with graphics enabled; no failures or skips.
 - Tests include the measured aerial wall, different diagonals/subdivisions,
   duplicate overlap, interior holes, reversed winding, Euclidean corner distance,
-  plane separation, catalog ownership and preservation of adjacent fallback.
+  plane separation, catalog ownership, no-op disjoint candidates and preservation
+  of adjacent fallback.
 - Native full-city V6 comparison and lifecycle checks are in progress.
 
 The fixed-pose test uses synthetic observations to reproduce geometry. It does
