@@ -386,3 +386,214 @@ A newly listed regional delivery was observed through Drive metadata only.
 Its ZIP bytes, digest and source-ID selection were not independently verified or
 imported, and the accepted 580-part catalog was not enlarged. Model authoring and
 sealed packages remain unchanged.
+
+## Fresh v5 native roof roundtrip (`63b3c056`)
+
+A separate fresh moving capture used the unchanged `FullCityTolerancePlayer`
+on `9deb78fbd1d8e01a52c406c6656f1bb197ae0c33`, technology
+`2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`, and the complete v5 sidecar recorded
+above. Its managed `Manhattan.Viewer.Runtime.dll` SHA-256 is
+`ab04ad6d23c82c2ad93217c9e8c99fe1c06498e94f5d2e5fdde8a7dd5989b2f4`;
+the copied source/resource fingerprint receipt remains
+`1b2da7467bb8f68ab98a5c680b8aea46f9898564e03f92af559bc73dd1c4e739`.
+This is source-scoped evidence for that private build, not appearance validation
+of the later `4133070` runtime or the source-ID pilot.
+
+The explicit motion input traversed `(1225,400,3585)` toward
+`(1725,400,3585)` and back, with five seconds per horizontal leg and fixed Euler
+`(65,208.5,0)`. The normal visible Player backbuffer was captured at 1920×1200;
+reported camera AA was TAA and VSync was 1. Tracking OFF and no webcam source
+were enforced by the frozen capture helper. Synthetic calibration and hidden UI
+were limited to this media run; streaming remained active. The report does not
+include a direct tracking flag or separate camera-pixel dimensions.
+
+All 301 raw motion frames were present and decoded from the variable-frame-rate
+movie. Their request-time span is 10.0083494 seconds; maximum decoded timestamp
+error is 0.0005887 seconds. The independent native anchor matches raw orientation
+with mean RGB error zero. No orientation transform, interpolation, trimming or
+acceleration was applied. Four readback buffers reported zero GPU readback
+errors and zero skipped capture requests. The movie is 13,879,249 bytes,
+SHA-256 `f460f2fe89b0a6478baeede1e5a6d70d5472b47cafa63c016a93e44401f83c09`.
+
+Loaded tiles ranged 329–341, pending loads 0–2, and tile-load failures and
+unsupported meshes were zero. Ownership work was pending in 48 motion samples;
+masked Skyline triangles ranged 38,019–52,944. Recorded x reached 1724.1456m,
+then returned to 1225.6636m in the last moving frame. A later settled native
+still records the exact start pose. Its RGB pixels are not identical to the
+settled initial roof still: mean absolute byte error is 0.4502, maximum 93,
+and 1.4256% of pixels differ by more than eight in any channel. The same pose
+therefore does not establish exact pixel restoration or identify a cause.
+
+The nine decoded QA frames, including first/last, and both settled roof stills
+were visually inspected. No obvious magenta error material or gross building
+disappearance was observed in those samples, and orientation was consistent.
+Full-frame decoding and selected visual samples do not certify every temporal
+surface, single-frame flicker or real head-motion perception. Capture cadence is
+not delivered FPS, and capture overhead is excluded from performance evidence.
+Raw inputs, native PNGs and failed earlier records remain private and retained;
+general flicker, physical tracking, performance and release acceptance remain
+open.
+
+## Fresh current-runtime diagnostic build (`4133070`)
+
+`FullCityVerifiedPlayer` was built from the exact 25 public runtime C# files and
+their 25 metadata files on `4133070f6dd290da01898cb29fd8fa34b7f507e9`.
+The seven private diagnostic helpers were retained. The runtime assembly
+definition, package manifest/lock and technology pin
+`2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329` were unchanged. The native Win64 build
+succeeded with zero errors and zero warnings, 114,748,742 reported bytes and
+15.3977 seconds of build time. The owned Editor exited before any subsequent
+native work; this build did not launch a benchmark Player.
+
+Before/after SHA-256 checks verified the original built catalog and all 10,039
+Addressables bundles, including the complete path inventory. The original
+`catalog.bin` remains
+`56b7e281f8171c55b5f6049b7b960fd31b6a90a86370c4c08f48053b26b07828`.
+The 10,038-tile private catalog and complete 260-group v5 sidecar were retained;
+the sidecar remains
+`bf64909d83f2919896c15e25f4a6dbf8bf870179561972835e6a0e6cf82ae661`.
+No original city asset or bundle was rebuilt or copied into the public project.
+
+The new managed `Manhattan.Viewer.Runtime.dll` SHA-256 is
+`a4059318a254e0db31b1f432daf75a13abf854f59b1861e9d9e5276ef567bb88`.
+The 37-entry source/resource fingerprint receipt is
+`f79dc2e4fa6567fb5b189d8b2398e09815b9dee75273b412c923a32948b2bef8`.
+All 67 existing Notices manifest entries verified against their byte counts and
+hashes, preserving the original license and attribution texts. Those copied
+Notices still record technology `960d5de`; their historical metadata is a
+diagnostic provenance limitation and does not constitute a fresh release
+manifest. The build identity and runtime fingerprint receipt record the current
+viewer and technology revisions separately.
+
+This receipt establishes a successful build and its input identity. CPU/GPU
+timings, delivered FPS, source-pilot publication, visual and temporal acceptance
+for this new build remain unmeasured. The preceding `9deb78f` timing and moving
+records retain their original source scope.
+
+## Fresh 413 scoped regional CPU/GPU measurements
+
+Four later, separate 90-second runs add timing evidence to the build-only receipt
+above. They used the same `FullCityVerifiedPlayer` binary in this order: Midtown
+uninstrumented (`eb5b417a`), Midtown timing (`32c42ade`), Park uninstrumented
+(`2531289b`), and Park timing (`0341cca8`). Each owned Player and its collectors
+exited before the next launch. The actual embedded `4133070`/`2a33e1c` identity,
+the exact `a4059318` managed DLL and `f79dc2e4` source/resource receipt were
+cross-checked separately for every run. The catalog, 260-group v5 sidecar,
+immutable city bundles and physical calibration source were retained.
+
+Actual measured rendering was 1920×1200 Windowed, TAA, VSync 1 and target-frame-rate
+setting 60. No tracker, video, counter probe or collision proxies were enabled.
+Warmup was configured for 15 seconds; a separate rendered-warmup trace was not
+recorded. Each route completed two fully measured circuits with full recorded
+route coverage. Median position-derived speed was within 0.0001m/s of 100m/s.
+The GPU was an RTX 4070 Laptop GPU and CPU a Core Ultra 9 185H.
+
+All four strict engine-frame P95 checks **failed the 16.7ms criterion**. Both Park
+P99 checks **failed the 25ms criterion**. Those results are not rounded into a
+pass. This is a private synthetic/no-tracker diagnostic, without general FPS,
+off-axis, webcam, visual, temporal, 20-minute memory or release qualification.
+
+All timing cells below are **P95/P99/maximum in milliseconds**. Percentiles use
+nearest rank `ceil(p*n)-1`; raw engine/stream CSV values have four decimal places.
+The active-work subset means `pending > 0` or `streaming_ms >= 0.5`, not a causal
+assignment of a slow frame to streaming.
+
+| Run | Scope / samples | Engine frame ms | Streaming work ms | ≥50ms engine / stream |
+|---|---:|---|---|---:|
+| Midtown uninstrumented | Whole / 5400 | 16.7263/16.7865/33.3354 | 1.7903/2.2288/5.1230 | 0 / 0 |
+| Midtown uninstrumented | Active work / 2706 | 16.7300/16.7958/33.3354 | 2.0505/2.4633/5.1230 | 0 / 0 |
+| Midtown timing | Whole / 5407 | 16.7291/16.8036/33.3198 | 1.6599/2.1484/4.2601 | 0 / 0 |
+| Midtown timing | Active work / 2635 | 16.7329/16.8063/33.3198 | 1.8947/2.3493/4.2601 | 0 / 0 |
+| Park uninstrumented | Whole / 5519 | 16.7795/33.3203/33.8243 | 1.6218/2.1067/4.4695 | 0 / 0 |
+| Park uninstrumented | Active work / 2334 | 16.7955/33.3298/33.8243 | 1.9026/2.4210/4.4695 | 0 / 0 |
+| Park timing | Whole / 5479 | 16.8134/30.9496/33.4917 | 1.7133/2.2454/4.5672 | 0 / 0 |
+| Park timing | Active work / 2417 | 16.8664/33.2086/33.4917 | 2.0229/2.5633/4.5672 | 0 / 0 |
+
+Loaded tile ranges were 426–449, 426–450, 368–441 and 368–442 respectively;
+pending loads were 0–2 and tile-load failures were zero in all four runs.
+
+The two timing runs had 5,406 and 5,478 measurement-phase receipts respectively.
+Their nonzero CPU frame-start timestamps were unique: zero missing timestamp/sample
+rows and zero duplicates. FrameTimingManager was enabled in every such receipt;
+CPU/GPU timer frequencies were 10MHz/1GHz. Only finite positive values contribute
+to the following FTM statistics. CPU fields were available in all deduplicated
+samples. GPU time was zero/unavailable in 6 Midtown and 92 Park samples, excluded
+rather than counted as a measured zero. Active-work GPU exclusions were 2 and 40.
+
+| Timing run | Scope | Metric | Valid samples | P95/P99/max ms | Available samples ≥50ms |
+|---|---|---|---:|---|---:|
+| Midtown | Whole | CPU frame | 5406 | 16.7341/16.8096/33.3498 | 0 |
+| Midtown | Whole | GPU frame | 5400 | 5.2204/5.6576/6.7564 | 0 |
+| Midtown | Whole | CPU main | 5406 | 3.0583/3.7392/14.7485 | 0 |
+| Midtown | Whole | CPU render | 5406 | 0.9443/2.1265/7.0779 | 0 |
+| Midtown | Whole | Present wait | 5406 | 15.6258/15.7300/30.6681 | 0 |
+| Midtown | Active work | CPU frame | 2634 | 16.7335/16.8120/29.4764 | 0 |
+| Midtown | Active work | GPU frame | 2632 | 5.2664/5.8061/6.7564 | 0 |
+| Midtown | Active work | CPU main | 2634 | 3.0334/3.6508/14.7485 | 0 |
+| Midtown | Active work | CPU render | 2634 | 0.9521/1.9323/5.4176 | 0 |
+| Midtown | Active work | Present wait | 2634 | 15.6344/15.7475/27.3797 | 0 |
+| Park | Whole | CPU frame | 5478 | 16.8233/30.9609/33.5081 | 0 |
+| Park | Whole | GPU frame | 5386 | 5.2265/6.9898/11.1002 | 0 |
+| Park | Whole | CPU main | 5478 | 3.3283/4.5770/8.0234 | 0 |
+| Park | Whole | CPU render | 5478 | 1.0237/2.4398/8.6751 | 0 |
+| Park | Whole | Present wait | 5478 | 15.6404/29.3627/32.4197 | 0 |
+| Park | Active work | CPU frame | 2416 | 16.8353/31.5825/33.5081 | 0 |
+| Park | Active work | GPU frame | 2376 | 5.9679/7.2950/9.7024 | 0 |
+| Park | Active work | CPU main | 2416 | 3.5226/4.5696/7.8827 | 0 |
+| Park | Active work | CPU render | 2416 | 1.0903/2.1337/6.5220 | 0 |
+| Park | Active work | Present wait | 2416 | 15.6486/29.8933/32.4197 | 0 |
+
+FTM reports the asynchronous latest rendered-frame sample. The active-work
+classification uses its first measurement-phase receipt and can lag the timed
+frame. CPU frame, CPU main, CPU render, present wait and GPU time are distinct
+observations. These sequential timing runs have instrumentation overhead and
+one run per condition; changes between them do not isolate that overhead or a
+performance cause. The available GPU maxima do not bound the unavailable samples.
+
+Ownership diagnostics use current receipt-frame counters, retaining legitimate
+zero-work samples. The arithmetic remainder is
+`max(0, streaming_ms - ownership_tick_ms)`. It includes work before ownership Tick
+and visibility work after publication, so it is not a purely pre-Tick timing or
+a causal explanation. No negative unclamped remainders were observed. Ownership
+was pending in 1,146 Midtown and 1,253 Park measurement receipts. These counters
+were not recorded in the uninstrumented runs.
+
+| Timing run | Receipt scope / samples | Ownership Tick P95/P99/max ms | Work excluding Tick P95/P99/max ms | ≥50ms tick / remainder |
+|---|---:|---|---|---:|
+| Midtown | Whole / 5406 | 1.1712/1.4828/3.8957 | 1.5111/2.0228/4.1477 | 0 / 0 |
+| Midtown | Active work / 2634 | 1.3036/1.6684/3.8957 | 1.7514/2.1959/4.1477 | 0 / 0 |
+| Park | Whole / 5478 | 1.2031/1.6555/3.5217 | 1.5013/2.0768/4.5672 | 0 / 0 |
+| Park | Active work / 2416 | 1.4320/2.0968/3.5217 | 1.8448/2.2424/4.5672 | 0 / 0 |
+
+Park recorded more engine updates than a nominal 60Hz count. The short intervals
+below account for part of that trace shape, without establishing a presentation
+rate or a cause. City-space routes remained at y=1.85m in Midtown and y=20m in
+Park; route-cycle counters ranged 0–3 in every run. Floating-origin offsets,
+foreground focus and individual frame UTC timestamps were not recorded. UTC
+measurement starts are derived from report-end UTC minus measured engine time.
+
+| Run | Frame rows | <8ms / <1ms / ≥25ms | Sum of engine deltas (s) | Recorded time span (s) | Reported measurement (s) |
+|---|---:|---:|---:|---:|---:|
+| Midtown uninstrumented | 5400 | 0 / 0 / 1 | 90.015795 | 89.999086 | 90.015404 |
+| Midtown timing | 5407 | 4 / 0 / 3 | 90.016359 | 89.999667 | 90.011604 |
+| Park uninstrumented | 5519 | 118 / 2 / 143 | 90.006993 | 89.998672 | 90.004616 |
+| Park timing | 5479 | 91 / 0 / 84 | 90.015764 | 89.999119 | 90.009087 |
+
+Time-aligned Windows memory samples were pinned to each exact Player PID. Driver
+memory is for the whole selected GPU, including other applications; the Unity
+graphics-allocation counter was unavailable in all four runs. Peaks below are
+GiB. Trend deltas cover roughly 78 seconds after the initial circuit window and
+cannot establish 20-minute memory stability.
+
+| Run | Player working set / private commit peak GiB | Whole GPU peak GiB | Working set / private trend Δ MiB |
+|---|---|---:|---|
+| Midtown uninstrumented | 2.1135 / 3.9780 | 1.7715 | +46.92 / +27.43 |
+| Midtown timing | 2.1164 / 3.9825 | 1.7695 | +57.10 / +38.26 |
+| Park uninstrumented | 2.0453 / 3.8373 | 1.7207 | +30.72 / +23.23 |
+| Park timing | 2.0612 / 3.8493 | 1.7207 | +40.33 / +34.44 |
+
+Raw CSVs, environment snapshots, exact input hashes, process lifecycle receipts
+and guarded analyses remain private. The root benchmark wrapper and analyzer
+were retained unchanged. These new measurements belong to this exact current
+runtime/v5 build; the earlier `9deb78f` media and performance records keep their
+original scope.
