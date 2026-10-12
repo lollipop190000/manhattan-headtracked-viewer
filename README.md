@@ -38,7 +38,7 @@ Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`)
 
 ```powershell
 gh auth login
-git clone --branch codex/physical-projection-audit-20261012 https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git clone --branch codex/physical-projection-audit-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs install --local
 git lfs pull
@@ -87,7 +87,7 @@ Head Tracking OFF는 현재 머리 오프셋을 유지하고 관측·필터링�
 
 ## 팀 개발
 
-`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [공개 source Release](https://github.com/lollipop190000/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
+`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [공개 source Release](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
 
 - [자산 버전·재현 방법](docs/assets.md)
 - [입력·충돌·게임 요소 연결](docs/architecture.md)

@@ -19,7 +19,7 @@ Windows x64 배포 ZIP을 전부 압축 해제하면 Unity Editor 설치나 도�
 공개 저장소를 복제할 Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다. `codex/physical-projection-audit-20261012` 소스를 직접 실행하려면 [브랜치 지정 실행 안내](team-quickstart.md)를 따릅니다.
 
 ```powershell
-git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git clone https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
@@ -67,7 +67,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 웹캠이 열리지 않으면 다른 카메라 앱을 닫고 Windows의 카메라 접근 권한과 `-Camera` 번호를 확인합니다. `Settings`의 `Show diagnostics`는 추적 상태·결과 지연·프레임 시간·타일 로딩 상태를 표시합니다. 런처 실행 로그는 실행 파일 옆 `Player.log`, `tracker-output.log`, `tracker-error.log`에 생성됩니다. 직접 실행한 플레이어의 기본 로그는 위 개인 저장 위치의 `Player.log`입니다.
 
-1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/lollipop190000/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
+1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
 
 벤치마크의 `benchmark.json`은 실행 마지막의 카메라 AA 설정, VSync,
 목표 프레임률, Frame Timing 통계 기능 상태와 추적기 요청 여부도 기록합니다.

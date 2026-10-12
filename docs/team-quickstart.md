@@ -1,5 +1,19 @@
 # 맨해튼: 팀원 실행 안내
 
+공유 저장소: [sshs-ai-club/manhattan-headtracked-viewer](https://github.com/sshs-ai-club/manhattan-headtracked-viewer). 조직의 현재 구성원 전원에게 [manhattan-contributors 팀](https://github.com/orgs/sshs-ai-club/teams/manhattan-contributors)을 통해 쓰기 권한을 부여했습니다. 새 조직 구성원이 들어오면 조직 관리자나 팀 관리자가 이 팀에도 추가합니다.
+
+## 함께 수정하기
+
+아래 준비를 마친 뒤 자신의 작업 브랜치를 만들고 조직 저장소에 올립니다.
+
+```powershell
+git switch -c codex/my-feature
+# 작업한 파일을 커밋한 뒤
+git push -u origin HEAD
+```
+
+GitHub에서 `codex/physical-projection-audit-20261012`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
+
 실행 대상은 공개 저장소의 **`codex/physical-projection-audit-20261012`** 브랜치입니다. 이 안내를 추가하기 전의 실행 코드 커밋은 `3b2984f849e2de864e6a96fb72d958d48beb8455`입니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
 
 ## 처음 한 번 준비
@@ -16,7 +30,7 @@ PowerShell에서 아래 명령을 순서대로 실행합니다. 각 단계가 �
 ```powershell
 gh auth login
 git lfs install
-git clone --branch codex/physical-projection-audit-20261012 https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git clone --branch codex/physical-projection-audit-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs pull
 git branch --show-current
