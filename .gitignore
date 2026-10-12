@@ -55,6 +55,7 @@
 **/face_landmarker.task*
 **/*runtime_calibration.json
 **/monitor_hint.json
+**/tracker_camera_*.json
 **/physical-calibration.json
 **/viewer-preferences.json
 **/position-bookmark.json

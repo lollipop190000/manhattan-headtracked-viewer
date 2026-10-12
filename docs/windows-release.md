@@ -35,6 +35,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 ## 실측 입력과 개인 보정
 
+Settings → **WEBCAM**에서 장치 이름·연결 방식·번호를 확인하고 클릭해 전환합니다. Python 추적기가 실행 중이어야 합니다. **Refresh webcam list**는 장치 목록을 갱신합니다. 성공한 선택은 `tracker_camera_preference.json`에 저장되며 도시 위치나 물리 보정 파일을 변경하지 않습니다. 명시적인 `-Camera`가 저장값보다 우선합니다. EShare에서 검은 프레임만 들어오면 **Black video** 상태가 표시됩니다. 휴대폰/외부 영상 연결은 EShare에서 완료해야 합니다. 카메라가 달라지면 렌즈 위치·intrinsics와 얼굴 기준은 새 장치에 맞춰 확인합니다.
+
 화면의 실제 표시 영역 너비·높이를 재고, 평소 정면을 보는 자세에서 눈과 화면 평면 사이의 거리를 입력합니다. 화면 베젤 크기나 해상도 픽셀 수를 물리 길이 대신 입력하지 않습니다. 기본 모드의 치수와 웹캠 위치는 게임 전체 표시 영역과 그 중심 기준입니다. 창을 옮기거나 크기를 바꾸면 두 10 cm ruler와 웹캠 중심 기준을 다시 확인합니다.
 
 패널 전체 치수를 입력하고 창 모드에서도 사용하려면 Settings → Viewport check의 **Dimensions are full monitor panel**을 켭니다. 치수·웹캠 위치·눈 좌표의 기준은 패널 중심입니다. Windows Player는 물리 픽셀 기준 client 위치와 크기를 측정하고 `Camera.rect`를 한 번 더 반영합니다. 창 전체가 한 패널 안에 있어야 하며 최소화·다른 모니터·오프스크린 렌더링이면 상태 메시지를 해결한 뒤 다시 확인합니다. 이 옵션은 viewer preference이며 기존 physical calibration을 자동 수정하거나 저장하지 않습니다.

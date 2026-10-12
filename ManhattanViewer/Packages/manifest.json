@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.headtracked.display": "https://github.com/lollipop190000/head-tracked-display.git?path=/Packages/com.headtracked.display#2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329",
+    "com.headtracked.display": "https://github.com/lollipop190000/head-tracked-display.git?path=/Packages/com.headtracked.display#e305f125c0efdd0e34292682b9e709cd8500b6eb",
     "com.unity.addressables": "2.7.6",
     "com.unity.cloud.gltfast": "6.20.0",
     "com.unity.inputsystem": "1.20.0",

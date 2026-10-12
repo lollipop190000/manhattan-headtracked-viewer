@@ -9,7 +9,7 @@
 
 Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~100m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
-현재 기술 패키지는 [`2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`](https://github.com/lollipop190000/head-tracked-display/commit/2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했습니다. [현재 투영 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
+현재 기술 패키지는 [`e305f125c0efdd0e34292682b9e709cd8500b6eb`](https://github.com/lollipop190000/head-tracked-display/commit/e305f125c0efdd0e34292682b9e709cd8500b6eb)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했습니다. [현재 투영 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
 
 일반적인 스트리밍 준비 완료와 실제 표시 전환을 다른 프레임으로 나누는 작업 경계를 추가했습니다. 기존 표시를 복구해야 하는 경우에는 즉시 처리합니다. 소스 `338c090`과 당시 대응 자료로 측정한 1920×1200·100m/s·웹캠 없는 진단에서 Midtown 반복 streaming P95는 1.8049/1.8441ms였습니다. 작업이 활발한 구간의 P95는 여전히 2ms를 넘으며, 이후 면 대응 수정의 성능·전체 지역·지붕 번쩍임·배포본 합격은 별도 검증이 필요합니다. 측정한 정확한 소스, 실패했던 중간 정책, CPU/GPU 시간과 남은 한계는 [현재 스트리밍 검증 기록](docs/current-streaming-validation.md)에 있습니다.
 
@@ -66,6 +66,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 `tools/run.ps1`는 고정 기술 저장소의 **단일 CMD 진입점** `Run-HeadTrackedDemo.cmd`를 호출하며 프로젝트·플레이어·추적기 경로만 전달합니다. 팀원이 사용하는 PC의 형제 폴더 경로를 참조하지 않습니다.
 
 ## 조작과 보정
+
+Settings → **WEBCAM**에서 장치 이름을 보고 카메라를 선택하고 **Refresh webcam list**로 목록을 갱신합니다. Python 추적기가 실행 중일 때 사용할 수 있고, 도시를 다시 시작하지 않고 전환합니다. 마지막으로 선택한 장치는 개인 폴더의 `tracker_camera_preference.json`에 따로 저장됩니다. 명령에 `-Camera 1`처럼 번호를 명시하면 그 실행에서는 저장한 선택보다 우선합니다. 장치 이름 옆 `dshow` / `msmf`는 Windows 연결 방식이며 번호는 방식별로 다를 수 있습니다. 필요하면 `tools/run.ps1 -Camera 1 -CameraBackend msmf`로 명시합니다. EShare가 검은 영상을 보내면 상태에 **Black video**가 표시되며 EShare에서 휴대폰/외부 영상 연결을 먼저 완료해야 합니다. 카메라를 바꾸면 해당 카메라의 위치·보정과 얼굴 기준을 다시 확인합니다.
 
 | 조작 | 동작 |
 |---|---|

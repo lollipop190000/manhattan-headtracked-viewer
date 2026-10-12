@@ -46,6 +46,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Camera 0
 
 다른 웹캠은 `-Camera 1`을 사용합니다. `Alt+F4`로 종료하면 추적기도 정리됩니다. 강제 정리는 같은 저장소에서 다음을 실행합니다.
 
+실행 후 **Settings → WEBCAM**에서도 이름으로 카메라를 선택할 수 있습니다. **Refresh webcam list**는 연결된 장치 목록을 갱신합니다. 선택값은 다음 실행에 복원되며 명시적인 `-Camera`가 우선합니다. 연결 방식이 필요하면 `-Camera 1 -CameraBackend msmf`를 사용합니다. EShare는 가상 장치를 열어도 외부 영상이 연결되기 전에는 검은 프레임을 보낼 수 있습니다. 게임의 **Black video** 상태를 확인하고 EShare 쪽 영상 연결을 완료합니다.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 ```

@@ -15,6 +15,10 @@ namespace Manhattan.Viewer
         private UnityEngine.UI.Text diagnostics, message, captureMessage, viewportMessage;
         private ViewerViewportRuler viewportRuler;
         private ViewerMeasurementWorkflow measurement;
+        private ViewerCameraSelection cameras;
+        private UnityEngine.UI.Text cameraMessage;
+        private Transform cameraOptions;
+        private string cameraListFingerprint;
         private float nextDiagnostics;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
@@ -115,6 +119,18 @@ namespace Manhattan.Viewer
             NumericRow(content, "Mouse sensitivity", app.KeyboardInput.MouseSensitivity, v => { app.KeyboardInput.MouseSensitivity = Mathf.Clamp(v, .01f, 1f); app.Preferences.mouseSensitivity = app.KeyboardInput.MouseSensitivity; app.SavePreferences(); });
             ToggleRow(content, "Temporal anti-aliasing", app.Preferences.temporalAA, v => { app.Preferences.temporalAA = v; app.Rendering.SetTemporalAA(v); app.SavePreferences(); });
             ToggleRow(content, "Show diagnostics", app.Preferences.diagnostics, v => { app.Preferences.diagnostics = v; app.SavePreferences(); });
+            Heading(content, "WEBCAM");
+            cameras = new ViewerCameraSelection(ViewerPersistence.DirectoryPath);
+            var cameraStatusRow = Row(content, 120);
+            cameraMessage = Text(cameraStatusRow, "Waiting for tracker camera list", 14, 0, 0, 380, 120);
+            cameraMessage.supportRichText = false; Stretch(cameraMessage.rectTransform);
+            ActionRow(content, "Refresh webcam list", () => cameras.Refresh());
+            var options = new GameObject("Webcam choices", typeof(RectTransform));
+            options.transform.SetParent(content, false); cameraOptions = options.transform;
+            var cameraLayout = options.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            cameraLayout.spacing = 6; cameraLayout.childControlHeight = cameraLayout.childControlWidth = true;
+            cameraLayout.childForceExpandHeight = false;
+            TextRow(content, "Choose a camera below. The tracker switches without moving the city. After changing cameras, check calibration and capture a new face reference. Black video means the camera source is not supplying an image.", 108);
             Heading(content, "CAMERA CALIBRATION");
             NumericRow(content, "Eye separation (mm)", c.measuredEyeSeparationMeters * 1000f, v => c.measuredEyeSeparationMeters = Mathf.Clamp(v, 45, 85) / 1000f);
             NumericRow(content, "Webcam horizontal FOV", c.horizontalFovDegrees, v => c.horizontalFovDegrees = Mathf.Clamp(v, 30, 110));
@@ -195,6 +211,7 @@ namespace Manhattan.Viewer
                 var row = captureMessage.transform.parent.GetComponent<UnityEngine.UI.LayoutElement>();
                 row.minHeight = row.preferredHeight = Mathf.Max(260, captureMessage.preferredHeight + 12);
             }
+            UpdateCameraChoices();
             diagnostics.text = app.Preferences.diagnostics ? string.Format(CultureInfo.InvariantCulture,
                 "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}{10}",
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
@@ -202,6 +219,30 @@ namespace Manhattan.Viewer
                 app.Benchmark.CpuMemoryBytes / 1048576f, app.Benchmark.GpuMemoryBytes / 1048576f,
                 ViewerTrackingDiagnostics.Format(app.Display) + "\n" + ViewerTrackingDiagnostics.FormatNear(app.Streamer.GetNearDiagnostics()),
                 app.Benchmark.Recording ? "\nRecording benchmark…" : "") : "";
+        }
+
+        private void UpdateCameraChoices()
+        {
+            if (cameras == null) return;
+            cameras.ReadStatus(); cameraMessage.text = cameras.Describe();
+            string fingerprint = "offline";
+            if (cameras.Online)
+            {
+                fingerprint = cameras.Current.session + ":" + cameras.Current.selected?.id;
+                foreach (var device in cameras.Current.devices ?? Array.Empty<ViewerCameraSelection.Device>()) fingerprint += ":" + device.id;
+            }
+            if (fingerprint == cameraListFingerprint) return;
+            cameraListFingerprint = fingerprint;
+            foreach (Transform child in cameraOptions) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            if (!cameras.Online) return;
+            foreach (var item in cameras.Current.devices ?? Array.Empty<ViewerCameraSelection.Device>())
+            {
+                var device = item;
+                string label = device.name + " (" + device.backend + ", " + device.index + ")";
+                if (device.id == cameras.Current.selected?.id) label = "Selected: " + label;
+                var button = Button(Row(cameraOptions, 52), label, () => cameras.Select(device));
+                button.GetComponentInChildren<UnityEngine.UI.Text>().supportRichText = false;
+            }
         }
 
         private RectTransform Row(Transform parent, float height)
