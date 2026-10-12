@@ -29,6 +29,15 @@ the sidecar. Runtime rechecks every required provider at atomic publication and
 restores the hull before either provider departs. This preserves partial-cohort
 fallback without waiting for unrelated neighboring tiles.
 
+At the streaming radius boundary, one half of a split wall may otherwise remain
+unrequested forever. Ordinary visible Core tiles now request their directly
+required joint partners, even outside the base radius. This is one hop only:
+secondary partners never become new visibility seeds. Their visibility flag is
+separate from ordinary radius hysteresis; they leave with the normal release
+rules after no seed needs them. The existing request concurrency and residency
+byte budget still apply. Missing or failed providers retain fallback until ready.
+Surface/Tracking/Window comparison switches do not change these requests.
+
 Double-precision polygon subtraction retains every uncovered convex fragment.
 Each projected intersection must also pass a 3D distance check at every corner;
 projection alone cannot hide an angled depth gap. This tests the bounded overlap,

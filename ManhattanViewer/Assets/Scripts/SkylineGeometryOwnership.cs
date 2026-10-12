@@ -43,6 +43,7 @@ namespace Manhattan.Viewer
         private readonly Dictionary<GameObject,Entry> entries=new Dictionary<GameObject,Entry>();
         private readonly Dictionary<string,SkylineOwnershipTile> bindings=new Dictionary<string,SkylineOwnershipTile>();
         private readonly Dictionary<string,SkylineOwnershipGroup> groups=new Dictionary<string,SkylineOwnershipGroup>();
+        private readonly Dictionary<string,HashSet<string>> jointPartners=new Dictionary<string,HashSet<string>>();
         // The catalog's complete replacement contract is separate from primitive coincidence.
         // Legacy hull and detailed Core can use different triangulation, so a complete, bound
         // replacement cohort must retire the eligible hull even when exact ordinals miss it.
@@ -71,7 +72,7 @@ namespace Manhattan.Viewer
         public void Configure(SkylineOwnershipData data,string sourceVersion,Func<string,string> resolver=null,CityCatalog catalog=null)
         {
             if(entries.Count!=0)throw new InvalidOperationException("Configure ownership before residency loads");
-            bindings.Clear();groups.Clear();replacementCohorts.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();DecodedMappingBytes=0;
+            bindings.Clear();groups.Clear();jointPartners.Clear();replacementCohorts.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();DecodedMappingBytes=0;
             resolveBinding=resolver??SkylineOwnershipBinding.BundleSignature;
             if(data==null||data.schema!=2||data.ruleVersion!=SkylineOwnershipData.CurrentRuleVersion||data.sourceVersion!=sourceVersion)return;
             try
@@ -103,8 +104,35 @@ namespace Manhattan.Viewer
                                 if(!bindings.ContainsKey(core.id)||!ids.Add(core.id))valid=false;
                         if(valid&&ids.Count==sky.requiredReplacementCount){var expected=new string[ids.Count];ids.CopyTo(expected);replacementCohorts.Add(sky.id,expected);}
                     }
+                if(catalog!=null&&catalog.sourceVersion==sourceVersion)
+                    foreach(var group in data.groups)foreach(var part in group.parts)foreach(var owner in part.owners)
+                    {
+                        var ids=owner.requiredCoreIds;if(ids==null||ids.Length<2)continue;
+                        bool valid=true;
+                        foreach(string id in ids)
+                        {
+                            int found=0;
+                            foreach(var tile in catalog.tiles)if(tile!=null&&tile.id==id)
+                            {found++;if(tile.layer!=CityLayer.Core||tile.replaces==null||Array.IndexOf(tile.replaces,group.skylineId)<0)valid=false;}
+                            if(found!=1)valid=false;
+                        }
+                        if(!valid)continue;
+                        foreach(string id in ids)
+                        {
+                            if(!jointPartners.TryGetValue(id,out var partners))jointPartners.Add(id,partners=new HashSet<string>());
+                            foreach(string other in ids)if(other!=id)partners.Add(other);
+                        }
+                    }
             }
-            catch(Exception){bindings.Clear();groups.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;}
+            catch(Exception){bindings.Clear();groups.Clear();jointPartners.Clear();replacementCohorts.Clear();DecodedMappingBytes=0;}
+        }
+        // Only ordinary visible Core tiles seed this one-hop request. Partners must
+        // never seed another expansion, or a connected city would stay resident forever.
+        public void CollectJointCorePartners(HashSet<string> visibleCoreIds,HashSet<string> result)
+        {
+            result.Clear();
+            foreach(string id in visibleCoreIds)if(jointPartners.TryGetValue(id,out var partners))
+                foreach(string partner in partners)if(!visibleCoreIds.Contains(partner))result.Add(partner);
         }
         private readonly List<Entry> snapshot=new List<Entry>();
         private struct MaterialContract {public bool opaque, legacyFallback;}
@@ -590,7 +618,7 @@ namespace Manhattan.Viewer
         {
             if(disposed)return;disposed=true;(work as IDisposable)?.Dispose();work=null;
             foreach(var e in entries.Values)foreach(var p in e.parts)ReleasePart(p);
-            entries.Clear();bindings.Clear();groups.Clear();replacementCohorts.Clear();snapshot.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();publicationMaterials.Clear();preparationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
+            entries.Clear();bindings.Clear();groups.Clear();jointPartners.Clear();replacementCohorts.Clear();snapshot.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();publicationMaterials.Clear();preparationMaterials.Clear();MaskedTriangles=0;DecodedMappingBytes=0;
         }
     }
 }

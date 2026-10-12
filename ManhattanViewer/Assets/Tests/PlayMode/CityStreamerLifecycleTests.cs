@@ -174,6 +174,52 @@ public sealed class CityStreamerLifecycleTests
         foreach(var fixture in fixtureRoots)Object.Destroy(fixture);
     }
     private Transform OwnershipTile(int index)=>host.transform.Find(catalog.tiles[index].id);
+    private void CreateSplitWallStreamer()
+    {
+        CreateGeometryStreamer();catalog.tiles[0].requiredReplacementCount=3;
+        catalog.tiles[1].cityBounds=new Bounds(Vector3.zero,Vector3.one);
+        catalog.tiles[2].cityBounds=new Bounds(Vector3.right*1500,Vector3.one);
+        var material=new Material(Shader.Find("Universal Render Pipeline/Lit")){name="Skyline"};ownershipAssets.Add(material);
+        material.SetFloat("_Surface",0);material.SetFloat("_AlphaClip",0);material.SetFloat("_ZWrite",1);material.SetFloat("_Cull",2);
+        provider.AssetFactory=address=>
+        {
+            int index=Array.FindIndex(catalog.tiles,t=>t.address==address);
+            var vertices=new[]{Vector3.zero,Vector3.right,Vector3.right+Vector3.up,Vector3.up};
+            var mesh=new Mesh {vertices=vertices,triangles=index==0?new[]{0,1,2,0,2,3}:index==1?new[]{0,1,3}:new[]{1,2,3}};ownershipAssets.Add(mesh);
+            var root=new GameObject("split wall fixture");root.AddComponent<MeshFilter>().sharedMesh=mesh;root.AddComponent<MeshRenderer>().sharedMaterial=material;return root;
+        };
+        var roots=Array.ConvertAll(catalog.tiles,t=>provider.AssetFactory(t.address));
+        var map=OwnershipTestData.Compile(catalog.tiles,roots,catalog.sourceVersion);
+        Assert.That(map.groups[0].parts[0].owners[0].requiredCoreIds.Length,Is.EqualTo(2));
+        var manager=(SkylineGeometryOwnership)typeof(CityStreamer).GetField("ownership",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(streamer);
+        manager.Configure(map,catalog.sourceVersion,_=>"fixture-content",catalog);
+        foreach(var root in roots)Object.Destroy(root);
+    }
+    [UnityTest]
+    public IEnumerator JointWallLoadsItsOutOfRadiusPartnerAndReleasesItAfterTheSeedLeaves()
+    {
+        CreateSplitWallStreamer();MoveAndEvaluate(Vector3.zero);
+        yield return WaitLoaded(3);yield return WaitOwnershipIdle();
+        Assert.That(SkylineIndexCount(),Is.Zero);Assert.That(OwnershipTile(2).gameObject.activeSelf,Is.True);
+        for(int cycle=0;cycle<2;cycle++)
+        {
+            MoveAndEvaluate(Vector3.right*10000);yield return WaitLoaded(1);yield return WaitOwnershipIdle();
+            Assert.That(SkylineIndexCount(),Is.EqualTo(6),"Fallback returns before either provider releases.");
+            MoveAndEvaluate(Vector3.zero);yield return WaitLoaded(3);yield return WaitOwnershipIdle();
+            Assert.That(SkylineIndexCount(),Is.Zero);
+        }
+        Assert.That(provider.ReleasesPerAddress[catalog.tiles[2].address],Is.EqualTo(2));
+    }
+    [UnityTest]
+    public IEnumerator JointPartnerRequestsRespectTheResidencyBudgetAndKeepFallback()
+    {
+        CreateSplitWallStreamer();streamer.residencyBudgetBytes=2048;MoveAndEvaluate(Vector3.zero);
+        yield return WaitLoaded(2);yield return WaitOwnershipIdle();
+        for(int i=0;i<5;i++){Tick();yield return null;}
+        Assert.That(streamer.LoadedTiles,Is.EqualTo(2));Assert.That(SkylineIndexCount(),Is.EqualTo(6));
+        streamer.residencyBudgetBytes=3072;yield return WaitLoaded(3);yield return WaitOwnershipIdle();
+        Assert.That(SkylineIndexCount(),Is.Zero);
+    }
     private int SkylineIndexCount()=>OwnershipTile(0).GetComponent<MeshFilter>().sharedMesh.triangles.Length;
     private IEnumerator WaitOwnershipIdle()
     {

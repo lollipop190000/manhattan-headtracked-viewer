@@ -342,6 +342,51 @@ public sealed class CityEvaluationEquivalenceTests
     }
     private struct Request { public string id; public float priority; }
 
+    [TestCase("valid")]
+    [TestCase("old-rule")]
+    [TestCase("wrong-relation")]
+    [TestCase("unknown-owner")]
+    public void JointPartnerRequestsStayOneHopAndCannotBecomeTheirOwnVisibilitySeeds(string variant)
+    {
+        var host=new GameObject("joint dependency evaluation");var observer=new GameObject("observer");
+        var catalog=ScriptableObject.CreateInstance<CityCatalog>();
+        try
+        {
+            var flight=observer.AddComponent<FreeFlightController>();flight.enabled=false;
+            var streamer=host.AddComponent<CityStreamer>();streamer.enabled=false;streamer.flight=flight;streamer.catalog=catalog;
+            catalog.sourceVersion="dependency-fixture";
+            catalog.tiles=new[]{
+                new CityTileRecord {id="a",address="a",layer=CityLayer.Core,replaces=new[]{"sky"},cityBounds=new Bounds(Vector3.zero,Vector3.one)},
+                new CityTileRecord {id="b",address="b",layer=CityLayer.Core,replaces=new[]{"sky"},cityBounds=new Bounds(Vector3.right*1500,Vector3.one)},
+                new CityTileRecord {id="c",address="c",layer=CityLayer.Core,replaces=new[]{"sky"},cityBounds=new Bounds(Vector3.right*1600,Vector3.one)},
+                new CityTileRecord {id="sky",address="sky",layer=CityLayer.Skyline,requiredReplacementCount=3}};
+            streamer.Initialize();
+            var map=new SkylineOwnershipData {sourceVersion=catalog.sourceVersion,
+                tiles=Array.ConvertAll(catalog.tiles,t=>new SkylineOwnershipTile {id=t.id}),
+                groups=new[]{new SkylineOwnershipGroup {skylineId="sky",parts=new[]{new SkylineOwnershipPart {path="",owners=new[]{
+                    new SkylineOwnershipOwner {coreId="a",requiredCoreIds=new[]{"a","b"},ordinals=new[]{0}},
+                    new SkylineOwnershipOwner {coreId="b",requiredCoreIds=new[]{"b","c"},ordinals=new[]{1}}}}}}}};
+            if(variant=="old-rule")map.ruleVersion="legacy-flat-hull-v6-coplanar-coverage";
+            if(variant=="wrong-relation")catalog.tiles[1].replaces=new[]{"other"};
+            if(variant=="unknown-owner")map.groups[0].parts[0].owners[0].requiredCoreIds=new[]{"a","missing"};
+            var manager=(SkylineGeometryOwnership)typeof(CityStreamer).GetField("ownership",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(streamer);
+            manager.Configure(map,catalog.sourceVersion,_=>"fixture",catalog);
+            IList all=List(streamer,"all");
+            for(int i=0;i<6;i++)
+            {
+                Evaluate.Invoke(streamer,null);
+                Assert.That(RequestIds(streamer),Is.EquivalentTo(variant=="valid"?new[]{"sky","a","b"}:new[]{"sky","a"}));
+                Assert.That((bool)Visible.GetValue(all[1]),Is.False,"A requested partner must not alter radius hysteresis or seed the next hop.");
+                Assert.That((bool)Wanted.GetValue(all[2]),Is.False,"The b-c record cannot expand from a secondary b request.");
+                if(variant=="valid")Assert.That(float.IsFinite((float)Priority.GetValue(all[1])),Is.True);
+            }
+            flight.SetPose(Vector3.right*10000,Quaternion.identity);Evaluate.Invoke(streamer,null);
+            Assert.That(RequestIds(streamer),Is.EquivalentTo(new[]{"sky"}));
+            Assert.That((bool)Field("jointVisible").GetValue(all[1]),Is.False);
+        }
+        finally {UnityEngine.Object.DestroyImmediate(host);UnityEngine.Object.DestroyImmediate(observer);UnityEngine.Object.DestroyImmediate(catalog);}
+    }
+
     [Test]
     public void ActualEvaluationPreservesRequestOrderTiesPredictionAndLiveCatalogEdits()
     {
