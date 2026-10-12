@@ -91,4 +91,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 `tools/build.ps1`는 빌드 후 원본 라이선스·이용 조건·출처를 `Notices/`에 복사하고 크기와 SHA-256을 검증합니다. 현재 검증한 목록은 **67개 원문 파일**이며 Unity·추적 패키지·도시 원본과 `CityDetailRenderer`의 Unity 라이선스·NOTICE를 포함합니다. 목록은 `Notices/manifest.json`을 기준으로 보존하며 파일 내용을 수정하지 않습니다. 이 manifest에는 도시 소스 버전과 기술 커밋도 기록됩니다.
 
+빌드 도구는 고정 Editor를 직접 실행하며 `-EditorPath`를 지원합니다. Addressables 콘텐츠 빌드 → 비동기 ownership 생성 → Player 빌드 순서로 완료를 기다립니다. 이 비동기 진입점을 `unity run/build`나 `-quit`로 실행하면 생성 중 조기 종료될 수 있으므로 `tools/build.ps1`를 사용합니다. 시간 초과나 실패 시 이 도구가 시작한 Editor만 종료하고 오류와 해당 로그 경로를 반환합니다.
+
 `ManhattanViewer.provenance.json`의 로컬 개발 경로, `ManhattanViewer_BurstDebugInformation_DoNotShip/`, 실행·추적기 로그, `tracker-session-*.heartbeat`, 개인 보정, 소스 ZIP, 추적기 가상환경·얼굴 모델은 배포 ZIP에서 제외합니다. 배포 ZIP의 SHA-256과 해당 빌드의 검증 기록은 Release에 함께 제공합니다.

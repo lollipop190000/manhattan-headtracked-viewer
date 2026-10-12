@@ -20,6 +20,27 @@ generated correspondence must be rebuilt using the
 [current v5 rule](skyline-ownership.md); older measured runs remain tied to their
 recorded source and mapping digests.
 
+The following Editor-generation refactor passed 235/235 EditMode and 129/129 live
+GPU PlayMode with zero Unity skips, plus 155 Python cases (153 passed, the same
+two Windows symlink-privilege skips) and eight PowerShell assertions. Seven new
+Editor cases exercise real output-pair publication, locked-file rollback with
+exact previous bytes or no previous data file, staging cleanup, and validation
+output guards including Windows casing. Five new PowerShell-process cases cover
+delayed completion, nonzero exit, owned timeout cleanup, launch arguments and
+Editor executable validation. The final scoped-registration cleanup was followed
+by another complete 235-case EditMode run; it does not change runtime code.
+
+A separate private native-asset probe deliberately fails an unknown Skyline
+group, preserves its previous output sentinels and input digests, restores a
+borrowed non-null path transform and exact locator/provider references and order,
+then successfully compiles the real `Skyline_1_6` group from ten exact built
+prefabs. It reports no additional hidden clone instances or private ownership
+meshes after cleanup. An earlier version failed locator restoration and was
+corrected to include the catalog's additional dynamic locator/provider
+registrations. This proves the scoped failure/retry path; it does not inject a
+mid-group failure or establish process-memory stability. File rollback handles
+ordinary managed exceptions; a two-file pair is not atomic across power loss.
+
 `tools/test.ps1` adds Unity EditMode and PlayMode suites and writes JUnit reports into ignored `TestResults/`. Preserve the head-tracking package's projection, calibration and lifecycle tests. Validate any package changes in a minimal project without URP, Manhattan or demo dependencies before publishing its pinned commit.
 
 ## Fixed route acceptance

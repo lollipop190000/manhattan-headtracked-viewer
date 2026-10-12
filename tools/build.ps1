@@ -1,4 +1,4 @@
-param([string]$OutputPath, [switch]$Bake, [switch]$AllowDirty, [string]$PythonExe = 'python')
+param([string]$OutputPath, [switch]$Bake, [switch]$AllowDirty, [string]$PythonExe = 'python', [string]$EditorPath)
 . (Join-Path $PSScriptRoot 'common.ps1')
 function Assert-CleanBuildSource {
     param([Parameter(Mandatory)][string]$RepositoryRoot, [switch]$AllowDirty)
@@ -26,11 +26,7 @@ New-Item -ItemType Directory -Path (Join-Path $ViewerRepository 'Logs') -Force |
 $previousBuild = $env:MANHATTAN_BUILD_PATH
 try {
     $env:MANHATTAN_BUILD_PATH = $OutputPath
-    $arguments = @('build', $ViewerProject, '--editor-version', $ViewerEditorVersion,
-        '--target', 'StandaloneWindows64', '--execute-method', 'Manhattan.Editor.BuildAutomation.BuildWindows',
-        '--output-path', $OutputPath, '--timeout', '7200')
-    if ($AllowDirty) { $arguments += '--allow-dirty-build' }
-    Invoke-Checked 'unity' $arguments
+    Invoke-ViewerOwnedEditorMethod -Method 'Manhattan.Editor.BuildAutomation.BuildWindows' -EditorPath $EditorPath -Timeout 7200 -BuildTarget 'StandaloneWindows64'
 }
 finally { $env:MANHATTAN_BUILD_PATH = $previousBuild }
 if (-not (Test-Path -LiteralPath $OutputPath)) { throw "Build reported success without producing $OutputPath" }

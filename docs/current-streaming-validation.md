@@ -3,6 +3,12 @@
 Recorded on 2026-10-12. This is scoped Windows diagnostic evidence, not a release
 or real-head-motion acceptance record.
 
+The performance/media tables below belong to `338c090` and its recorded v4
+correspondence. The later `747170e` correction uses v5 correspondence and needs
+separate rebuilt-input validation; those earlier numbers do not certify the
+new mapping. See [current ownership rules](skyline-ownership.md) and the later
+live webcam limits in [viewport validation](physical-viewport-validation.md).
+
 ## Source and immutable city inputs
 
 The measured scheduling policy is in viewer runtime commit
