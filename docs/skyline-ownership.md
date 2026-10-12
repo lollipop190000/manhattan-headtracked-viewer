@@ -10,6 +10,21 @@ Near remains additional facade/window detail over the Core building. This change
 
 The derived `Resources/CityOwnership.json` and `CityOwnershipHash.txt` are ignored by Git. Rebuild both when the city content changes. The sidecar binds source version, asset location/provider/type, bundle dependency content hashes, mesh layout and local transforms. Startup verifies the JSON digest; residency checks also require the loaded source-prefab mesh references. Missing, ambiguous or mismatched identity preserves the full fallback.
 
+The current rule is `legacy-flat-hull-v5-tolerance-checked`, still using schema 2.
+The offline compiler discovers nearby triangle candidates through 1mm centroid
+cells, then requires each corresponding raw vertex to be within 1mm Euclidean
+distance, cyclic winding and a positive normal dot product. Buckets alone never
+establish correspondence. This handles tiny built-mesh differences across a
+rounding boundary while rejecting a >1mm diagonal even inside one old rounded
+cell. Tile relationships and material eligibility still apply. No vertex is
+moved, no texture is rewritten and no geometry matching is added to runtime loads.
+
+**Rebuild the correspondence after updating from v4.** The runtime rejects that
+old rule and retains fallback until an explicit v5 rebuild. Recompiling this
+derived sidecar from existing exact built bundles does not require a source mesh,
+texture or Addressables bundle rebake. Keep a copy of prior diagnostics outside
+the project if they need to remain reproducible.
+
 Generate explicitly from an existing built catalog in an owned project:
 
 ```powershell

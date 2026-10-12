@@ -36,6 +36,40 @@ public sealed class SkylineSidecarRegressionTests
         ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.SetDesired(core,true);
     }
     private void Drain(){for(int i=0;i<1000&&ownership.Busy;i++)ownership.Tick(1000);Assert.That(ownership.Busy,Is.False);}
+    [TestCase(false)]
+    [TestCase(true)]
+    public void SubMillimetreBoundaryMatchRetiresOnlyCoveredWallAndRestoresBeforeDeparture(bool surfaceOff)
+    {
+        var fallbackVertices = new[] {
+            new Vector3(1018.458984375f,.22f,3234.323974609375f),
+            new Vector3(1018.458984375f,182.8800048828125f,3234.323974609375f),
+            new Vector3(989.177978515625f,182.8800048828125f,3250.080078125f),
+            Vector3.right*10,Vector3.right*11,Vector3.right*10+Vector3.up};
+        var replacementVertices = (Vector3[])fallbackVertices.Clone();
+        replacementVertices[0]=new Vector3(1018.4586791992188f,.22f,3234.323486328125f);
+        replacementVertices[1]=new Vector3(1018.4586791992188f,182.8800048828125f,3234.323486328125f);
+        replacementVertices[2]=new Vector3(989.17822265625f,182.8800048828125f,3250.080078125f);
+        original.vertices=fallbackVertices;source.GetComponent<MeshFilter>().sharedMesh.vertices=replacementVertices;
+        var sourceMesh=source.GetComponent<MeshFilter>().sharedMesh;
+        var sourceIndices=sourceMesh.triangles;var originalIndices=original.triangles;
+        var originalMaterials=sky.GetComponent<MeshRenderer>().sharedMaterials;
+        data=OwnershipTestData.Compile(new[]{skyTile,coreTile},new[]{sky,core});
+        ownership.Configure(data,"fixture",_=>"fixture-content");
+        ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);
+        var surfaces=sky.AddComponent<SurfaceDetailComparison>();surfaces.EnabledDetails=!surfaceOff;surfaces.Register(sky);
+        ownership.SetDesired(core,true);Drain();
+        Assert.That(ownership.MaskedTriangles,Is.EqualTo(1),"The exact covered wall remains eligible across a 1mm bucket boundary.");
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh.triangles,Is.EqualTo(new[]{3,4,5}),"The unrelated fallback stays present.");
+        Assert.That(core.activeSelf,Is.True);Assert.That(core.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(sourceMesh));
+        ownership.SetDesired(core,false);Assert.That(ownership.CanRelease(core),Is.False);Drain();
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));Assert.That(core.activeSelf,Is.False);
+        Assert.That(ownership.CanRelease(core),Is.True);
+        ownership.SetDesired(core,true);Drain();Assert.That(ownership.MaskedTriangles,Is.EqualTo(1));
+        ownership.SetDesired(core,false);Drain();surfaces.Unregister(sky);
+        Assert.That(original.vertices,Is.EqualTo(fallbackVertices));Assert.That(original.triangles,Is.EqualTo(originalIndices));
+        Assert.That(sourceMesh.vertices,Is.EqualTo(replacementVertices));Assert.That(sourceMesh.triangles,Is.EqualTo(sourceIndices));
+        Assert.That(sky.GetComponent<MeshRenderer>().sharedMaterials,Is.EqualTo(originalMaterials));
+    }
     [TestCase(1,true)]
     [TestCase(2,false)]
     public void CompleteReplacementRetiresSameQuadWithDifferentDiagonalOnlyForExactCatalogCohort(int required,bool complete)
@@ -105,6 +139,15 @@ public sealed class SkylineSidecarRegressionTests
         data=OwnershipTestData.Compile(catalog.tiles,new[]{sky,core,other});ownership.Configure(data,"fixture",_=>"fixture-content",catalog);
         ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.Register(otherTile,other,otherSource);ownership.SetDesired(core,true);ownership.SetDesired(other,true);Drain();
         Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+    }
+    [Test]public void PreviousQuantizedRulePreservesFallbackUntilAnExplicitSidecarRebuild()
+    {
+        data.ruleVersion="legacy-flat-hull-v4-extra-material-safe";
+        Register();Drain();
+        Assert.That(ownership.SidecarBindings,Is.Zero);
+        Assert.That(ownership.MaskedTriangles,Is.Zero);
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+        Assert.That(original.triangles,Is.EqualTo(new[]{0,1,2,3,4,5}));
     }
     [Test]public void MissingSidecarPreservesFullFallback()
     {

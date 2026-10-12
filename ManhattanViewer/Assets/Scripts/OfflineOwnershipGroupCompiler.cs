@@ -46,9 +46,11 @@ namespace Manhattan.Viewer
             public Entry entry; public MeshFilter filter; public Mesh original, first, second, stagedMesh;
             public int[][] indices; public bool[] matchable, current, staged;
         }
-        private sealed class Slot {public Part part;public int ordinal;public Slot next;}
+        private sealed class Slot {public Part part;public int ordinal;public Triangle triangle;public Slot next;}
         private readonly Dictionary<GameObject,Entry> entries=new Dictionary<GameObject,Entry>();
-        private readonly Dictionary<Triangle,Slot> triangles=new Dictionary<Triangle,Slot>();
+        // Buckets discover candidates only. Raw cyclic vertex distances establish coverage;
+        // independent millimetre rounding both misses close faces and accepts cube diagonals.
+        private readonly Dictionary<CentroidBucket,Slot> triangles=new Dictionary<CentroidBucket,Slot>();
         private readonly List<Entry> snapshot=new List<Entry>();
         private readonly Stopwatch timer=new Stopwatch();
         private IEnumerator work;
@@ -175,8 +177,9 @@ namespace Manhattan.Viewer
                         if(!part.matchable[sub]){ordinal+=indices.Length/3;continue;}
                         for(int i=0;i<indices.Length;i+=3)
                         {
-                            var key=new Triangle(points[indices[i]],points[indices[i+1]],points[indices[i+2]]);
-                            triangles.TryGetValue(key,out var previous);triangles[key]=new Slot {part=part,ordinal=ordinal++,next=previous};
+                            var triangle=new Triangle(points[indices[i]],points[indices[i+1]],points[indices[i+2]]);
+                            var bucket=triangle.Bucket;
+                            triangles.TryGetValue(bucket,out var previous);triangles[bucket]=new Slot {part=part,ordinal=ordinal++,triangle=triangle,next=previous};
                             if(++steps%256==0)yield return null;
                         }
                     }
@@ -199,9 +202,7 @@ namespace Manhattan.Viewer
                         var indices=mesh.GetTriangles(sub);yield return null;
                         for(int i=0;i<indices.Length;i+=3)
                         {
-                            var key=new Triangle(points[indices[i]],points[indices[i+1]],points[indices[i+2]]);
-                            if(triangles.TryGetValue(key,out var slot))for(;slot!=null;slot=slot.next)
-                                if(!slot.part.entry.removed&&Array.IndexOf(e.tile.replaces,slot.part.entry.tile.id)>=0)e.matches.Add(slot);
+                            MatchTriangle(e,new Triangle(points[indices[i]],points[indices[i+1]],points[indices[i+2]]));
                             if(i%768==0)yield return null;
                         }
                     }
@@ -316,6 +317,19 @@ namespace Manhattan.Viewer
             while(t!=null&&t!=entry.root.transform){local=Matrix4x4.TRS(t.localPosition,t.localRotation,t.localScale)*local;t=t.parent;}
             for(int i=0;i<vertices.Length;i++){result[i]=new Point(local.MultiplyPoint3x4(vertices[i])+entry.tile.cityOrigin);if(i%256==0)yield return null;}
         }
+        private void MatchTriangle(Entry core,Triangle triangle)
+        {
+            // A vertex-wise 1mm displacement moves the centroid at most one cell on
+            // each axis. Search 27 fixed neighbours, not combinations of vertex buckets.
+            var bucket=triangle.Bucket;
+            for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++)
+            {
+                if(!triangles.TryGetValue(bucket.Offset(x,y,z),out var slot))continue;
+                for(;slot!=null;slot=slot.next)
+                    if(!slot.part.entry.removed&&Array.IndexOf(core.tile.replaces,slot.part.entry.tile.id)>=0&&triangle.Matches(slot.triangle))
+                        core.matches.Add(slot);
+            }
+        }
         private void ReleasePart(Part p)
         {
             if(p.filter!=null)p.filter.sharedMesh=p.original;
@@ -328,22 +342,48 @@ namespace Manhattan.Viewer
             foreach(var e in entries.Values)foreach(var p in e.parts)ReleasePart(p);
             entries.Clear();triangles.Clear();snapshot.Clear();MaskedTriangles=0;
         }
-        private readonly struct Point : IEquatable<Point>,IComparable<Point>
+        private const float PositionTolerance=.001f;
+        private const double PositionToleranceSquared=(double)PositionTolerance*PositionTolerance;
+        private readonly struct Point
+        {
+            public readonly Vector3 position;
+            public Point(Vector3 p){if(!float.IsFinite(p.x)||!float.IsFinite(p.y)||!float.IsFinite(p.z))throw new InvalidOperationException("Non-finite city vertex");position=p;}
+        }
+        private readonly struct Triangle
+        {
+            private readonly Vector3 a,b,c;
+            public Triangle(Point x,Point y,Point z){a=x.position;b=y.position;c=z.position;}
+            public CentroidBucket Bucket=>new CentroidBucket(a,b,c);
+            public bool Matches(Triangle other)
+            {
+                // Cyclic rotations retain winding. Opposite winding and degenerate
+                // geometry do not prove pixel coverage, even for a two-sided Core.
+                if(Vector3.Dot(Vector3.Cross(b-a,c-a),Vector3.Cross(other.b-other.a,other.c-other.a))<=0)return false;
+                return (Near(a,other.a)&&Near(b,other.b)&&Near(c,other.c))||
+                       (Near(a,other.b)&&Near(b,other.c)&&Near(c,other.a))||
+                       (Near(a,other.c)&&Near(b,other.a)&&Near(c,other.b));
+            }
+            private static bool Near(Vector3 left,Vector3 right)
+            {
+                double x=(double)left.x-right.x,y=(double)left.y-right.y,z=(double)left.z-right.z;
+                return x*x+y*y+z*z<=PositionToleranceSquared;
+            }
+        }
+        private readonly struct CentroidBucket : IEquatable<CentroidBucket>
         {
             private readonly int x,y,z;
-            public Point(Vector3 p){if(!float.IsFinite(p.x)||!float.IsFinite(p.y)||!float.IsFinite(p.z))throw new InvalidOperationException("Non-finite city vertex");x=(int)Math.Round((double)p.x*1000);y=(int)Math.Round((double)p.y*1000);z=(int)Math.Round((double)p.z*1000);}
-            public bool Equals(Point p)=>x==p.x&&y==p.y&&z==p.z;
-            public int CompareTo(Point p){int c=x.CompareTo(p.x);if(c==0)c=y.CompareTo(p.y);return c!=0?c:z.CompareTo(p.z);}
-            public override bool Equals(object o)=>o is Point p&&Equals(p);
+            public CentroidBucket(Vector3 a,Vector3 b,Vector3 c)
+            {
+                // Compute in double so kilometre-scale float centroid rounding cannot
+                // move otherwise valid neighbours two cells apart.
+                x=Axis(a.x,b.x,c.x);y=Axis(a.y,b.y,c.y);z=Axis(a.z,b.z,c.z);
+            }
+            private CentroidBucket(int x,int y,int z){this.x=x;this.y=y;this.z=z;}
+            private static int Axis(float a,float b,float c)=>checked((int)Math.Floor(((double)a+b+c)/(3d*PositionTolerance)));
+            public CentroidBucket Offset(int dx,int dy,int dz)=>new CentroidBucket(checked(x+dx),checked(y+dy),checked(z+dz));
+            public bool Equals(CentroidBucket other)=>x==other.x&&y==other.y&&z==other.z;
+            public override bool Equals(object value)=>value is CentroidBucket other&&Equals(other);
             public override int GetHashCode(){unchecked{return (x*397^y)*397^z;}}
-        }
-        private readonly struct Triangle : IEquatable<Triangle>
-        {
-            private readonly Point a,b,c;
-            public Triangle(Point x,Point y,Point z){if(y.CompareTo(x)<0&&y.CompareTo(z)<=0){a=y;b=z;c=x;}else if(z.CompareTo(x)<0&&z.CompareTo(y)<0){a=z;b=x;c=y;}else{a=x;b=y;c=z;}}
-            public bool Equals(Triangle t)=>a.Equals(t.a)&&b.Equals(t.b)&&c.Equals(t.c);
-            public override bool Equals(object o)=>o is Triangle t&&Equals(t);
-            public override int GetHashCode(){unchecked{return (a.GetHashCode()*397^b.GetHashCode())*397^c.GetHashCode();}}
         }
     }
 }

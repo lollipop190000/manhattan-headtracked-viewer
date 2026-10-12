@@ -73,7 +73,7 @@ namespace Manhattan.Viewer
             if(entries.Count!=0)throw new InvalidOperationException("Configure ownership before residency loads");
             bindings.Clear();groups.Clear();replacementCohorts.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();DecodedMappingBytes=0;
             resolveBinding=resolver??SkylineOwnershipBinding.BundleSignature;
-            if(data==null||data.schema!=2||data.ruleVersion!="legacy-flat-hull-v4-extra-material-safe"||data.sourceVersion!=sourceVersion)return;
+            if(data==null||data.schema!=2||data.ruleVersion!=SkylineOwnershipData.CurrentRuleVersion||data.sourceVersion!=sourceVersion)return;
             try
             {
                 foreach(var tile in data.tiles)bindings.Add(tile.id,tile);

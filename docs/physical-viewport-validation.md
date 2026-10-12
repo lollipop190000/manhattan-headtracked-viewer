@@ -144,7 +144,42 @@ retained privately with the captures; no large assets, captures or logs are trac
 
 ## Remaining acceptance work
 
-Real webcam freshness, physical head-motion perception, moving-head TAA/flicker,
+A subsequent user-authorized live webcam check used the unchanged runtime
+`338c090`, an explicit private numeric observer and the same built city inputs.
+Its first 180-second trace had fresh valid input, but the copied physical profile
+differed from the user's confirmed measurements. It is excluded from physical
+perception/metric acceptance. Original profile files remained unchanged.
+
+Only the copied panel width/height and reference distance were corrected for a
+separate 95.075-second session. Camera intrinsics, IPD, webcam extrinsics, stored
+depth correction and filter settings were not fitted or overwritten. There was no
+old basic face reference and no precise camera calibration; rigid estimation was
+active. The session recorded 4,796 render observations and 2,839 distinct receive
+timestamps. After conservatively omitting the first already-present packet,
+2,838 positive sequence observations had no duplicate/reset or receive gap above
+100ms. Valid fresh fractions were 100% at both render-frame and unique-observation
+sampling; no tile-load failure was recorded.
+
+Actual Tracking OFF and depth-lock intervals were collected, rather than inferred
+from sent commands. Tracking OFF kept rendered XYZ fixed while raw/input movement
+continued. Depth lock kept input/rendered Z stable after settling while raw Z
+changed. Rig XYZ and the aperture remained fixed. The diagnostic limits were
+1 micrometre for OFF eye/rig/aperture invariance, 1mm for rendered depth after
+0.5-second settling, and at least 5mm of raw/input motion to exercise a comparison.
+These are numeric consistency checks, not calibrated distance accuracy. The private
+automatic control did not refresh the top comparison button label; the bottom
+diagnostics and recorded display flags identify actual state. Normal user clicks
+still update that button as before.
+
+The user reported that larger-than-usual movements were okay, but could not
+determine an improvement from the physical-profile correction. A depth-lock-specific
+preference was not established. No facial images were stored. Numeric observer
+overhead excludes this session from performance evidence; rotation contamination,
+absolute eye-position accuracy, camera calibration, exposure-to-display latency
+and general temporal flicker remain unverified. Both owned tracker sessions ended
+and their camera resources were released.
+
+Broader webcam robustness, calibrated physical head-motion perception, moving-head TAA/flicker,
 identification of the user's specific offending surfaces, the complete regional
 speed/proxy acceptance matrix and the actual source-ID model replacement pilot
 remain open. Current full-city 1920×1200 no-tracker diagnostic measurements are

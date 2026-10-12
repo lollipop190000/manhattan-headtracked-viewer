@@ -13,8 +13,9 @@ namespace Manhattan.Viewer
 {
     [Serializable] public sealed class SkylineOwnershipData
     {
+        public const string CurrentRuleVersion = "legacy-flat-hull-v5-tolerance-checked";
         public int schema = 2;
-        public string ruleVersion = "legacy-flat-hull-v4-extra-material-safe";
+        public string ruleVersion = CurrentRuleVersion;
         public string sourceVersion;
         public SkylineOwnershipTile[] tiles = Array.Empty<SkylineOwnershipTile>();
         public SkylineOwnershipGroup[] groups = Array.Empty<SkylineOwnershipGroup>();

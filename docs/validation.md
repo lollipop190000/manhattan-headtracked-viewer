@@ -8,6 +8,18 @@ Current integration results and incomplete checks are recorded in [physical view
 
 `tools/test.ps1 -DataOnly` runs Python data tests using only the standard library, plus eight PowerShell assertions for GPU CSV and environment metadata. These cover source integrity/extraction, catalog/fixture/notice invariants, build preflight and measured-report analysis. GitHub Actions also verifies technology/UPM revision agreement and prevents tracked downloads, personal calibration, build output or generated city files.
 
+The later tolerance-matching correction passed 228/228 EditMode and 129/129 live
+GPU PlayMode, with zero Unity skips. Its eight focused EditMode cases were first
+run against the original compiler: four failed, including a reproduced native
+wall missed across a rounding boundary and a false match beyond 1mm inside the
+same rounded cell. The final suite includes partial-wall preservation, Surface
+OFF/ON, fallback restoration before departure, reentry, imported-asset invariants
+and rejection of the previous mapping rule. Python remained 150 cases (148 passed,
+two Windows symlink-privilege skips) and eight PowerShell assertions passed. The
+generated correspondence must be rebuilt using the
+[current v5 rule](skyline-ownership.md); older measured runs remain tied to their
+recorded source and mapping digests.
+
 `tools/test.ps1` adds Unity EditMode and PlayMode suites and writes JUnit reports into ignored `TestResults/`. Preserve the head-tracking package's projection, calibration and lifecycle tests. Validate any package changes in a minimal project without URP, Manhattan or demo dependencies before publishing its pinned commit.
 
 ## Fixed route acceptance
