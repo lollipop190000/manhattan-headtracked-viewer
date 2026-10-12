@@ -15,7 +15,11 @@ The technology package remains pinned to `960d5de55037a3fe2739ed055c8de091b8c54a
 
 ## Safe Unity test execution
 
+Current viewport integration adds a physical aperture to the existing estimator/filter/projection path. Rulers use that aperture and measurement confirmation also binds its position, so moving a mapped window invalidates confirmation even if the pixel resolution stays constant. Full panel mapping is explicit in Settings and available only in Windows Player. See [current viewport validation](physical-viewport-validation.md) for exact tested revisions and limits; the historical results below remain attached to their original sources.
+
 Use Unity **6000.3.22f1**, a fresh test process launched with **`-runTests`**, and a clean test scene. Do not run this fixture in an ordinary interactive Test Runner session.
+
+`tools/test.ps1` now supplies `--no-tracker` and a disposable calibration directory to both Unity runs. Use `tools/test.ps1 -EditorPlayMode -PythonExe '<Python 3.13 executable>'` for tests requiring a live GPU Game View. This explicit option opens the pinned Editor, prepares an empty test scene, keeps all fixture guards, and produces `TestResults/playmode-nunit.xml`. Default CLI batch execution cannot invoke `WaitForEndOfFrame`; its failures/skips are not rendered acceptance. Optional `-EditorPath` selects the pinned executable when inventory cannot locate it.
 
 The existing `ManhattanBootstrap.StartEmptyScene` runtime initializer can start the normal viewer and Python bridge when a catalog is available unless the process has `-runTests`. Fixture setup explicitly fails if this argument is absent or an active bootstrap already exists. This guard cannot undo startup that occurred before setup. The argument also does not suppress an authored bootstrap component already present in a scene.
 

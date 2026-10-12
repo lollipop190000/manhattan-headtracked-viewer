@@ -16,10 +16,10 @@ Windows x64 배포 ZIP을 전부 압축 해제하면 Unity Editor 설치나 도�
 
 ## 웹캠 추적기 준비와 실행
 
-이 비공개 저장소를 읽을 수 있는 GitHub 계정, Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다.
+공개 저장소를 복제할 Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다. `codex/physical-projection-audit-20261012` 소스를 직접 실행하려면 [브랜치 지정 실행 안내](team-quickstart.md)를 따릅니다.
 
 ```powershell
-git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git clone https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
@@ -35,7 +35,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 ## 실측 입력과 개인 보정
 
-화면의 실제 표시 영역 너비·높이를 재고, 평소 정면을 보는 자세에서 눈과 화면 평면 사이의 거리를 입력합니다. 화면 베젤 크기나 해상도 픽셀 수를 물리 길이 대신 입력하지 않습니다. 기본 전체 화면에서는 표시 패널의 물리 크기를 사용하고, 창 모드로 변경했다면 게임 화면이 차지하는 실제 너비·높이에 맞춰 다시 보정합니다.
+Settings → **WEBCAM**에서 장치 이름·연결 방식·번호를 확인하고 클릭해 전환합니다. Python 추적기가 실행 중이어야 합니다. **Refresh webcam list**는 장치 목록을 갱신합니다. 성공한 선택은 `tracker_camera_preference.json`에 저장되며 도시 위치나 물리 보정 파일을 변경하지 않습니다. 명시적인 `-Camera`가 저장값보다 우선합니다. EShare에서 검은 프레임만 들어오면 **Black video** 상태가 표시됩니다. 휴대폰/외부 영상 연결은 EShare에서 완료해야 합니다. 카메라가 달라지면 렌즈 위치·intrinsics와 얼굴 기준은 새 장치에 맞춰 확인합니다.
+
+화면의 실제 표시 영역 너비·높이를 재고, 평소 정면을 보는 자세에서 눈과 화면 평면 사이의 거리를 입력합니다. 화면 베젤 크기나 해상도 픽셀 수를 물리 길이 대신 입력하지 않습니다. 기본 모드의 치수와 웹캠 위치는 게임 전체 표시 영역과 그 중심 기준입니다. 창을 옮기거나 크기를 바꾸면 두 10 cm ruler와 웹캠 중심 기준을 다시 확인합니다.
+
+패널 전체 치수를 입력하고 창 모드에서도 사용하려면 Settings → Viewport check의 **Dimensions are full monitor panel**을 켭니다. 치수·웹캠 위치·눈 좌표의 기준은 패널 중심입니다. Windows Player는 물리 픽셀 기준 client 위치와 크기를 측정하고 `Camera.rect`를 한 번 더 반영합니다. 창 전체가 한 패널 안에 있어야 하며 최소화·다른 모니터·오프스크린 렌더링이면 상태 메시지를 해결한 뒤 다시 확인합니다. 이 옵션은 viewer preference이며 기존 physical calibration을 자동 수정하거나 저장하지 않습니다.
 
 오른쪽 `Settings`에서 `Screen width (cm)`, `Screen height (cm)`, `Viewing distance (cm)`를 수정한 뒤 `Save physical calibration`으로 저장합니다. 웹캠을 켠 상태에서 정면 기준 자세를 잡고 `Capture current face reference`를 누릅니다. IPD·웹캠 위치·카메라 보정과 필터는 같은 설정창의 상세 항목에 있습니다.
 
@@ -63,7 +67,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 웹캠이 열리지 않으면 다른 카메라 앱을 닫고 Windows의 카메라 접근 권한과 `-Camera` 번호를 확인합니다. `Settings`의 `Show diagnostics`는 추적 상태·결과 지연·프레임 시간·타일 로딩 상태를 표시합니다. 런처 실행 로그는 실행 파일 옆 `Player.log`, `tracker-output.log`, `tracker-error.log`에 생성됩니다. 직접 실행한 플레이어의 기본 로그는 위 개인 저장 위치의 `Player.log`입니다.
 
-1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/lollipop190000/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
+1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
+
+벤치마크의 `benchmark.json`은 실행 마지막의 카메라 AA 설정, VSync,
+목표 프레임률, Frame Timing 통계 기능 상태와 추적기 요청 여부도 기록합니다.
+`cameraAntiAliasing`, `vSyncCount`, `targetFrameRate`,
+`frameTimingStatisticsEnabled`, `trackerRequested`를 원본 보고서와 함께 보존합니다.
+이 값들은 종료 시점의 설정이며 실행 내내 설정이 같았다는 증거나 달성한 FPS가
+아닙니다. 설정한 AA가 실제 모든 렌더 패스에서 사용됐는지는 별도 렌더 검사가
+필요합니다. CPU/GPU 프레임 시간, 관측 유효율과 화면 품질도 각각 확인합니다.
 
 ## 배포 ZIP에 포함할 파일
 
@@ -80,5 +92,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 | `Notices/` | 하위 파일 전체와 `manifest.json` |
 
 `tools/build.ps1`는 빌드 후 원본 라이선스·이용 조건·출처를 `Notices/`에 복사하고 크기와 SHA-256을 검증합니다. 현재 검증한 목록은 **67개 원문 파일**이며 Unity·추적 패키지·도시 원본과 `CityDetailRenderer`의 Unity 라이선스·NOTICE를 포함합니다. 목록은 `Notices/manifest.json`을 기준으로 보존하며 파일 내용을 수정하지 않습니다. 이 manifest에는 도시 소스 버전과 기술 커밋도 기록됩니다.
+
+빌드 도구는 고정 Editor를 직접 실행하며 `-EditorPath`를 지원합니다. Addressables 콘텐츠 빌드 → 비동기 ownership 생성 → Player 빌드 순서로 완료를 기다립니다. 이 비동기 진입점을 `unity run/build`나 `-quit`로 실행하면 생성 중 조기 종료될 수 있으므로 `tools/build.ps1`를 사용합니다. 시간 초과나 실패 시 이 도구가 시작한 Editor만 종료하고 오류와 해당 로그 경로를 반환합니다.
+
+비동기 생성이 끝난 뒤 실제 Player 빌드는 `PlayerBuildDispatch`가 편집기의 예약 실행 시점에 시작합니다. Unity player loop 안에서 곧바로 빌드하면 거절되는 문제를 피하며, 결과와 예외를 원래 빌드 작업으로 돌려줍니다. 독립 Windows 시험 빌드에서도 동일한 공개 코드를 그대로 사용해 실제 실행 파일 생성을 확인했습니다. 이 검사는 전체 도시 배포본의 이식성·성능 합격과는 별개입니다.
 
 `ManhattanViewer.provenance.json`의 로컬 개발 경로, `ManhattanViewer_BurstDebugInformation_DoNotShip/`, 실행·추적기 로그, `tracker-session-*.heartbeat`, 개인 보정, 소스 ZIP, 추적기 가상환경·얼굴 모델은 배포 ZIP에서 제외합니다. 배포 ZIP의 SHA-256과 해당 빌드의 검증 기록은 Release에 함께 제공합니다.

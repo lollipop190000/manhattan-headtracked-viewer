@@ -27,6 +27,18 @@ namespace Manhattan.Viewer
         private int renderedFrame = -10;
         private static readonly int ScaledScreenParams = Shader.PropertyToID("_ScaledScreenParams");
         public bool Visible { get; private set; }
+        private Vector2 PhysicalSize
+        {
+            get
+            {
+                var display = camera != null ? camera.GetComponent<HeadTrackedDisplay>() : null;
+                if (display == null || !float.IsFinite(calibration.screenWidth) || !float.IsFinite(calibration.screenHeight) ||
+                    calibration.screenWidth <= 0 || calibration.screenHeight <= 0)
+                    return new Vector2(calibration.screenWidth, calibration.screenHeight);
+                Rect aperture = display.ProjectionScreenRectMeters;
+                return aperture.size;
+            }
+        }
         public RectTransform HorizontalBar => horizontal;
         public RectTransform VerticalBar => vertical;
 
@@ -75,7 +87,7 @@ namespace Manhattan.Viewer
             if (overlay == null) return;
             Layout layout = default;
             bool valid = Onscreen && calibration != null && TryCalculate(camera.pixelRect,
-                new Vector2(calibration.screenWidth, calibration.screenHeight), out layout);
+                PhysicalSize, out layout);
             overlay.gameObject.SetActive(Visible && valid);
             if (!Visible || !valid) return;
             PixelRect(horizontal, new Rect(layout.HorizontalStart.x, layout.HorizontalStart.y - 1, layout.HorizontalPixels, 2));
@@ -111,13 +123,13 @@ namespace Manhattan.Viewer
             bool fresh = renderedFrame >= Time.frameCount - 2 && renderedViewport == viewport;
             string render = fresh ? string.Format(CultureInfo.InvariantCulture, "{0} x {1} px (URP frame)", renderedPixels.x, renderedPixels.y) : "awaiting URP camera frame";
             string note = !Onscreen ? "Rulers unavailable: offscreen target or different display." :
-                !TryCalculate(viewport, new Vector2(calibration.screenWidth, calibration.screenHeight), out _) ? "Rulers unavailable: invalid size or size below 10 cm." : "Measure both 10 cm rulers with a real ruler.";
+                !TryCalculate(viewport, PhysicalSize, out _) ? "Rulers unavailable: invalid size or size below 10 cm." : "Measure both 10 cm rulers with a real ruler.";
             return string.Format(CultureInfo.InvariantCulture,
                 "Camera viewport: ({0:0}, {1:0}) {2:0} x {3:0} px\nRender: {4}\nAspect: viewport {5:0.0000} / applied {6:0.0000}\nApplied size: {7:0.##} x {8:0.##} cm\n{9}\nMeasurement aid only; no values changed or saved.",
                 viewport.x, viewport.y, viewport.width, viewport.height, render,
                 viewport.height > 0 ? viewport.width / viewport.height : 0,
-                calibration.screenHeight > 0 ? calibration.screenWidth / calibration.screenHeight : 0,
-                calibration.screenWidth * 100, calibration.screenHeight * 100, note);
+                PhysicalSize.y > 0 ? PhysicalSize.x / PhysicalSize.y : 0,
+                PhysicalSize.x * 100, PhysicalSize.y * 100, note);
         }
 
         private void OnCameraRendered(ScriptableRenderContext context, Camera renderedCamera)

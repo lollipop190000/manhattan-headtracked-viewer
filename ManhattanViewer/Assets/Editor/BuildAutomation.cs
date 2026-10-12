@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Manhattan.Viewer;
 using UnityEditor;
@@ -189,7 +190,17 @@ namespace Manhattan.Editor
             Debug.Log("CITY_DETAIL_SHADER_VARIANTS " + sources.Count + " keyword combinations retained without native city dependencies.");
         }
 
-        public static void BuildWindows()
+        // Async batch entry point: launch without -quit and let this method own the
+        // exit only after the complete ownership/player build or handled failure.
+        public static async void BuildWindows()
+        {
+            int exitCode=1;
+            try {await BuildWindowsAsync();exitCode=0;}
+            catch(Exception error){Debug.LogException(error);}
+            finally {if(Application.isBatchMode)EditorApplication.Exit(exitCode);}
+        }
+
+        public static async Task BuildWindowsAsync()
         {
             if(AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset")==null)throw new InvalidOperationException("Run CityBake.BuildAll first.");
             WriteBuildIdentity();
@@ -198,13 +209,13 @@ namespace Manhattan.Editor
             AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult addressableResult);
             if(!string.IsNullOrEmpty(addressableResult.Error))throw new InvalidOperationException(addressableResult.Error);
             // Compile ownership from these exact built bundles, preserving imported city data.
-            SkylineOwnershipBake.FromBuildSettings(addressableResult.OutputPath);
+            await SkylineOwnershipBake.FromBuildSettingsAsync(addressableResult.OutputPath);
             // Content was built above; prevent the player preprocessor from building it a second time.
             addressableSettings.BuildAddressablesWithPlayerBuild = AddressableAssetSettings.PlayerBuildOption.DoNotBuildWithPlayer;
             string output=Environment.GetEnvironmentVariable("MANHATTAN_BUILD_PATH");
             if(string.IsNullOrEmpty(output))output=Path.GetFullPath(Path.Combine(Application.dataPath,"../../Builds/ManhattanViewer/ManhattanViewer.exe"));
             Directory.CreateDirectory(Path.GetDirectoryName(output));
-            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=EditorBuildSettings.scenes.Where(s=>s.enabled).Select(s=>s.path).ToArray(),locationPathName=output,target=BuildTarget.StandaloneWindows64,options=BuildOptions.None});
+            var report=await PlayerBuildDispatch.BuildAsync(new BuildPlayerOptions{scenes=EditorBuildSettings.scenes.Where(s=>s.enabled).Select(s=>s.path).ToArray(),locationPathName=output,target=BuildTarget.StandaloneWindows64,options=BuildOptions.None});
             if(report.summary.result!=BuildResult.Succeeded)throw new InvalidOperationException("Player build failed: "+report.summary.result);
             Debug.Log("MANHATTAN_WINDOWS_BUILD "+output+" bytes="+report.summary.totalSize);
         }

@@ -1,13 +1,19 @@
 > **WIP shared branch; do not merge as a release.**
-> Textured facade/roof restoration is retained; only dirty Skyline masks are prepared with fresh coverage/publication guards. Final Unity tests119/119 Play and178/178 Edit. Current short streamingP95=2.1380ms still exceeds2ms. Real webcam/global flicker acceptance remain pending. See [current status](docs/ownership-wip-status.md).
+> Tests and performance measurements belong to their recorded source revisions. Current scoped no-tracker Windows measurements and earlier failed runs are in [streaming validation](docs/current-streaming-validation.md). Real webcam/global flicker and release acceptance remain pending. See [ownership status](docs/ownership-wip-status.md) and [viewport integration checks](docs/physical-viewport-validation.md).
 
 # Manhattan Head Tracked Viewer
 
+팀원이 `codex/physical-projection-audit-20261012` 버전을 실행하려면 [브랜치 지정 실행 안내](docs/team-quickstart.md)를 따릅니다. 저장소와 도시 원본 Release는 공개되어 있습니다. 기존 Windows preview 초안은 다른 커밋이므로 이 브랜치의 실행 파일로 사용하지 않습니다.
+
 맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
 
-Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~50m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
+Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~100m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
-현재 고정된 기술 커밋은 [`960d5de55037a3fe2739ed055c8de091b8c54aed`](https://github.com/lollipop190000/head-tracked-display/commit/960d5de55037a3fe2739ed055c8de091b8c54aed)입니다. 패키지 데모와 URP 없는 최소 소비 프로젝트의 투영·보정·수명주기 검사, 런타임 전용 Windows smoke와 공용 런처 검사를 통과했습니다. 맨해튼 전체 도시 Windows 빌드와 실제 GPU의 비교·창문 디테일 검증도 실행했습니다. 첫 Midtown 50m/s 측정에서는 프레임 P95 16.683ms, P99 16.684ms, 50ms 이상 정지 0회를 기록했습니다. **전체 경로의 웹캠 성능 합격과 실제 머리 이동 확인은 아직 완료되지 않았습니다.** [검증 기록](docs/validation.md)은 실제 측정과 미확인 항목을 구분합니다.
+현재 기술 패키지는 [`c5ddab14d12dcc8acc8b31048f5752686984f3ab`](https://github.com/lollipop190000/head-tracked-display/commit/c5ddab14d12dcc8acc8b31048f5752686984f3ab)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했습니다. [현재 투영 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
+
+일반적인 스트리밍 준비 완료와 실제 표시 전환을 다른 프레임으로 나누는 작업 경계를 추가했습니다. 기존 표시를 복구해야 하는 경우에는 즉시 처리합니다. 소스 `338c090`과 당시 대응 자료로 측정한 1920×1200·100m/s·웹캠 없는 진단에서 Midtown 반복 streaming P95는 1.8049/1.8441ms였습니다. 작업이 활발한 구간의 P95는 여전히 2ms를 넘으며, 이후 면 대응 수정의 성능·전체 지역·지붕 번쩍임·배포본 합격은 별도 검증이 필요합니다. 측정한 정확한 소스, 실패했던 중간 정책, CPU/GPU 시간과 남은 한계는 [현재 스트리밍 검증 기록](docs/current-streaming-validation.md)에 있습니다.
+
+동일한 벽의 미세한 좌표 차이가 반올림 경계에 걸려 단색 원거리 면이 상세 텍스처를 가리는 문제를 재현해 수정했습니다. 실제 꼭짓점 거리와 방향을 검증하며, 원본 자산은 변경하지 않습니다. 현재 코드에는 기존 built bundle에서 **v5 면 대응 자료를 명시적으로 재생성**해야 합니다. [Skyline 대응 자료 생성 안내](docs/skyline-ownership.md)를 따릅니다.
 
 ## Windows 배포본 실행
 
@@ -28,11 +34,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 ## 복제 → 준비 → 빌드 → 실행
 
-Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`), Unity **6000.3.22f1**와 Windows 빌드 모듈을 설치합니다. GitHub 계정은 이 비공개 저장소와 자산 Release에 접근할 수 있어야 합니다. Unity 라이선스도 활성화되어 있어야 합니다.
+Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`), Unity **6000.3.22f1**와 Windows 빌드 모듈을 설치합니다. 저장소와 자산 Release는 공개되어 있습니다. 현재 setup 도구는 `gh auth status`를 확인하므로 GitHub CLI에 로그인합니다. Unity 라이선스도 활성화되어 있어야 합니다.
 
 ```powershell
 gh auth login
-git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git clone --branch codex/physical-projection-audit-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs install --local
 git lfs pull
@@ -61,6 +67,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 
 ## 조작과 보정
 
+Settings → **WEBCAM**에서 장치 이름을 보고 카메라를 선택하고 **Refresh webcam list**로 목록을 갱신합니다. Python 추적기가 실행 중일 때 사용할 수 있고, 도시를 다시 시작하지 않고 전환합니다. 마지막으로 선택한 장치는 개인 폴더의 `tracker_camera_preference.json`에 따로 저장됩니다. 명령에 `-Camera 1`처럼 번호를 명시하면 그 실행에서는 저장한 선택보다 우선합니다. 장치 이름 옆 `dshow` / `msmf`는 Windows 연결 방식이며 번호는 방식별로 다를 수 있습니다. 필요하면 `tools/run.ps1 -Camera 1 -CameraBackend msmf`로 명시합니다. EShare가 검은 영상을 보내면 상태에 **Black video**가 표시되며 EShare에서 휴대폰/외부 영상 연결을 먼저 완료해야 합니다. 카메라를 바꾸면 해당 카메라의 위치·보정과 얼굴 기준을 다시 확인합니다.
+
 | 조작 | 동작 |
 |---|---|
 | 도시 화면 클릭 | 마우스 포인터 잠금·이동 시작 |
@@ -71,7 +79,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 | Esc / Settings | 포인터 해제·오른쪽 설정창 |
 | Alt+F4 | 플레이어 종료·추적기 정리 |
 
-첫 실행에서 실제 화면 **너비·높이·관찰 거리**를 입력합니다. 머리 이동은 실측 단위 그대로 투영하며, 먼 스카이라인보다 가까운 창틀·창문·건물 모서리에서 효과를 확인하기 쉽습니다. 상세 카메라 보정·IPD·이동 속도·진단은 오른쪽 Settings에 있습니다.
+첫 실행에서 실제 화면 **너비·높이·관찰 거리**를 입력합니다. 머리 이동은 실측 단위 그대로 투영하며, 먼 스카이라인보다 가까운 창틀·창문·건물 모서리에서 효과를 확인하기 쉽습니다. 상세 카메라 보정·IPD·이동 속도·진단은 오른쪽 Settings에 있습니다. 기본 치수는 게임 전체 표시 영역의 실측값입니다. 패널 전체 치수로 창 모드까지 사용하려면 Settings → Viewport check의 **Dimensions are full monitor panel**을 켜고 패널 중심 기준으로 웹캠 위치를 확인합니다. Windows Player가 창 위치·크기와 카메라 영역을 함께 반영하며, 기존 개인 보정 파일은 자동 변환하지 않습니다.
 
 자동 벤치마크·비교 캡처는 시작 입력창을 생략하므로, 먼저 일반 실행에서 실측 보정을 저장합니다. 개인 파일을 별도 경로에서 관리하려면 일반 실행과 벤치마크에 같은 `-CalibrationDirectory '<private calibration directory>'`를 전달합니다. 해당 경로의 보정·설정·북마크는 Git이나 자산 Release에 올리지 않습니다.
 
@@ -79,7 +87,7 @@ Head Tracking OFF는 현재 머리 오프셋을 유지하고 관측·필터링�
 
 ## 팀 개발
 
-`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [비공개 source Release](https://github.com/lollipop190000/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
+`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [공개 source Release](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
 
 - [자산 버전·재현 방법](docs/assets.md)
 - [입력·충돌·게임 요소 연결](docs/architecture.md)
@@ -90,6 +98,10 @@ GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한
 
 개발 중 커밋하지 않은 변경으로 로컬 빌드를 확인할 때는 `tools/build.ps1 -AllowDirty`를 사용합니다. 팀에 전달할 빌드는 변경을 커밋하고 고정된 소스 버전에서 다시 만듭니다.
 
+`tools/build.ps1`는 고정 Unity Editor를 직접 실행하고 도시 대응 데이터 생성이 끝난 뒤 Player를 빌드합니다. Editor 경로를 자동으로 찾지 못하면 `-EditorPath`로 지정합니다. 기존 번들에서 대응 데이터만 다시 만들 때는 [ownership 생성 안내](docs/skyline-ownership.md)의 `tools/bake_ownership.ps1`를 사용합니다.
+
+멀리 있는 건물의 텍스처를 단색 외형이 가리던 문제는 원본 자산을 바꾸지 않고 대응 판정을 수정했습니다. 같은 위치의 실제 Windows Player 수정 전후 결과는 [벽면 검증 기록](docs/beige-wall-validation.md)에 있습니다.
+
 `tools/build.ps1`는 실행 파일 옆 `Notices/`에 검증된 도시 원본 이용 조건과 라이선스·출처를 함께 준비합니다. Windows 배포 ZIP에도 이 폴더를 포함합니다. 성능 측정은 `tools/benchmark.ps1`가 1920×1200 Exclusive Fullscreen을 요청하며 AC·데스크톱 Hz·드라이버·전력 제한 가용성과 GPU 로그를 기록합니다.
 
 반복 측정 전체 목록은 `tools/benchmark_suite.ps1 -DryRun`으로 확인하고, 실측 보정 준비 후 `tools/benchmark_suite.ps1 -CalibrationDirectory '<private calibration directory>'`로 순차 실행합니다. 기본 웹캠 사용·12가지 실행의 측정 시간은 약 2시간 5분이며 준비/로딩 시간이 추가됩니다. GUID 폴더에 원본 로그와 진행 JSON을 보존합니다. `-CaseFilter`로 일부만 선택하고, `-NoTracker`·`-DurationOverride`는 명시적인 기초 비교·탐색 용도로 사용합니다. 완료 상태가 성능 합격을 의미하지는 않습니다.
@@ -97,5 +109,7 @@ GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한
 세 스위치의 시각 비교는 `tools/run.ps1 -PlayerArguments`로 `--comparison-captures-out <directory> --quit-after-comparison-captures`를 명시적으로 실행합니다. 30초 준비 후 기준 화면·8가지 조합·왕복 복원 화면과 보고서를 만들며, 일반 시작이나 저장 설정을 바꾸지 않습니다. 명령 예제와 수동 이미지 확인 항목은 [비교 캡처 가이드](docs/validation.md#explicit-comparison-captures)에 있습니다. 실제 성능 분석은 5개 지역×두 속도의 10가지 경로, 별도 1200초 메모리 기록과 일치하는 충돌 프록시 OFF/ON 쌍을 확인합니다.
 
 코드는 [MIT](LICENSE) 라이선스입니다. NYC 지리 데이터와 외부 모델·라이브러리의 조건은 별도로 유지합니다.
+
+소스 하나(`282030_0`)의 실제 Windows Player 교체·Surface OFF/ON·취소·복원을 격리된 환경에서 검증했습니다. 기존 면 492개만 교체하고 주변 메시 19개를 보존했으며, 원본 6,068개 삼각형과 좌표·노멀·UV가 일치했습니다. [소스 교체 검증 기록](docs/source-replacement-validation.md)에 정확한 실행 버전, 이미지 비교 오차와 실패 이력을 남겼습니다. 일반 도시 스트리밍 연결·모델 자동 활성화·광학 동등성·성능 합격은 아직 완료되지 않았습니다.
 
 Legacy merged Skyline의 primitive ownership, offline 재생성 및 검증 한계는 [소유권 문서](docs/skyline-ownership.md)에 정리했습니다.

@@ -92,10 +92,10 @@ class BuildGateTests(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         preflight = source.index("Invoke-Checked $PythonExe @((Join-Path $PSScriptRoot 'build_preflight.py')")
         gate = source.index("Assert-CleanBuildSource -RepositoryRoot $ViewerRepository -AllowDirty:$AllowDirty")
-        unity = source.index("Invoke-Checked 'unity' $arguments")
+        unity = source.index("Invoke-ViewerOwnedEditorMethod -Method 'Manhattan.Editor.BuildAutomation.BuildWindows'")
         self.assertLess(preflight, gate)
         self.assertLess(gate, unity)
-        self.assertIn("--allow-dirty-build", source)
+        self.assertIn("[switch]$AllowDirty", source)
 
 
 if __name__ == "__main__":

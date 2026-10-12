@@ -15,6 +15,10 @@ namespace Manhattan.Viewer
         private UnityEngine.UI.Text diagnostics, message, captureMessage, viewportMessage;
         private ViewerViewportRuler viewportRuler;
         private ViewerMeasurementWorkflow measurement;
+        private ViewerCameraSelection cameras;
+        private UnityEngine.UI.Text cameraMessage;
+        private Transform cameraOptions;
+        private string cameraListFingerprint;
         private float nextDiagnostics;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
@@ -80,6 +84,7 @@ namespace Manhattan.Viewer
             scroll.viewport = viewport; scroll.content = content;
             Heading(content, "SETTINGS");
             TextRow(content, "Physical values use centimetres. Changes preserve city position.", 54);
+            BuildWebcamSection(content);
             var c = app.Display.Calibration;
             NumericRow(content, "Screen width (cm)", c.screenWidth * 100f, v => { if (v >= 10 && v <= 300) { c.screenWidth = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Screen height (cm)", c.screenHeight * 100f, v => { if (v >= 10 && v <= 200) { c.screenHeight = v / 100f; app.UpdateCalibration(); } });
@@ -103,9 +108,12 @@ namespace Manhattan.Viewer
             captureMessage.supportRichText = false;
             Stretch(captureMessage.rectTransform);
             Heading(content, "VIEWPORT CHECK");
+            TextRow(content, "Default: width/height measure the whole game render surface. Full panel mode uses the entire monitor panel and maps the player window automatically. Webcam offsets use that same centre.", 100);
+            ToggleRow(content, "Dimensions are full monitor panel", app.Preferences.fullPanelDimensions, value =>
+            { app.Preferences.fullPanelDimensions = value; app.WindowViewport.SetPanelMapping(value); app.Frame.Refresh(); app.Rendering.ResetHistory(); app.SavePreferences(); });
             ToggleRow(content, "Show manual 10 cm rulers", false, viewportRuler.SetVisible);
-            var viewportRow = Row(content, 132);
-            viewportMessage = Text(viewportRow, viewportRuler.Describe(), 14, 0, 0, 380, 132);
+            var viewportRow = Row(content, 240);
+            viewportMessage = Text(viewportRow, viewportRuler.Describe(), 14, 0, 0, 380, 240);
             Stretch(viewportMessage.rectTransform);
             Heading(content, "FLIGHT & IMAGE");
             NumericRow(content, "Movement speed (m/s)", app.Flight.Speed, v => { app.Flight.Speed = v; app.Preferences.movementSpeed = app.Flight.Speed; app.SavePreferences(); });
@@ -141,6 +149,22 @@ namespace Manhattan.Viewer
             ActionRow(content, "Run 20 minute route at current speed", () => { app.Benchmark.StartBenchmark(app.Flight.Speed, 1200f, null, app.Streamer.CollisionProxiesEnabled); ShowDrawer(false); });
             ActionRow(content, "Finish and save current benchmark", () => app.Benchmark.Finish());
             ActionRow(content, "Close settings", () => ShowDrawer(false));
+        }
+
+        private void BuildWebcamSection(Transform content)
+        {
+            Heading(content, "WEBCAM");
+            cameras = new ViewerCameraSelection(ViewerPersistence.DirectoryPath);
+            var cameraStatusRow = Row(content, 120);
+            cameraMessage = Text(cameraStatusRow, "Waiting for tracker camera list", 14, 0, 0, 380, 120);
+            cameraMessage.supportRichText = false; Stretch(cameraMessage.rectTransform);
+            ActionRow(content, "Refresh webcam list", () => cameras.Refresh());
+            var options = new GameObject("Webcam choices", typeof(RectTransform));
+            options.transform.SetParent(content, false); cameraOptions = options.transform;
+            var cameraLayout = options.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            cameraLayout.spacing = 6; cameraLayout.childControlHeight = cameraLayout.childControlWidth = true;
+            cameraLayout.childForceExpandHeight = false;
+            TextRow(content, "Choose a camera below. The tracker switches without moving the city. After changing cameras, check calibration and capture a new face reference. Black video means the camera source is not supplying an image.", 108);
         }
 
         private void CaptureFaceReference()
@@ -185,13 +209,14 @@ namespace Manhattan.Viewer
         {
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
-            if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe();
+            if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe() + "\n" + app.WindowViewport.Status;
             if (captureMessage != null)
             {
                 captureMessage.text = measurement.Describe();
                 var row = captureMessage.transform.parent.GetComponent<UnityEngine.UI.LayoutElement>();
                 row.minHeight = row.preferredHeight = Mathf.Max(260, captureMessage.preferredHeight + 12);
             }
+            UpdateCameraChoices();
             diagnostics.text = app.Preferences.diagnostics ? string.Format(CultureInfo.InvariantCulture,
                 "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}{10}",
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
@@ -199,6 +224,30 @@ namespace Manhattan.Viewer
                 app.Benchmark.CpuMemoryBytes / 1048576f, app.Benchmark.GpuMemoryBytes / 1048576f,
                 ViewerTrackingDiagnostics.Format(app.Display) + "\n" + ViewerTrackingDiagnostics.FormatNear(app.Streamer.GetNearDiagnostics()),
                 app.Benchmark.Recording ? "\nRecording benchmark…" : "") : "";
+        }
+
+        private void UpdateCameraChoices()
+        {
+            if (cameras == null) return;
+            cameras.ReadStatus(); cameraMessage.text = cameras.Describe();
+            string fingerprint = "offline";
+            if (cameras.Online)
+            {
+                fingerprint = cameras.Current.session + ":" + cameras.Current.selected?.id;
+                foreach (var device in cameras.Current.devices ?? Array.Empty<ViewerCameraSelection.Device>()) fingerprint += ":" + device.id;
+            }
+            if (fingerprint == cameraListFingerprint) return;
+            cameraListFingerprint = fingerprint;
+            foreach (Transform child in cameraOptions) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            if (!cameras.Online) return;
+            foreach (var item in cameras.Current.devices ?? Array.Empty<ViewerCameraSelection.Device>())
+            {
+                var device = item;
+                string label = device.name + " (" + device.backend + ", " + device.index + ")";
+                if (device.id == cameras.Current.selected?.id) label = "Selected: " + label;
+                var button = Button(Row(cameraOptions, 52), label, () => cameras.Select(device));
+                button.GetComponentInChildren<UnityEngine.UI.Text>().supportRichText = false;
+            }
         }
 
         private RectTransform Row(Transform parent, float height)

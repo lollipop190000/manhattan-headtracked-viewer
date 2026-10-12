@@ -333,6 +333,10 @@ def analyze_run(directory):
                launchRequestedSpeed=launch_speed, executedSpeed=speed_trace,
                durationSeconds=duration, width=report.get("width"), height=report.get("height"),
                renderWidth=report.get("renderWidth"), renderHeight=report.get("renderHeight"), fullscreenMode=report.get("fullscreenMode"),
+               cameraAntiAliasing=report.get("cameraAntiAliasing"), vSyncCount=number(report.get("vSyncCount")),
+               targetFrameRate=number(report.get("targetFrameRate")),
+               frameTimingStatisticsEnabled=report.get("frameTimingStatisticsEnabled"),
+               reportedTrackerRequested=report.get("trackerRequested"),
                displayModeWidth=report.get("displayModeWidth"), displayModeHeight=report.get("displayModeHeight"), environment=environment,
                routeDurationSeconds=route_duration, routeDistanceMeters=number(report.get("routeDistanceMeters")),
                routeCoverageFraction=coverage, completedMeasuredCircuits=completed, traceDurationSeconds=trace_duration,
@@ -488,6 +492,13 @@ def markdown(result):
             format_number(run["workingSetPeakBytes"], 3, GIB), format_number(run["driverGpu"]["peakBytes"], 3, GIB), format_number(run["gfxApproxPeakBytes"], 3, GIB)]) + " |")
     if not result["runs"]:
         lines += ["", "No measured benchmark files are available."]
+    lines += ["", "These rendering values are end-of-run settings, not achieved FPS or proof of unchanged settings throughout the run. Missing fields in historical reports remain pending.", "",
+              "| Region / m/s | Camera AA setting | VSync count | Target FPS setting | Frame timing enabled | Tracker requested |", "|---|---|---:|---:|---|---|"]
+    for run in result["runs"]:
+        boolean = lambda value: "pending" if value is None else str(value)
+        lines.append(f"| {run['region']} / {format_number(run['speed'], 0)} | {run.get('cameraAntiAliasing') or 'pending'} | "
+                     f"{format_number(run.get('vSyncCount'), 0)} | {format_number(run.get('targetFrameRate'), 0)} | "
+                     f"{boolean(run.get('frameTimingStatisticsEnabled'))} | {boolean(run.get('reportedTrackerRequested'))} |")
     lines += ["", "| Region | Requested m/s | Applied route m/s | Position/time median m/s | Speed verified |", "|---|---:|---:|---:|---|"]
     for run in result["runs"]:
         lines.append(f"| {run['region']} | {format_number(run['requestedSpeed'])} | {format_number(run['actualRouteSpeed'])} | "

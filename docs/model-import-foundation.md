@@ -1,15 +1,24 @@
 # Opt-in source-ID import foundation
 
-Status: **source inspection and immutable staging are runnable; Unity import/bake,
-material conversion, and live replacement are not implemented by this patch.**
+Status: source inspection and immutable staging are runnable. The later explicit
+`SourceReplacementLoader` connects the decision gate to a controlled native
+scene, exact primitive masks, Surface variants and rollback. Production import,
+optical approval and the live CityStreamer coordinator remain incomplete.
 Every generated plan deliberately says `runtimeReady: false`.
 
-This additive proposal targets viewer PR #2 at
-`6a2e0c50710ca86a3ee24757457ec5f3e116b97b`. The tracking package remains pinned to
-`960d5de55037a3fe2739ed055c8de091b8c54aed`. Existing CityBake, CityCatalog,
-CityStreamer, Skyline/Core ownership, Surface comparison, navigation, calibration,
-and off-axis projection are unchanged. Nothing discovers or enables this contract
-at startup. Existing legacy additive Near assets follow their existing path.
+Source and staging path checks reject POSIX symlinks and Windows reparse points,
+including directory junctions in ancestor directories. Windows junction rejection
+is exercised using real junctions without requiring symbolic-link privileges.
+Symbolic-link tests report a skip when Windows denies that privilege; the payload
+boundary remains enforced.
+
+The original staging proposal targets viewer PR #2 at
+`6a2e0c50710ca86a3ee24757457ec5f3e116b97b`. Current viewer integration pins the
+tracking package to `2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`; see its separate
+[viewport validation](physical-viewport-validation.md). Staging does not change
+CityBake, navigation, calibration or scene selection. Normal startup does not
+discover or enable this contract. Existing legacy additive Near assets follow
+their existing path.
 
 ## Runnable commands
 
@@ -151,8 +160,9 @@ not included in the 179 building selections.
 
 ## Decision-only runtime contract
 
-`SourceReplacementGate` is a System-only class, not a MonoBehaviour. No existing
-component calls it. Its EditMode tests exercise a proposed transactional protocol:
+`SourceReplacementGate` is a System-only class, not a MonoBehaviour. The explicit
+loader described below calls it; normal startup does not. Its EditMode tests
+exercise the transactional protocol:
 
 1. Construct one gate for one stable source ID, with immutable legacy fallback,
    exact body mapping, and exact additive-trim mapping identities. A legacy
@@ -160,7 +170,7 @@ component calls it. Its EditMode tests exercise a proposed transactional protoco
 2. Begin an immutable candidate request containing geometry payload identities
    and exactly one optical-material-profile identity. The gate enforces bounded
    payload count and a monotonic readiness deadline.
-3. A future loader keeps all candidate renderers hidden. After actual byte-hash,
+3. The loader keeps all candidate renderers hidden. After actual byte-hash,
    geometry ownership, dependency, and material validation, report each exact
    observed identity and measured hash. The gate does not perform those checks.
 4. Evaluate a single visibility decision. `Replacement` requires every candidate
@@ -179,13 +189,64 @@ component calls it. Its EditMode tests exercise a proposed transactional protoco
    legacy evidence, and failure/cancel/timeout cannot skip rollback.
 
 An optical-profile identity is a hash-pinned evidence artifact, not a Boolean
-permission to ignore unsupported features. This patch supplies no production
+permission to ignore unsupported features. This foundation supplies no production
 profile artifact. A lying caller can misuse a decision-only gate; actual loader,
 geometry/material validators and atomic publication remain mandatory.
 
-## Required follow-on wiring and Unity acceptance
+## Explicit controlled native loader
 
-Before enabling even one real source ID:
+`SourceReplacementLoader` is constructed by a caller with exact legacy bindings,
+measured fallback/body/trim bytes, a Surface controller, an exclusive write lease
+and an optional shared source frame. There is no startup hook or automatic model
+selection. A provider returns an inactive static scene root, actual payload bytes
+and a native geometry/material/profile receipt. The request independently pins
+the profile hash. Receipt matching alone is insufficient: the loader also rejects
+empty geometry/materials, disabled or shadow-only renderers, unsupported renderer
+types, Unity's error shader and unexpected executable components.
+
+Canonical texture evidence requires readable Texture2D bytes, bound to native
+format/color-space/mips and sampler state. The same raw-byte SHA-256 path runs in
+Editor and Player. Unreadable or other texture types are refused, rather than
+silently approved from a name, instance ID or Editor-only image hash. A renderer
+provider that discards CPU texture data needs a separately designed evidence
+protocol before it can use this controlled adapter.
+
+Publication clones the mapped legacy meshes and removes only the proven triangle
+ordinals. Unrelated triangles, vertices and imported buffers remain intact. The
+loader applies and acknowledges the gate decision on the Unity main thread. A
+rollback restores the original mesh pointers before hiding and releasing the
+candidate. Cancellation, timeout, stale completion and version replacement use
+the same fallback-first order. A foreign mesh pointer or invalid write lease
+holds resources until the caller restores a safe state; disposal refuses to
+discard an unrestored publication.
+
+The lease is a caller obligation, not a production locking system. It must exclude
+CityStreamer, Skyline ownership and other writers for the entire mapped source.
+The controlled fixture supplies that exclusion; live city integration still
+requires a coordinator. A common frame may translate during publication;
+independent root movement, rotation or scale changes invalidate the binding.
+
+`IFlatSurfaceVariantFactory` optionally configures a private Surface OFF material
+clone for an explicitly supported shader family. Registration caches variants by
+original material and factory identity, records original material references,
+and restores those references on unregister. A custom factory cannot use the
+Near-specific fade conversion. Provider-specific flat variants must preserve the
+base texture coverage, alpha, sidedness and optical settings while changing only
+the named surface detail. Imported materials are never edited.
+
+The generic loader does not parse glTF or validate shader optical equivalence,
+camera culling or GPU support. The provider must perform those checks before the
+caller pins its receipt. Transmission/IOR metadata blocks the ordinary profile;
+a qualified approximation requires explicit limitations. Retaining IOR in JSON
+does not mean the shader applies it. The private one-source Windows pilot uses
+an independently verified mapping and actual native glTF import. The
+[2026-10-12 executed validation](source-replacement-validation.md) records the
+one-source Windows pass for `282030_0`, its exact scope and retained failures.
+Production coordination and optical/model acceptance remain incomplete.
+
+## Required production wiring and Unity acceptance
+
+Before enabling a real source ID in normal city streaming:
 
 1. Implement an editor adapter consuming the exact pinned plan. Extract selected
    nodes only, preserve ancestry, derive tile-local native meshes, preserve material
@@ -209,7 +270,7 @@ Before enabling even one real source ID:
    textures, draw calls, load hitches and transition flicker on the six-ID pilot
    before enabling 179. No FPS, Unity compile, or pixel acceptance is claimed here.
 
-## Cloud validation scope
+## Historical staging-patch cloud validation scope
 
 The patch includes focused standard-library tests using a tiny generated GLB and
 external PNG. Actual accepted sources were also inspected, and two representative

@@ -23,7 +23,7 @@ namespace Manhattan.Viewer
         private float declaredDistance, declaredMotion = .1f, distanceUncertainty = -1, motionUncertainty = -1;
         private bool confirmed;
         private float confirmedScreenWidth, confirmedScreenHeight;
-        private Rect confirmedViewport;
+        private Rect confirmedViewport, confirmedAperture;
         public float DeclaredDistanceMeters { get => declaredDistance; set => SetDeclaration(ref declaredDistance, value); }
         public float DeclaredMotionMeters { get => declaredMotion; set => SetDeclaration(ref declaredMotion, value); }
         public float DeclaredDistanceUncertaintyMeters { get => distanceUncertainty; set => SetDeclaration(ref distanceUncertainty, value); }
@@ -49,7 +49,9 @@ namespace Manhattan.Viewer
         }
         private bool ConfirmationMatchesViewport() => app != null &&
             app.Display.Calibration.screenWidth.Equals(confirmedScreenWidth) && app.Display.Calibration.screenHeight.Equals(confirmedScreenHeight) &&
-            app.Display.GetComponent<Camera>().pixelRect.Equals(confirmedViewport);
+            app.Display.GetComponent<Camera>().pixelRect.Equals(confirmedViewport) &&
+            app.Display.ProjectionScreenRectMeters.Equals(confirmedAperture) &&
+            (app.WindowViewport == null || app.WindowViewport.MappingValid);
         private void ReconcileConfirmation()
         {
             if (confirmed && !ConfirmationMatchesViewport())
@@ -60,12 +62,15 @@ namespace Manhattan.Viewer
             if (app == null) return false;
             ReconcileConfirmation();
             var c = app.Display.Calibration; var viewport = app.Display.GetComponent<Camera>().pixelRect;
+            if (app.WindowViewport != null && !app.WindowViewport.MappingValid)
+            { InvalidateDeclarations("Physical viewport mapping unavailable. Resolve the viewport status before confirming."); return false; }
             if (!ViewerPersistence.ValidatePhysical(c.screenWidth, c.screenHeight, DeclaredDistanceMeters) ||
                 !MeasurementSample.Finite(DeclaredMotionMeters) || DeclaredMotionMeters < .02f || DeclaredMotionMeters > .5f ||
                 !MeasurementSample.Finite(DeclaredDistanceUncertaintyMeters) || !MeasurementSample.Finite(DeclaredMotionUncertaintyMeters) ||
                 !MeasurementSample.Finite(viewport.x) || !MeasurementSample.Finite(viewport.y) || !MeasurementSample.Finite(viewport.width) || !MeasurementSample.Finite(viewport.height) || viewport.width <= 0 || viewport.height <= 0)
             { InvalidateDeclarations("Enter valid ruler declarations and use a visible camera viewport before confirming."); return false; }
-            confirmedScreenWidth = c.screenWidth; confirmedScreenHeight = c.screenHeight; confirmedViewport = viewport; confirmed = true;
+            confirmedScreenWidth = c.screenWidth; confirmedScreenHeight = c.screenHeight; confirmedViewport = viewport;
+            confirmedAperture = app.Display.ProjectionScreenRectMeters; confirmed = true;
             actionMessage = "User confirmed current declarations and both ruler spans for this physical screen size and camera viewport."; return true;
         }
         private bool CurrentInputReady() => readiness.Ready && latest.Usable && app.Display.ResultAgeMilliseconds >= 0 && app.Display.ResultAgeMilliseconds <= 100;

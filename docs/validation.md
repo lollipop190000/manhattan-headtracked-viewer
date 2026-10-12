@@ -4,7 +4,64 @@ The acceptance target is a webcam-enabled standalone Windows player on RTX 4070 
 
 ## Automated checks
 
+Current integration results and incomplete checks are recorded in [physical viewport validation](physical-viewport-validation.md) and [current streaming validation](current-streaming-validation.md). Earlier measurements below remain historical and do not certify the current package pin. For a live Windows GPU test run, use `tools/test.ps1 -EditorPlayMode -PythonExe '<Python 3.13 executable>'`; it opens the isolated test Game View, uses `-runTests --no-tracker`, and keeps personal calibration separate. Batch-mode results cannot certify frame-end rendering tests.
+
 `tools/test.ps1 -DataOnly` runs Python data tests using only the standard library, plus eight PowerShell assertions for GPU CSV and environment metadata. These cover source integrity/extraction, catalog/fixture/notice invariants, build preflight and measured-report analysis. GitHub Actions also verifies technology/UPM revision agreement and prevents tracked downloads, personal calibration, build output or generated city files.
+
+The later tolerance-matching correction passed 228/228 EditMode and 129/129 live
+GPU PlayMode, with zero Unity skips. Its eight focused EditMode cases were first
+run against the original compiler: four failed, including a reproduced native
+wall missed across a rounding boundary and a false match beyond 1mm inside the
+same rounded cell. The final suite includes partial-wall preservation, Surface
+OFF/ON, fallback restoration before departure, reentry, imported-asset invariants
+and rejection of the previous mapping rule. Python remained 150 cases (148 passed,
+two Windows symlink-privilege skips) and eight PowerShell assertions passed. The
+generated correspondence must be rebuilt using the
+[current v5 rule](skyline-ownership.md); older measured runs remain tied to their
+recorded source and mapping digests.
+
+The following Editor-generation refactor passed 235/235 EditMode and 129/129 live
+GPU PlayMode with zero Unity skips, plus 155 Python cases (153 passed, the same
+two Windows symlink-privilege skips) and eight PowerShell assertions. Seven new
+Editor cases exercise real output-pair publication, locked-file rollback with
+exact previous bytes or no previous data file, staging cleanup, and validation
+output guards including Windows casing. Five new PowerShell-process cases cover
+delayed completion, nonzero exit, owned timeout cleanup, launch arguments and
+Editor executable validation. The final scoped-registration cleanup was followed
+by another complete 235-case EditMode run; it does not change runtime code.
+
+The subsequent controlled source-loader and material-family hooks passed
+241/241 EditMode and initially 150/150 live GPU PlayMode, with zero Unity skips. The 21
+loader cases exercise publication, exact neighboring-primitive preservation,
+Surface OFF/ON, rollback-before-release, stale/cancelled/timed-out loads, version
+replacement, invalid leases, foreign mesh pointers, common-frame rebasing and
+matching-receipt renderability failures. Six EditMode cases cover factory-aware
+Surface caching, snapshot isolation, registration failure cleanup, restoration
+and unsupported custom fade conversion. Python remains 155 cases (153 passed,
+two Windows symlink-privilege skips), and all eight PowerShell assertions pass.
+These executed synthetic fixture cases do not approve a production optical
+profile, live CityStreamer coordination or real-source pixel quality.
+
+A subsequent actual Windows compilation exposed an Editor-only texture hash API
+in the new loader. Native material evidence now hashes readable Texture2D bytes
+and format/color-space/mip/sampler metadata identically in Editor and Player.
+Unreadable or non-Texture2D content fails closed. Three new staging-mutation cases
+cover changed pixels, lost readability and a RenderTexture substitution. The
+complete rerun passed 241/241 EditMode and 153/153 live GPU PlayMode, zero Unity
+skips, with the same 153 passed Python cases, two privilege skips and eight
+PowerShell assertions. Player compilation and appearance are separate evidence;
+Editor tests alone did not detect the original platform API mismatch.
+
+A separate private native-asset probe deliberately fails an unknown Skyline
+group, preserves its previous output sentinels and input digests, restores a
+borrowed non-null path transform and exact locator/provider references and order,
+then successfully compiles the real `Skyline_1_6` group from ten exact built
+prefabs. It reports no additional hidden clone instances or private ownership
+meshes after cleanup. An earlier version failed locator restoration and was
+corrected to include the catalog's additional dynamic locator/provider
+registrations. This proves the scoped failure/retry path; it does not inject a
+mid-group failure or establish process-memory stability. File rollback handles
+ordinary managed exceptions; a two-file pair is not atomic across power loss.
 
 `tools/test.ps1` adds Unity EditMode and PlayMode suites and writes JUnit reports into ignored `TestResults/`. Preserve the head-tracking package's projection, calibration and lifecycle tests. Validate any package changes in a minimal project without URP, Manhattan or demo dependencies before publishing its pinned commit.
 

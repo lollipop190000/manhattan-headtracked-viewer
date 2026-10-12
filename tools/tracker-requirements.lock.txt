@@ -3,6 +3,7 @@
 absl-py==2.5.1
 certifi==2026.7.22
 cffi==2.1.1
+cv2-enumerate-cameras==1.4.0
 contourpy==1.4.0
 cycler==0.12.1
 flatbuffers==25.12.19

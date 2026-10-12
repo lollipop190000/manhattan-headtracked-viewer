@@ -321,6 +321,28 @@ class BenchmarkAnalysisTests(unittest.TestCase):
             self.assertEqual(1536, result["runs"][1]["renderWidth"])
             self.assertIn("pending", result["runs"][2]["acceptance"])
 
+    def test_render_settings_preserve_disabled_zero_and_missing_historical_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            legacy = measured_fixture(repository, "legacy-settings")
+            recorded = measured_fixture(repository, "recorded-settings")
+            path = recorded / "benchmark.json"
+            report = json.loads(path.read_text())
+            report.update(cameraAntiAliasing="None", vSyncCount=0, targetFrameRate=30,
+                          frameTimingStatisticsEnabled=False, trackerRequested=False)
+            path.write_text(json.dumps(report), encoding="utf-8")
+            result = aggregate([legacy, recorded], repository)
+            old, current = result["runs"]
+            for key in ("cameraAntiAliasing", "vSyncCount", "targetFrameRate", "frameTimingStatisticsEnabled", "reportedTrackerRequested"):
+                self.assertIsNone(old[key])
+            self.assertEqual("None", current["cameraAntiAliasing"])
+            self.assertEqual(0, current["vSyncCount"])
+            self.assertEqual(30, current["targetFrameRate"])
+            self.assertIs(current["frameTimingStatisticsEnabled"], False)
+            self.assertIs(current["reportedTrackerRequested"], False)
+            self.assertIn("None | 0 | 30 | False | False", markdown(result))
+            self.assertIn("pending | pending | pending | pending | pending", markdown(result))
+
     def test_embedded_identity_rejects_cli_mismatch_and_dirty_build(self):
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory)

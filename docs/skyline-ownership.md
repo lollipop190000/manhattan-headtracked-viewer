@@ -6,26 +6,49 @@ Near remains additional facade/window detail over the Core building. This change
 
 ## Offline correspondence
 
-`SkylineOwnershipBake` compiles one Skyline and its linked Core group at a time from the exact built Addressables prefab locations. The runtime does not build a city-wide vertex/triangle dictionary or compare Core and Skyline geometry on each load. `BuildAutomation.BuildWindows` runs this step after the Addressables content build, before the Player build.
+`SkylineOwnershipBake` compiles one Skyline and its linked Core group at a time from the exact built Addressables prefab locations. Catalog and prefab loads are awaited on the Editor thread. Group cleanup releases instances and handles, then lets the Editor process pending bundle unloads before loading the next group. This avoids re-entering dependency operations through synchronous `WaitForCompletion`. The runtime does not build a city-wide vertex/triangle dictionary or compare Core and Skyline geometry on each load. `BuildAutomation.BuildWindows` awaits this same step after the Addressables content build, before the Player build.
 
 The derived `Resources/CityOwnership.json` and `CityOwnershipHash.txt` are ignored by Git. Rebuild both when the city content changes. The sidecar binds source version, asset location/provider/type, bundle dependency content hashes, mesh layout and local transforms. Startup verifies the JSON digest; residency checks also require the loaded source-prefab mesh references. Missing, ambiguous or mismatched identity preserves the full fallback.
+
+The current rule is `legacy-flat-hull-v5-tolerance-checked`, still using schema 2.
+The offline compiler discovers nearby triangle candidates through 1mm centroid
+cells, then requires each corresponding raw vertex to be within 1mm Euclidean
+distance, cyclic winding and a positive normal dot product. Buckets alone never
+establish correspondence. This handles tiny built-mesh differences across a
+rounding boundary while rejecting a >1mm diagonal even inside one old rounded
+cell. Tile relationships and material eligibility still apply. No vertex is
+moved, no texture is rewritten and no geometry matching is added to runtime loads.
+
+**Rebuild the correspondence after updating from v4.** The runtime rejects that
+old rule and retains fallback until an explicit v5 rebuild. Recompiling this
+derived sidecar from existing exact built bundles does not require a source mesh,
+texture or Addressables bundle rebake. Keep a copy of prior diagnostics outside
+the project if they need to remain reproducible.
 
 Generate explicitly from an existing built catalog in an owned project:
 
 ```powershell
-$env:MANHATTAN_OWNERSHIP_CATALOG_PATH = '<built Addressables catalog.bin or catalog.json>'
-unity run '<project>' --editor-version 6000.3.22f1 -- -executeMethod Manhattan.Editor.SkylineOwnershipBake.FromEnvironment
+.\tools\bake_ownership.ps1 -CatalogPath '<built Addressables catalog.bin or catalog.json>'
 ```
 
 For a short validation of one group, use separate output outside `Assets`:
 
 ```powershell
-$env:MANHATTAN_OWNERSHIP_VALIDATE_SKYLINE_ID = 'Skyline_0_8'
-$env:MANHATTAN_OWNERSHIP_VALIDATION_OUTPUT = '<separate validation directory>'
-unity run '<project>' --editor-version 6000.3.22f1 -- -executeMethod Manhattan.Editor.SkylineOwnershipBake.FromEnvironment
+.\tools\bake_ownership.ps1 -CatalogPath '<built Addressables catalog.bin or catalog.json>' `
+    -SkylineId 'Skyline_0_8' -ValidationOutput '<separate validation directory>'
 ```
 
-This requires the existing generated city catalog and built bundles. It does not bake or migrate the source assets. Remove the two validation environment variables before generating the complete sidecar.
+This requires the existing generated city catalog and built bundles. It does not bake or migrate the source assets. The wrapper restores its environment variables when it exits. It and `tools/build.ps1` locate the pinned Editor or accept `-EditorPath`, launch only their owned hidden batch process, and enforce a timeout. The async entrypoint exits the batch Editor after success or failure; do not add `-quit` or invoke it through `unity run/build`, which supplies `-quit` and can terminate before awaited work completes. Interactive calls await `FromBuildSettingsAsync` or `ValidateBuiltGroupAsync` and leave the Editor open.
+
+Run this offline scope without unrelated concurrent Addressables requests. Normal
+first-use Addressables initialization settles before the scope borrows global
+state. Catalog loading also adds dynamic locators and catalog-declared providers;
+cleanup removes registrations introduced by this scope and restores its path
+transform while retaining pre-existing object references and order. The output
+pair is staged after all groups finish. Ordinary publication/import exceptions
+restore previous bytes and remove staging files; hard process termination between
+the two file replacements can still leave a mismatched pair, which startup digest
+verification rejects safely.
 
 ## Coverage and lifetime
 
@@ -36,6 +59,23 @@ Imported shared meshes are immutable while ownership is active. Replacing a sour
 Prepare masks and private mesh variants incrementally. The final validation, mesh-pointer changes and Core activation share one no-yield publication. Shared material contracts are cached only inside that publication and cleared on every Tick exit. Late Skyline is gated until coverage is coherent. Cancellation, failure and unload restore fallback before releasing Core; failed preparation also publishes the visibility change in the same streamer tick.
 
 After the final owner leaves a group, its private native mesh variants and decoded staging/index arrays are released. The compact correspondence itself remains available for later residency. Mesh copy/read/upload calls and final atomic publication are indivisible, so the configured streaming budget is a scheduling target, not a hard maximum for every frame.
+
+The streamer schedules ownership against 60% of its total work budget, less work
+already spent that frame. The remaining headroom accounts for an indivisible
+preparation step and the visibility update after publication; ownership previously
+consumed the entire remainder before that update. A cohort can wait more frames,
+with the previous representation retained. Load/radius policy, geometry, materials,
+quality and the indivisible publication are unchanged. This does not impose a hard
+deadline on mesh uploads or a large atomic publication.
+
+Ordinary replacement preparation explicitly ends its streaming tick before final
+revalidation and publication, even when some allowance remains. Publication starts on a later
+tick, avoiding the combined preparation and commit costs in one frame. The
+captured renderer/mesh/material state is rechecked after that boundary; a late
+coverage change restores fallback. Mesh pointers and Core activation still
+publish together without yielding, and release still waits for restored fallback.
+Departing/revoked Core coverage and an initially gated late Skyline bypass the
+extra boundary, preserving immediate fallback recovery and its existing tests.
 
 ## Validation limits
 

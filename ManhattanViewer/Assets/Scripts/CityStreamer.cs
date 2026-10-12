@@ -291,7 +291,11 @@ namespace Manhattan.Viewer
             }
             UpdateNearFeedback();
             long previousPublication = ownership.Publications;
-            ownership.Tick(Mathf.Max(0f, workBudgetMilliseconds - (float)workTimer.Elapsed.TotalMilliseconds));
+            // Leave headroom for an indivisible ownership step and the visibility update
+            // after publication. Spending the entire remaining budget before that work
+            // consistently exceeded the 2ms scheduling target. Existing coverage stays
+            // published while a cohort waits; mesh uploads/publication remain atomic.
+            ownership.Tick(Mathf.Max(0f, workBudgetMilliseconds * .6f - (float)workTimer.Elapsed.TotalMilliseconds));
             if (ownership.Publications != previousPublication) UpdateVisibility();
             FrameWorkMilliseconds = (float)workTimer.Elapsed.TotalMilliseconds;
         }

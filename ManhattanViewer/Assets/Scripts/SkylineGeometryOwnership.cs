@@ -17,6 +17,7 @@ namespace Manhattan.Viewer
     /// </summary>
     public sealed class SkylineGeometryOwnership : IDisposable
     {
+        private static readonly object PublicationBoundary = new object();
         private sealed class Entry
         {
             public CityTileRecord tile; public GameObject root, sourcePrefab;
@@ -72,7 +73,7 @@ namespace Manhattan.Viewer
             if(entries.Count!=0)throw new InvalidOperationException("Configure ownership before residency loads");
             bindings.Clear();groups.Clear();replacementCohorts.Clear();pendingGroups.Clear();groupVersions.Clear();publishedVersions.Clear();DecodedMappingBytes=0;
             resolveBinding=resolver??SkylineOwnershipBinding.BundleSignature;
-            if(data==null||data.schema!=2||data.ruleVersion!="legacy-flat-hull-v4-extra-material-safe"||data.sourceVersion!=sourceVersion)return;
+            if(data==null||data.schema!=2||data.ruleVersion!=SkylineOwnershipData.CurrentRuleVersion||data.sourceVersion!=sourceVersion)return;
             try
             {
                 foreach(var tile in data.tiles)bindings.Add(tile.id,tile);
@@ -200,7 +201,14 @@ namespace Manhattan.Viewer
                 }
                 try
                 {
-                    if(work.MoveNext())continue;
+                    if(work.MoveNext())
+                    {
+                        // Preparation may fill its allowance just before a substantial
+                        // indivisible commit. Start that commit on a later tick instead
+                        // of stacking both costs in one rendered frame.
+                        if(ReferenceEquals(work.Current,PublicationBoundary))return;
+                        continue;
+                    }
                     (work as IDisposable)?.Dispose();work=null;snapshot.Clear();
                 }
                 catch(Exception error)
@@ -364,6 +372,15 @@ namespace Manhattan.Viewer
                     part.stagedMesh=variant;
                 }
             }
+            // Separate ordinary preparation from commit, while preserving immediate
+            // recovery for departing owners, revoked coverage and gated late fallback.
+            // Those recovery paths must not add a frame with no usable representation.
+            bool urgent=false;
+            foreach(var e in snapshot)if(!e.removed&&
+                ((e.tile.layer==CityLayer.Skyline&&!e.presented)||
+                 (e.tile.layer==CityLayer.Core&&e.committed&&
+                  (!active.Contains(e)||(e.hasCoveragePublication&&e.lastCovered&&!covers.Contains(e))))))urgent=true;
+            if(!urgent)yield return PublicationBoundary;
             // No yield from pointer publication through Core activation. No rendered frame can
             // observe missing fallback before Core appears, or missing Core before restoration.
             // Recheck source pointers/transforms and coverage after resumable preparation.
