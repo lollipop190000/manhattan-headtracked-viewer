@@ -6,7 +6,7 @@ namespace Manhattan.Viewer
 {
     /// <summary>Private depth-priority variants for the legacy opaque Skyline hull.
     /// Triangle ownership still removes fully covered faces; this resolves the
-    /// residual coplanar pixels when only part of a split wall is resident.</summary>
+    /// residual wall ties and source-rounded roofs when detail is partial.</summary>
     public sealed class SkylineFallbackDepth : IDisposable
     {
         public const string ShaderName = "Manhattan/SkylineFallbackLit";

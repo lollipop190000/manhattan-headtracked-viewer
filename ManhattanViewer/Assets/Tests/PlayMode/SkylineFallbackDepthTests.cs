@@ -78,6 +78,79 @@ public sealed class SkylineFallbackDepthTests
     }
 
     [UnityTest]
+    public IEnumerator RoundedRoofHeightRetainsDetailAtGrazingAnglesAndRealOcclusion()
+    {
+        if (Application.isBatchMode || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            Assert.Ignore("Requires the live GPU PlayMode runner");
+        var fallback = Quad(Material(Color.red)); var detail = Quad(Material(Color.green));
+        fallback.transform.rotation = detail.transform.rotation = Quaternion.Euler(90, 0, 0);
+        var cameraObject = new GameObject("grazing roof camera"); objects.Add(cameraObject);
+        var camera = cameraObject.AddComponent<Camera>(); camera.cullingMask = 1 << 29;
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black;
+        camera.nearClipPlane = .3f; camera.farClipPlane = 5000; camera.fieldOfView = 35;
+        var data = camera.GetUniversalAdditionalCameraData();
+        data.antialiasing = AntialiasingMode.None; data.renderPostProcessing = false;
+        var lightObject = new GameObject("roof light"); objects.Add(lightObject);
+        var light = lightObject.AddComponent<Light>(); light.type = LightType.Directional;
+        light.transform.rotation = Quaternion.Euler(60, 0, 0);
+        light.color = Color.white; light.intensity = 2; light.shadows = LightShadows.None; light.cullingMask = 1 << 29;
+        var target = new RenderTexture(192, 192, 32); target.Create(); objects.Add(target); camera.targetTexture = target;
+        var pixels = new Texture2D(192, 192, TextureFormat.RGB24, false); objects.Add(pixels);
+        var surfaces = fallback.AddComponent<SurfaceDetailComparison>();
+        depth.Register(skyline, fallback); surfaces.Register(fallback); surfaces.Register(detail);
+        var previous = RenderTexture.active;
+        try
+        {
+            foreach (float distance in new[] { 50f, 1250f, 4000f })
+            foreach (float angle in new[] { 5f, 10f, 30f })
+            {
+                float size = distance * .2f;
+                // Measured bundled roof: 188.519m hull vs 188.5188m Core.
+                fallback.transform.position = new Vector3(0, 188.519f, 0);
+                detail.transform.position = new Vector3(-size * .25f, 188.5188f, 0);
+                fallback.transform.localScale = new Vector3(size, size, 1);
+                detail.transform.localScale = new Vector3(size * .5f, size, 1);
+                var center = new Vector3(0, 188.5188f, 0);
+                var offset = Quaternion.Euler(angle, 0, 0) * Vector3.back * distance;
+                camera.transform.SetPositionAndRotation(center + offset, Quaternion.LookRotation(-offset));
+                foreach (bool enabled in new[] { true, false, true })
+                {
+                    surfaces.EnabledDetails = enabled;
+                    for (int frame = 0; frame < 4; frame++)
+                    {
+                        camera.transform.position = center + offset + Vector3.right * (frame % 2 == 0 ? -.12f : .12f);
+                        camera.ResetProjectionMatrix(); var projection = camera.projectionMatrix;
+                        projection.m02 += (frame % 2 == 0 ? -.75f : .75f) / 192f;
+                        projection.m12 += (frame < 2 ? -.75f : .75f) / 192f;
+                        camera.projectionMatrix = projection;
+                        yield return null; // Render a new frame after transform/projection changes.
+                        yield return new WaitForEndOfFrame();
+                        RenderTexture.active = target; pixels.ReadPixels(new Rect(0, 0, 192, 192), 0, 0); pixels.Apply();
+                        var sample = camera.WorldToViewportPoint(center + Vector3.left * size * .25f);
+                        var covered = pixels.GetPixel((int)(sample.x * 192), (int)(sample.y * 192));
+                        Assert.That(covered.g, Is.GreaterThan(covered.r + .2f), $"Rounded roof at {distance}m / {angle} degrees / Surface {enabled} / jitter {frame}");
+                        sample = camera.WorldToViewportPoint(center + Vector3.right * size * .25f);
+                        var uncovered = pixels.GetPixel((int)(sample.x * 192), (int)(sample.y * 192));
+                        Assert.That(uncovered.r, Is.GreaterThan(uncovered.g + .2f), "Partial fallback must remain visible");
+                    }
+                }
+                fallback.transform.position += Vector3.up * .02f;
+                yield return null;
+                yield return new WaitForEndOfFrame();
+                RenderTexture.active = target; pixels.ReadPixels(new Rect(0, 0, 192, 192), 0, 0); pixels.Apply();
+                var foregroundSample = camera.WorldToViewportPoint(center + Vector3.left * size * .25f);
+                var foreground = pixels.GetPixel((int)(foregroundSample.x * 192), (int)(foregroundSample.y * 192));
+                Assert.That(foreground.r, Is.GreaterThan(foreground.g + .2f), $"A real 2cm foreground roof must still occlude detail at {distance}m / {angle} degrees");
+            }
+        }
+        finally
+        {
+            RenderTexture.active = previous; camera.targetTexture = null; target.Release();
+            surfaces.Unregister(detail); surfaces.Unregister(fallback); depth.Unregister(fallback);
+        }
+    }
+
+    [UnityTest]
     public IEnumerator PartialCoplanarWallKeepsDetailAndUncoveredFallbackAcrossSurfaceRoundTrips()
     {
         if (Application.isBatchMode || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
