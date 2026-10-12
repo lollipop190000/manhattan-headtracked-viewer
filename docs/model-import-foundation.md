@@ -204,6 +204,13 @@ the profile hash. Receipt matching alone is insufficient: the loader also reject
 empty geometry/materials, disabled or shadow-only renderers, unsupported renderer
 types, Unity's error shader and unexpected executable components.
 
+Canonical texture evidence requires readable Texture2D bytes, bound to native
+format/color-space/mips and sampler state. The same raw-byte SHA-256 path runs in
+Editor and Player. Unreadable or other texture types are refused, rather than
+silently approved from a name, instance ID or Editor-only image hash. A renderer
+provider that discards CPU texture data needs a separately designed evidence
+protocol before it can use this controlled adapter.
+
 Publication clones the mapped legacy meshes and removes only the proven triangle
 ordinals. Unrelated triangles, vertices and imported buffers remain intact. The
 loader applies and acknowledges the gate decision on the Unity main thread. A
@@ -235,9 +242,9 @@ does not mean the shader applies it. The private one-source Windows pilot uses
 an independently verified mapping and actual native glTF import; its evidence
 and remaining limitations are recorded separately after execution.
 
-## Required follow-on wiring and Unity acceptance
+## Required production wiring and Unity acceptance
 
-Before enabling even one real source ID:
+Before enabling a real source ID in normal city streaming:
 
 1. Implement an editor adapter consuming the exact pinned plan. Extract selected
    nodes only, preserve ancestry, derive tile-local native meshes, preserve material
@@ -261,7 +268,7 @@ Before enabling even one real source ID:
    textures, draw calls, load hitches and transition flicker on the six-ID pilot
    before enabling 179. No FPS, Unity compile, or pixel acceptance is claimed here.
 
-## Cloud validation scope
+## Historical staging-patch cloud validation scope
 
 The patch includes focused standard-library tests using a tiny generated GLB and
 external PNG. Actual accepted sources were also inspected, and two representative

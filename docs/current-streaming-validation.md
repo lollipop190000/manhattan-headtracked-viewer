@@ -14,6 +14,67 @@ The full v5 rebuild and matched native fixed-pose result are now recorded in
 static surface proof does not transfer the older performance/memory acceptance
 to that build.
 
+## Current v5 short regional measurements (`9deb78f`)
+
+Two fresh private `FullCityTolerancePlayer` runs measured the complete 260-group
+v5 correspondence on source `9deb78fbd1d8e01a52c406c6656f1bb197ae0c33`, with
+technology `2a33e1c0115bbc6b9c8e5d9709c3aff7c0dbb329`. They reuse the unchanged
+10,038-tile `manhattan-2026-10-10-v2` catalog and original built bundles. The v5
+sidecar is 4,394,261 bytes, SHA-256
+`bf64909d83f2919896c15e25f4a6dbf8bf870179561972835e6a0e6cf82ae661`;
+catalog digests and the matched surface result are in
+[beige wall validation](beige-wall-validation.md). Both runs retain the same
+`runtime-fingerprints.json` digest
+`1b2da7467bb8f68ab98a5c680b8aea46f9898564e03f92af559bc73dd1c4e739`.
+The executable digest alone cannot distinguish their managed runtime from older
+Unity Players; recorded source/resource fingerprints provide that linkage.
+
+Each run configured 15 seconds of warmup and measured 90 seconds, without a
+tracker, timing/counter probes, video capture or collision proxies. Output and
+camera resolution were 1920×1200, Windowed, TAA and VSync 1, on Unity 6000.3.22f1,
+URP 17.3.0, glTFast 6.20.0 and RTX 4070 Laptop. Percentiles use nearest rank on
+the raw four-decimal millisecond CSV. The private `scoped-analysis.json` records
+are identified by these run IDs:
+
+| Route / run ID | Frames | Engine delta P95 / P99 / max ms | Streaming P95 / P99 / max ms | Loaded / pending tiles |
+|---|---:|---|---|---|
+| Midtown `9a936c9df4644016887b8bf59f615b62` | 5,401 | 16.6832 / 16.6833 / 16.6856 | 1.8472 / 2.3562 / 5.1629 | 426–449 / 0–2 |
+| Park `311fe36ad27040f48b385fddac84e573` | 5,381 | 16.6831 / 16.6836 / 44.4118 | 1.6024 / 2.1352 / 3.9124 | 368–442 / 0–2 |
+
+Both recorded zero engine-delta or streaming samples `>=50ms` and zero tile-load
+failures.
+Independent city-position/time checks measured median speeds 99.9977m/s and
+99.9976m/s, respectively, with effectively 100% measured time coverage. Each
+completed two measured circuits and covered the full production route.
+
+The active-work subset (`pending > 0` or streaming work `>=0.5ms`) contains
+2,798 Midtown and 2,276 Park samples. Its streaming P95/P99/max is
+2.0992/2.5754/5.1629ms and 1.9353/2.3649/3.9124ms, respectively. Midtown's active
+P95 still exceeds 2ms. The correlated `engine >=50ms && streaming >=2ms` count
+is zero; causal streaming-stall attribution remains unavailable.
+
+| Route | Exact Player working-set peak GiB | Exact Player private-commit peak GiB | Whole selected GPU peak GiB |
+|---|---:|---:|---:|
+| Midtown | 2.1066 | 3.9923 | 1.7705 |
+| Park | 2.1297 | 3.8899 | 1.7217 |
+
+Windows counters are aligned to the exact executable/PID, not a verified process
+tree; the tracker was disabled. Driver memory includes other applications on the
+selected GPU and is not Player-only VRAM. Unity's graphics-allocation counter is
+unavailable. After the first route circuit, short-run private-commit median
+growth was 55.82/37.30MiB and in-Player working-set growth was 45.19/30.15MiB.
+These approximately 78-second trend windows do not establish twenty-minute
+memory acceptance.
+
+Engine deltas include VSync waiting; they do not establish delivered full-frame
+FPS or GPU rendering time. Visible-pixel warmup was not verified. Both builds are
+dirty private diagnostics with synthetic calibration and no head tracking;
+acceptance remains pending. These measurements do not certify the later
+`b341221` source-loader/Surface foundation, whose 241 EditMode and 150 GPU
+PlayMode checks are separate correctness evidence. The native source pilot has
+not run in this record. Historical `338c090`/v4 performance and long-memory
+tables below retain their original scope and do not transfer to v5 or the pilot.
+
 ## Source and immutable city inputs
 
 The measured scheduling policy is in viewer runtime commit

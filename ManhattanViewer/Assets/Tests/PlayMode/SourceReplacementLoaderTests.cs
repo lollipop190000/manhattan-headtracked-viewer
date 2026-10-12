@@ -358,6 +358,44 @@ public sealed class SourceReplacementLoaderTests
         Assert.That(candidate.releases, Is.EqualTo(1));
     }
 
+    [Test]
+    public void SameTextureDescriptorWithChangedPixelsFailsFreshPublicationValidation()
+    {
+        var nativeTexture = Object.Instantiate(texture); nativeTexture.name = texture.name; objects.Add(nativeTexture);
+        var candidate = NewCandidate(beforeReceipt: native => native.original.SetTexture("_BaseMap", nativeTexture));
+        loader.Begin(candidate.request, new ImmediateProvider(candidate.stage), clock);
+        Assert.That(loader.PublishedRoot, Is.Null);
+        nativeTexture.SetPixel(0, 0, Color.black); nativeTexture.Apply();
+        Assert.That(nativeTexture.name, Is.EqualTo(texture.name)); Assert.That(nativeTexture.width, Is.EqualTo(texture.width));
+        Assert.That(nativeTexture.height, Is.EqualTo(texture.height)); Assert.That(nativeTexture.format, Is.EqualTo(texture.format));
+        Assert.That(SourceReplacementLoader.MaterialFingerprint(candidate.root, surfaces), Is.Not.EqualTo(candidate.stage.Descriptor.nativeMaterialFingerprint));
+        loader.Tick(++clock);
+        AssertFallback(); Assert.That(loader.PublishedRoot, Is.Null); Assert.That(candidate.releases, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void UnreadableTextureFailsClosedEvenWithPreviouslyValidReceipt()
+    {
+        var nativeTexture = Object.Instantiate(texture); objects.Add(nativeTexture);
+        var candidate = NewCandidate(beforeReceipt: native => native.original.SetTexture("_BaseMap", nativeTexture));
+        nativeTexture.Apply(false, true);
+        Assert.That(nativeTexture.isReadable, Is.False);
+        Assert.Throws<InvalidOperationException>(() => SourceReplacementLoader.MaterialFingerprint(candidate.root));
+        loader.Begin(candidate.request, new ImmediateProvider(candidate.stage), clock); loader.Tick(clock);
+        AssertFallback(); Assert.That(loader.PublishedRoot, Is.Null); Assert.That(candidate.releases, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void RenderTextureCannotSubstituteForVerifiedTexture2DContent()
+    {
+        var candidate = NewCandidate();
+        var unsupported = new RenderTexture(texture.width, texture.height, 0) { name = texture.name }; objects.Add(unsupported);
+        candidate.original.SetTexture("_BaseMap", unsupported);
+        Assert.Throws<InvalidOperationException>(() => SourceReplacementLoader.MaterialFingerprint(candidate.root));
+        loader.Begin(candidate.request, new ImmediateProvider(candidate.stage), clock); loader.Tick(clock);
+        AssertFallback(); Assert.That(loader.PublishedRoot, Is.Null); Assert.That(candidate.releases, Is.EqualTo(1));
+    }
+
     [TestCase("empty_vertices")]
     [TestCase("empty_indices")]
     [TestCase("empty_materials")]

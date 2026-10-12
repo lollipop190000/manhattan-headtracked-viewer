@@ -574,12 +574,24 @@ namespace Manhattan.Viewer
                         case UnityEngine.Rendering.ShaderPropertyType.Range: text.Append(material.GetFloat(property).ToString("R", CultureInfo.InvariantCulture)); break;
                         case UnityEngine.Rendering.ShaderPropertyType.Int: text.Append(material.GetInteger(property)); break;
                         case UnityEngine.Rendering.ShaderPropertyType.Texture:
-                            var texture = material.GetTexture(property); text.Append(texture != null ? texture.name + ":" + texture.imageContentsHash + ":" + texture.width + "x" + texture.height : "NULL");
+                            text.Append(TextureFingerprint(material.GetTexture(property)));
                             AppendVector(text, material.GetTextureScale(property)); AppendVector(text, material.GetTextureOffset(property)); break;
                     }
                 }
             }
             return HashBytes(Encoding.UTF8.GetBytes(text.ToString()));
+        }
+        private static string TextureFingerprint(Texture texture)
+        {
+            if (texture == null) return "NULL";
+            // The same protocol runs in Editor and Player. An Editor-only image
+            // hash or instance identity cannot prove native texture content.
+            if (!(texture is Texture2D image) || !image.isReadable) throw new InvalidOperationException("Readable Texture2D bytes are required for native material content evidence.");
+            var bytes = image.GetRawTextureData();
+            if (bytes == null || bytes.Length == 0) throw new InvalidOperationException("Native texture content is unavailable.");
+            return image.name + ":" + HashBytes(bytes) + ":" + image.width + "x" + image.height + ":" + image.format +
+                ":" + image.graphicsFormat + ":" + image.isDataSRGB + ":mips=" + image.mipmapCount + ":" + image.filterMode +
+                ":" + image.wrapModeU + ":" + image.wrapModeV + ":" + image.wrapModeW + ":aniso=" + image.anisoLevel;
         }
         private static void AppendMatrix(StringBuilder text, Matrix4x4 matrix)
         { for (int i = 0; i < 16; i++) { if (!float.IsFinite(matrix[i])) throw new InvalidOperationException("Nonfinite source transform."); text.Append(matrix[i].ToString("R", CultureInfo.InvariantCulture)).Append(','); } }

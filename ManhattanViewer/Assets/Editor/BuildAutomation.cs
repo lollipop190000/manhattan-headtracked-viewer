@@ -215,7 +215,7 @@ namespace Manhattan.Editor
             string output=Environment.GetEnvironmentVariable("MANHATTAN_BUILD_PATH");
             if(string.IsNullOrEmpty(output))output=Path.GetFullPath(Path.Combine(Application.dataPath,"../../Builds/ManhattanViewer/ManhattanViewer.exe"));
             Directory.CreateDirectory(Path.GetDirectoryName(output));
-            var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=EditorBuildSettings.scenes.Where(s=>s.enabled).Select(s=>s.path).ToArray(),locationPathName=output,target=BuildTarget.StandaloneWindows64,options=BuildOptions.None});
+            var report=await PlayerBuildDispatch.BuildAsync(new BuildPlayerOptions{scenes=EditorBuildSettings.scenes.Where(s=>s.enabled).Select(s=>s.path).ToArray(),locationPathName=output,target=BuildTarget.StandaloneWindows64,options=BuildOptions.None});
             if(report.summary.result!=BuildResult.Succeeded)throw new InvalidOperationException("Player build failed: "+report.summary.result);
             Debug.Log("MANHATTAN_WINDOWS_BUILD "+output+" bytes="+report.summary.totalSize);
         }

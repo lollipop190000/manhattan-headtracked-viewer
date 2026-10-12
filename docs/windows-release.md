@@ -93,4 +93,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 빌드 도구는 고정 Editor를 직접 실행하며 `-EditorPath`를 지원합니다. Addressables 콘텐츠 빌드 → 비동기 ownership 생성 → Player 빌드 순서로 완료를 기다립니다. 이 비동기 진입점을 `unity run/build`나 `-quit`로 실행하면 생성 중 조기 종료될 수 있으므로 `tools/build.ps1`를 사용합니다. 시간 초과나 실패 시 이 도구가 시작한 Editor만 종료하고 오류와 해당 로그 경로를 반환합니다.
 
+비동기 생성이 끝난 뒤 실제 Player 빌드는 `PlayerBuildDispatch`가 편집기의 예약 실행 시점에 시작합니다. Unity player loop 안에서 곧바로 빌드하면 거절되는 문제를 피하며, 결과와 예외를 원래 빌드 작업으로 돌려줍니다. 독립 Windows 시험 빌드에서도 동일한 공개 코드를 그대로 사용해 실제 실행 파일 생성을 확인했습니다. 이 검사는 전체 도시 배포본의 이식성·성능 합격과는 별개입니다.
+
 `ManhattanViewer.provenance.json`의 로컬 개발 경로, `ManhattanViewer_BurstDebugInformation_DoNotShip/`, 실행·추적기 로그, `tracker-session-*.heartbeat`, 개인 보정, 소스 ZIP, 추적기 가상환경·얼굴 모델은 배포 ZIP에서 제외합니다. 배포 ZIP의 SHA-256과 해당 빌드의 검증 기록은 Release에 함께 제공합니다.

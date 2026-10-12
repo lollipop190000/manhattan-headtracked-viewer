@@ -31,7 +31,7 @@ Editor executable validation. The final scoped-registration cleanup was followed
 by another complete 235-case EditMode run; it does not change runtime code.
 
 The subsequent controlled source-loader and material-family hooks passed
-241/241 EditMode and 150/150 live GPU PlayMode, with zero Unity skips. The 21
+241/241 EditMode and initially 150/150 live GPU PlayMode, with zero Unity skips. The 21
 loader cases exercise publication, exact neighboring-primitive preservation,
 Surface OFF/ON, rollback-before-release, stale/cancelled/timed-out loads, version
 replacement, invalid leases, foreign mesh pointers, common-frame rebasing and
@@ -41,6 +41,16 @@ and unsupported custom fade conversion. Python remains 155 cases (153 passed,
 two Windows symlink-privilege skips), and all eight PowerShell assertions pass.
 These executed synthetic fixture cases do not approve a production optical
 profile, live CityStreamer coordination or real-source pixel quality.
+
+A subsequent actual Windows compilation exposed an Editor-only texture hash API
+in the new loader. Native material evidence now hashes readable Texture2D bytes
+and format/color-space/mip/sampler metadata identically in Editor and Player.
+Unreadable or non-Texture2D content fails closed. Three new staging-mutation cases
+cover changed pixels, lost readability and a RenderTexture substitution. The
+complete rerun passed 241/241 EditMode and 153/153 live GPU PlayMode, zero Unity
+skips, with the same 153 passed Python cases, two privilege skips and eight
+PowerShell assertions. Player compilation and appearance are separate evidence;
+Editor tests alone did not detect the original platform API mismatch.
 
 A separate private native-asset probe deliberately fails an unknown Skyline
 group, preserves its previous output sentinels and input digests, restores a
