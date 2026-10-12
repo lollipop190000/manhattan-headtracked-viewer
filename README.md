@@ -106,4 +106,6 @@ GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한
 
 코드는 [MIT](LICENSE) 라이선스입니다. NYC 지리 데이터와 외부 모델·라이브러리의 조건은 별도로 유지합니다.
 
+소스 하나(`282030_0`)의 실제 Windows Player 교체·Surface OFF/ON·취소·복원을 격리된 환경에서 검증했습니다. 기존 면 492개만 교체하고 주변 메시 19개를 보존했으며, 원본 6,068개 삼각형과 좌표·노멀·UV가 일치했습니다. [소스 교체 검증 기록](docs/source-replacement-validation.md)에 정확한 실행 버전, 이미지 비교 오차와 실패 이력을 남겼습니다. 일반 도시 스트리밍 연결·모델 자동 활성화·광학 동등성·성능 합격은 아직 완료되지 않았습니다.
+
 Legacy merged Skyline의 primitive ownership, offline 재생성 및 검증 한계는 [소유권 문서](docs/skyline-ownership.md)에 정리했습니다.

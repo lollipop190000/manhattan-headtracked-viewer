@@ -239,8 +239,10 @@ camera culling or GPU support. The provider must perform those checks before the
 caller pins its receipt. Transmission/IOR metadata blocks the ordinary profile;
 a qualified approximation requires explicit limitations. Retaining IOR in JSON
 does not mean the shader applies it. The private one-source Windows pilot uses
-an independently verified mapping and actual native glTF import; its evidence
-and remaining limitations are recorded separately after execution.
+an independently verified mapping and actual native glTF import. The
+[2026-10-12 executed validation](source-replacement-validation.md) records the
+one-source Windows pass for `282030_0`, its exact scope and retained failures.
+Production coordination and optical/model acceptance remain incomplete.
 
 ## Required production wiring and Unity acceptance
 
