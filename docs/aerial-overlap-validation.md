@@ -48,15 +48,29 @@ their directly required joint partners. Secondary partners cannot seed further
 requests or feed back into radius hysteresis, and the residency byte budget
 still applies. This extends Core residency only for proved shared walls.
 
+A further outer boundary around `Core_Manhattan_Core_1_4` retains a partial
+wall from `Skyline_0_4`. Extending residency again would merely move that boundary.
+The retained legacy opaque hull therefore receives a private material variant
+with `Offset 0, 8`, without slope bias. This gives detailed geometry priority for
+near-coplanar depth ties while preserving uncovered pixels. The source triangles
+remain present, so CPU ray coincidences at this boundary are expected; they are
+not evidence of a failed depth-priority render. The shader retains the pinned
+URP Lit lighting and passes, with zero offset for shadows, Meta and 2D.
+Surface ON/OFF both retain this priority and unregister restores the original
+material. The offset is measured in device-dependent depth units, not millimetres.
+Only imported opaque, untextured legacy hulls qualify; the runtime variant cannot
+establish imported provenance or act as a detailed Core coverage provider.
+
 Rebuild `CityOwnership.json` and its digest through the normal build, or use
 `tools/bake_ownership.ps1` with the existing built catalog. V5/V6 maps cannot be used
-with the V7 runtime. Meshes, UVs, materials, source packs, original bundles,
-lighting and comparison controls are unchanged. Base radius values are unchanged;
+with the V7 runtime. Imported meshes, UVs, materials, source packs and original bundles are unchanged.
+Runtime hull material variants change depth priority; lighting and comparison
+controls retain their behavior. Base radius values are unchanged;
 the explicit joint-partner requests can add Core tiles beyond those radii.
 
 ## Validation
 
-- 263 EditMode and 161 PlayMode checks passed with graphics enabled; no failures
+- 263 EditMode and 171 PlayMode checks passed with graphics enabled; no failures
   or skips. These include split-wall conjunctions, departure/reload round trips
   with Surface ON/OFF, and a provider mesh or relationship changing immediately
   before publication, one-hop request/release behavior and residency limits.
@@ -69,7 +83,32 @@ the explicit joint-partner requests can add Core tiles beyond those radii.
   of adjacent fallback.
 - Portable checks passed: 153 Python tests, two skips, plus five GPU-results
   parser checks and three benchmark-environment checks.
-- Native full-city V7 comparisons are in progress.
+- The native captures retain the same city position, camera projection, physical
+  eye, lighting, resolution and GPU as their v5 controls. The three original
+  24-ray grids have no remaining cross-layer near-coincidences after ownership
+  masking. Additional distant probes still find the deliberately retained partial
+  hull; its depth priority is validated by GPU output, not by claiming every
+  source triangle has disappeared.
+- The GPU fixture renders overlapping red fallback and green detailed half-walls
+  at 10m, 1km and 4km. Detail wins the tie, uncovered fallback remains, a 2cm
+  foreground hull retains occlusion, and Surface ON/OFF/ON round trips pass.
+  Shared variant release/revisit and unsupported material exclusions also pass.
+- Distant buildings without resident detailed geometry still use plain fallback
+  faces. A sharp triangular transition can remain where only one source wall
+  triangle is available; this is missing detail at the outer residency boundary,
+  distinct from the jagged alternating depth conflict corrected here.
+- Final Windows D3D11 Player: source `60162ea`, RTX 4070 Laptop, 1920 x 1200,
+  347 settled tiles, zero pending loads/failures, and 198,554 masked hull
+  triangles (v5 control: 340 tiles and 39,677 masks). All shared sampled source
+  meshes/indices/material properties remain identical, apart from the intended
+  runtime Skyline shader substitution.
+- A 60-second, 100m/s native route completed five 500m-out/500m-back circuits.
+  Streaming failures: 0; frames at least 50ms: 0; streaming P95:
+  1.9523ms; frame P95: 16.6832ms; maximum frame:
+  16.6862ms. Residency ranged from 331 to 338 tiles, with repeated
+  mask publication/release. This run uses NoTracker and vsync, and has no usable
+  graphics-memory counter. `performanceTargetPassed` remains **false**; these
+  localized measurements are not full benchmark-suite or webcam acceptance.
 
 ## Local artifact preparation
 
@@ -92,11 +131,18 @@ The completed map has 260 groups and 522 unchanged built bindings. It preserves
 all 1,538,441 existing singleton assignments and adds 805 joint records covering
 16,531 hull ordinals. Its SHA-256 is
 `11c80be019cd105fb623cb454bc9f24bd542872e71147831e7e34dba9501e151`.
-The normal-product Windows Player built successfully with zero errors/warnings
-from rendering source `75c27d617ee050e3e6dfe33cae0236e244d10977`, pinned tracking
-revision `c5ddab14d12dcc8acc8b31048f5752686984f3ab`, and all 28 production runtime
+The normal-product Windows Player BuildReport records zero errors/warnings
+from rendering source `60162eaf91ad1e9f74c95e3acb200e6dfb3e0ce1`, pinned tracking
+revision `c5ddab14d12dcc8acc8b31048f5752686984f3ab`, and all 30 production runtime
 source hashes matching the branch. Private opt-in inspection helpers are present;
 the build identity therefore declares a dirty diagnostic build.
 
 The fixed-pose test uses synthetic observations to reproduce geometry. It does
 not measure webcam distance accuracy or certify every moving-head rendering issue.
+
+The existing local `Run-LocalBranch.ps1` now selects this verified Player. Only
+its PlayerPath changed; tracker, camera arguments, project identity and calibration
+directory are preserved. The previous Player and launcher bytes are retained.
+All seven existing personal calibration/preference JSON files still match their
+pre-validation hashes. The public team guide selects the same feature branch;
+no local build, private diagnostic evidence or personal data is committed.

@@ -16,6 +16,8 @@ GitHub에서 `codex/physical-projection-audit-20261012`를 대상으로 Pull Req
 
 항공 시점의 외벽 겹침 수정까지 확인할 실행 대상은 공개 저장소의 **`codex/city-overlap-20261012`** 브랜치입니다. 기존 공유 브랜치 `codex/physical-projection-audit-20261012`에서 분리한 수정이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [외벽 겹침 검증 기록](aerial-overlap-validation.md), [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
 
+현재 수정은 [PR #6](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/6)에서 검토할 수 있습니다. 겹치는 면의 대응 판정과 로딩 경계의 깊이 우선순위를 함께 수정했으며 Surface 비교는 그대로 사용할 수 있습니다. 상세 모델이 아직 로딩되지 않은 먼 건물의 단색 대체 면은 남을 수 있습니다.
+
 ## 처음 한 번 준비
 
 Windows x64에서 다음을 설치합니다.
