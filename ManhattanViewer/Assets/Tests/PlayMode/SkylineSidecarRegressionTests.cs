@@ -235,6 +235,17 @@ public sealed class SkylineSidecarRegressionTests
         ownership.Register(skyTile,sky);ownership.Register(coreTile,core,source);ownership.Register(otherTile,other,otherSource);ownership.SetDesired(core,true);ownership.SetDesired(other,true);Drain();
         Assert.That(ownership.MaskedTriangles,Is.Zero);Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
     }
+    [TestCase(false)]
+    [TestCase(true)]
+    public void DepthVariantCannotEstablishImportedHullOrCoreCoverage(bool onCore)
+    {
+        var target=onCore?core:sky;
+        var variant=new Material(target.GetComponent<MeshRenderer>().sharedMaterial) {name="Skyline",shader=Resources.Load<Shader>("SkylineFallbackLit")};objects.Add(variant);
+        target.GetComponent<MeshRenderer>().sharedMaterial=variant;
+        Register();Drain();
+        Assert.That(ownership.MaskedTriangles,Is.Zero);
+        Assert.That(sky.GetComponent<MeshFilter>().sharedMesh,Is.SameAs(original));
+    }
     [Test]public void PreviousQuantizedRulePreservesFallbackUntilAnExplicitSidecarRebuild()
     {
         data.ruleVersion="legacy-flat-hull-v4-extra-material-safe";

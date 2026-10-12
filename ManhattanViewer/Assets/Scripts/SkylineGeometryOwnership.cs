@@ -551,6 +551,7 @@ namespace Manhattan.Viewer
         {
             // Baker's imported flat hull only; runtime clones never establish provenance.
             if(material==null||(material.name!="Skyline"&&(!allowRuntimeVariant||material.name!="Skyline (surface off)")))return false;
+            if(!allowRuntimeVariant&&(material.shader==null||material.shader.name!="Universal Render Pipeline/Lit"))return false;
             foreach(string map in HullMaps)if(material.HasProperty(map)&&material.GetTexture(map)!=null)return false;
             return true;
         }
