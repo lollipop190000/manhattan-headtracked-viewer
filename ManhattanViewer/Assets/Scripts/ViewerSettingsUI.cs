@@ -84,6 +84,7 @@ namespace Manhattan.Viewer
             scroll.viewport = viewport; scroll.content = content;
             Heading(content, "SETTINGS");
             TextRow(content, "Physical values use centimetres. Changes preserve city position.", 54);
+            BuildWebcamSection(content);
             var c = app.Display.Calibration;
             NumericRow(content, "Screen width (cm)", c.screenWidth * 100f, v => { if (v >= 10 && v <= 300) { c.screenWidth = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Screen height (cm)", c.screenHeight * 100f, v => { if (v >= 10 && v <= 200) { c.screenHeight = v / 100f; app.UpdateCalibration(); } });
@@ -119,18 +120,6 @@ namespace Manhattan.Viewer
             NumericRow(content, "Mouse sensitivity", app.KeyboardInput.MouseSensitivity, v => { app.KeyboardInput.MouseSensitivity = Mathf.Clamp(v, .01f, 1f); app.Preferences.mouseSensitivity = app.KeyboardInput.MouseSensitivity; app.SavePreferences(); });
             ToggleRow(content, "Temporal anti-aliasing", app.Preferences.temporalAA, v => { app.Preferences.temporalAA = v; app.Rendering.SetTemporalAA(v); app.SavePreferences(); });
             ToggleRow(content, "Show diagnostics", app.Preferences.diagnostics, v => { app.Preferences.diagnostics = v; app.SavePreferences(); });
-            Heading(content, "WEBCAM");
-            cameras = new ViewerCameraSelection(ViewerPersistence.DirectoryPath);
-            var cameraStatusRow = Row(content, 120);
-            cameraMessage = Text(cameraStatusRow, "Waiting for tracker camera list", 14, 0, 0, 380, 120);
-            cameraMessage.supportRichText = false; Stretch(cameraMessage.rectTransform);
-            ActionRow(content, "Refresh webcam list", () => cameras.Refresh());
-            var options = new GameObject("Webcam choices", typeof(RectTransform));
-            options.transform.SetParent(content, false); cameraOptions = options.transform;
-            var cameraLayout = options.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            cameraLayout.spacing = 6; cameraLayout.childControlHeight = cameraLayout.childControlWidth = true;
-            cameraLayout.childForceExpandHeight = false;
-            TextRow(content, "Choose a camera below. The tracker switches without moving the city. After changing cameras, check calibration and capture a new face reference. Black video means the camera source is not supplying an image.", 108);
             Heading(content, "CAMERA CALIBRATION");
             NumericRow(content, "Eye separation (mm)", c.measuredEyeSeparationMeters * 1000f, v => c.measuredEyeSeparationMeters = Mathf.Clamp(v, 45, 85) / 1000f);
             NumericRow(content, "Webcam horizontal FOV", c.horizontalFovDegrees, v => c.horizontalFovDegrees = Mathf.Clamp(v, 30, 110));
@@ -160,6 +149,22 @@ namespace Manhattan.Viewer
             ActionRow(content, "Run 20 minute route at current speed", () => { app.Benchmark.StartBenchmark(app.Flight.Speed, 1200f, null, app.Streamer.CollisionProxiesEnabled); ShowDrawer(false); });
             ActionRow(content, "Finish and save current benchmark", () => app.Benchmark.Finish());
             ActionRow(content, "Close settings", () => ShowDrawer(false));
+        }
+
+        private void BuildWebcamSection(Transform content)
+        {
+            Heading(content, "WEBCAM");
+            cameras = new ViewerCameraSelection(ViewerPersistence.DirectoryPath);
+            var cameraStatusRow = Row(content, 120);
+            cameraMessage = Text(cameraStatusRow, "Waiting for tracker camera list", 14, 0, 0, 380, 120);
+            cameraMessage.supportRichText = false; Stretch(cameraMessage.rectTransform);
+            ActionRow(content, "Refresh webcam list", () => cameras.Refresh());
+            var options = new GameObject("Webcam choices", typeof(RectTransform));
+            options.transform.SetParent(content, false); cameraOptions = options.transform;
+            var cameraLayout = options.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            cameraLayout.spacing = 6; cameraLayout.childControlHeight = cameraLayout.childControlWidth = true;
+            cameraLayout.childForceExpandHeight = false;
+            TextRow(content, "Choose a camera below. The tracker switches without moving the city. After changing cameras, check calibration and capture a new face reference. Black video means the camera source is not supplying an image.", 108);
         }
 
         private void CaptureFaceReference()

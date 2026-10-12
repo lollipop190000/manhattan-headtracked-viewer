@@ -9,7 +9,7 @@
 
 Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~100m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
 
-현재 기술 패키지는 [`e305f125c0efdd0e34292682b9e709cd8500b6eb`](https://github.com/lollipop190000/head-tracked-display/commit/e305f125c0efdd0e34292682b9e709cd8500b6eb)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했습니다. [현재 투영 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
+현재 기술 패키지는 [`c5ddab14d12dcc8acc8b31048f5752686984f3ab`](https://github.com/lollipop190000/head-tracked-display/commit/c5ddab14d12dcc8acc8b31048f5752686984f3ab)에 고정되어 있습니다. 부분 카메라 영역과 물리 화면의 창 위치를 반영하는 투영을 추가했습니다. URP 없는 최소 소비 프로젝트와 합성 Windows Player 검사는 통과했습니다. [현재 투영 검증 기록](docs/physical-viewport-validation.md)을 확인합니다.
 
 일반적인 스트리밍 준비 완료와 실제 표시 전환을 다른 프레임으로 나누는 작업 경계를 추가했습니다. 기존 표시를 복구해야 하는 경우에는 즉시 처리합니다. 소스 `338c090`과 당시 대응 자료로 측정한 1920×1200·100m/s·웹캠 없는 진단에서 Midtown 반복 streaming P95는 1.8049/1.8441ms였습니다. 작업이 활발한 구간의 P95는 여전히 2ms를 넘으며, 이후 면 대응 수정의 성능·전체 지역·지붕 번쩍임·배포본 합격은 별도 검증이 필요합니다. 측정한 정확한 소스, 실패했던 중간 정책, CPU/GPU 시간과 남은 한계는 [현재 스트리밍 검증 기록](docs/current-streaming-validation.md)에 있습니다.
 

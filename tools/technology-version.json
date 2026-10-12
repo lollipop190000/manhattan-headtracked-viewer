@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/lollipop190000/head-tracked-display.git",
-  "revision": "e305f125c0efdd0e34292682b9e709cd8500b6eb",
+  "revision": "c5ddab14d12dcc8acc8b31048f5752686984f3ab",
   "packagePath": "Packages/com.headtracked.display",
   "pythonVersion": "3.13.5",
   "pythonRequirements": "python_tracker/requirements.txt",
