@@ -12,11 +12,13 @@ git switch -c codex/my-feature
 git push -u origin HEAD
 ```
 
-GitHub에서 `codex/physical-projection-audit-20261012`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
+GitHub에서 `codex/roof-flicker-20261013`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
 
-항공 시점의 외벽 겹침 수정까지 확인할 실행 대상은 공개 저장소의 **`codex/city-overlap-20261012`** 브랜치입니다. 기존 공유 브랜치 `codex/physical-projection-audit-20261012`에서 분리한 수정이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [외벽 겹침 검증 기록](aerial-overlap-validation.md), [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
+외벽 겹침과 먼 지붕 번쩍임 수정까지 확인할 실행 대상은 공개 저장소의 **`codex/roof-flicker-20261013`** 브랜치입니다. 기존 외벽 수정 브랜치 `codex/city-overlap-20261012`에서 분리한 후속 수정이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [지붕 번쩍임 검증 기록](roof-flicker-validation.md), [외벽 겹침 검증 기록](aerial-overlap-validation.md), [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
 
-현재 수정은 [PR #6](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/6)에서 검토할 수 있습니다. 겹치는 면의 대응 판정과 로딩 경계의 깊이 우선순위를 함께 수정했으며 Surface 비교는 그대로 사용할 수 있습니다. 상세 모델이 아직 로딩되지 않은 먼 건물의 단색 대체 면은 남을 수 있습니다.
+지붕 번쩍임 후속 수정은 [PR #7](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/7)에서 검토할 수 있습니다.
+
+앞선 외벽 수정은 [PR #6](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/6)에서 검토할 수 있습니다. 겹치는 면의 대응 판정과 로딩 경계의 깊이 우선순위를 함께 수정했으며 Surface 비교는 그대로 사용할 수 있습니다. 상세 모델이 아직 로딩되지 않은 먼 건물의 단색 대체 면은 남을 수 있습니다.
 
 ## 처음 한 번 준비
 
@@ -32,7 +34,7 @@ PowerShell에서 아래 명령을 순서대로 실행합니다. 각 단계가 �
 ```powershell
 gh auth login
 git lfs install
-git clone --branch codex/city-overlap-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch codex/roof-flicker-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs pull
 git branch --show-current

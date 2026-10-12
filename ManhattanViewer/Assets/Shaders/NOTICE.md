@@ -2,9 +2,14 @@
 
 `Assets/Scripts/Resources/SkylineFallbackLit.shader` is also adapted from the
 same pinned `Lit.shader`, under the same Unity Companion License below. It
-retains the stock passes and introduces `Offset 0, 8` for camera depth ties on
-private legacy Skyline hull variants. Shadow, Meta and 2D passes explicitly
-retain zero offset. No slope bias is used. The depth unit is GPU dependent;
+retains the stock passes and uses `Offset 0, 8` for wall depth ties on
+private legacy Skyline hull variants. `SkylineFallbackDepth.hlsl` additionally
+recesses these closed hulls by 1mm in world Y in the camera passes, preventing
+millimetre-rounded fallback roofs from covering detailed roofs.
+`SkylineFallbackMotion.hlsl` applies the same recess to current and previous
+unjittered motion projections. Imported vertices/materials are unchanged.
+Shadow, Meta and 2D passes retain their stock positions and zero offset.
+No slope bias is used. The depth unit is GPU dependent;
 it is not a fixed distance in metres. Repeat native depth-priority and material
 round-trip tests after changing Unity, URP, graphics API or depth format.
 

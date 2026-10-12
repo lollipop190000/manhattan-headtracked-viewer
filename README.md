@@ -3,7 +3,7 @@
 
 # Manhattan Head Tracked Viewer
 
-팀원이 항공 시점의 외벽 겹침 수정이 포함된 `codex/city-overlap-20261012` 버전을 실행하려면 [브랜치 지정 실행 안내](docs/team-quickstart.md)를 따릅니다. 저장소와 도시 원본 Release는 공개되어 있습니다. 기존 Windows preview 초안은 다른 커밋이므로 이 브랜치의 실행 파일로 사용하지 않습니다.
+팀원이 외벽 겹침과 먼 지붕 번쩍임 수정이 포함된 `codex/roof-flicker-20261013` 버전을 실행하려면 [브랜치 지정 실행 안내](docs/team-quickstart.md)를 따릅니다. 저장소와 도시 원본 Release는 공개되어 있습니다. 기존 Windows preview 초안은 다른 커밋이므로 이 브랜치의 실행 파일로 사용하지 않습니다.
 
 맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
 
@@ -14,6 +14,8 @@ Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Sett
 일반적인 스트리밍 준비 완료와 실제 표시 전환을 다른 프레임으로 나누는 작업 경계를 추가했습니다. 기존 표시를 복구해야 하는 경우에는 즉시 처리합니다. 소스 `338c090`과 당시 대응 자료로 측정한 1920×1200·100m/s·웹캠 없는 진단에서 Midtown 반복 streaming P95는 1.8049/1.8441ms였습니다. 작업이 활발한 구간의 P95는 여전히 2ms를 넘으며, 이후 면 대응 수정의 성능·전체 지역·지붕 번쩍임·배포본 합격은 별도 검증이 필요합니다. 측정한 정확한 소스, 실패했던 중간 정책, CPU/GPU 시간과 남은 한계는 [현재 스트리밍 검증 기록](docs/current-streaming-validation.md)에 있습니다.
 
 높은 위치에서 단색 원거리 면이 상세 건물의 창문을 가리는 문제를 재현했습니다. 같은 벽의 삼각형 분할이 다르거나 한 벽이 여러 도시 구역으로 나뉜 경우가 원인이었습니다. v7은 그 벽에 필요한 이웃 구역까지 요청하고, 상세 면들이 모두 표시될 때 덮개를 제거하며, 한쪽이 빠지면 복원합니다. 이웃 요청은 연쇄 확장하지 않으며 기존 메모리 제한을 따릅니다. 바깥 로딩 경계에 남는 부분 겹침은 실행 중 복제한 단색 재질의 깊이 우선순위로 안정시킵니다. 원본 재질과 Surface 비교 동작은 보존합니다. 현재 코드에는 기존 built bundle에서 **v7 면 대응 자료를 명시적으로 재생성**해야 합니다. [항공 시점 검증 기록](docs/aerial-overlap-validation.md)과 [Skyline 대응 자료 생성 안내](docs/skyline-ownership.md)를 따릅니다.
+
+먼 지붕의 남은 번쩍임은 반올림된 단색 배경 지붕과 상세 지붕의 약 0.2mm 높이 차이에서 재현됐습니다. `codex/roof-flicker-20261013`은 기존 외벽 수정에 더해, 해당 배경 건물만 렌더링할 때 1mm 낮춰 겹침을 해소합니다. 원본 도시 자산·조명·추적 패키지·비교 스위치는 그대로 유지합니다. [지붕 번쩍임 검증 기록](docs/roof-flicker-validation.md)을 참고하세요.
 
 ## Windows 배포본 실행
 
@@ -38,7 +40,7 @@ Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`)
 
 ```powershell
 gh auth login
-git clone --branch codex/city-overlap-20261012 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch codex/roof-flicker-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs install --local
 git lfs pull
