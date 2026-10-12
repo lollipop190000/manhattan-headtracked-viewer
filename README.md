@@ -96,6 +96,8 @@ GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한
 
 `tools/build.ps1`는 고정 Unity Editor를 직접 실행하고 도시 대응 데이터 생성이 끝난 뒤 Player를 빌드합니다. Editor 경로를 자동으로 찾지 못하면 `-EditorPath`로 지정합니다. 기존 번들에서 대응 데이터만 다시 만들 때는 [ownership 생성 안내](docs/skyline-ownership.md)의 `tools/bake_ownership.ps1`를 사용합니다.
 
+멀리 있는 건물의 텍스처를 단색 외형이 가리던 문제는 원본 자산을 바꾸지 않고 대응 판정을 수정했습니다. 같은 위치의 실제 Windows Player 수정 전후 결과는 [벽면 검증 기록](docs/beige-wall-validation.md)에 있습니다.
+
 `tools/build.ps1`는 실행 파일 옆 `Notices/`에 검증된 도시 원본 이용 조건과 라이선스·출처를 함께 준비합니다. Windows 배포 ZIP에도 이 폴더를 포함합니다. 성능 측정은 `tools/benchmark.ps1`가 1920×1200 Exclusive Fullscreen을 요청하며 AC·데스크톱 Hz·드라이버·전력 제한 가용성과 GPU 로그를 기록합니다.
 
 반복 측정 전체 목록은 `tools/benchmark_suite.ps1 -DryRun`으로 확인하고, 실측 보정 준비 후 `tools/benchmark_suite.ps1 -CalibrationDirectory '<private calibration directory>'`로 순차 실행합니다. 기본 웹캠 사용·12가지 실행의 측정 시간은 약 2시간 5분이며 준비/로딩 시간이 추가됩니다. GUID 폴더에 원본 로그와 진행 JSON을 보존합니다. `-CaseFilter`로 일부만 선택하고, `-NoTracker`·`-DurationOverride`는 명시적인 기초 비교·탐색 용도로 사용합니다. 완료 상태가 성능 합격을 의미하지는 않습니다.

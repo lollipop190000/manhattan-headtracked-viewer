@@ -30,6 +30,18 @@ delayed completion, nonzero exit, owned timeout cleanup, launch arguments and
 Editor executable validation. The final scoped-registration cleanup was followed
 by another complete 235-case EditMode run; it does not change runtime code.
 
+The subsequent controlled source-loader and material-family hooks passed
+241/241 EditMode and 150/150 live GPU PlayMode, with zero Unity skips. The 21
+loader cases exercise publication, exact neighboring-primitive preservation,
+Surface OFF/ON, rollback-before-release, stale/cancelled/timed-out loads, version
+replacement, invalid leases, foreign mesh pointers, common-frame rebasing and
+matching-receipt renderability failures. Six EditMode cases cover factory-aware
+Surface caching, snapshot isolation, registration failure cleanup, restoration
+and unsupported custom fade conversion. Python remains 155 cases (153 passed,
+two Windows symlink-privilege skips), and all eight PowerShell assertions pass.
+These executed synthetic fixture cases do not approve a production optical
+profile, live CityStreamer coordination or real-source pixel quality.
+
 A separate private native-asset probe deliberately fails an unknown Skyline
 group, preserves its previous output sentinels and input digests, restores a
 borrowed non-null path transform and exact locator/provider references and order,

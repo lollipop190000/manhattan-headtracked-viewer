@@ -7,7 +7,7 @@ namespace Manhattan.Viewer
     /// <summary>
     /// Decision-only, single-threaded replacement transaction for one stable source ID.
     /// This does not load assets, inspect geometry/materials or change any Unity renderer.
-    /// A future adapter must validate exact body/trim ownership and optical compatibility,
+    /// Its trusted adapter must validate exact body/trim ownership and optical compatibility,
     /// keep the fallback resident, and apply each decision atomically between frames.
     /// Readiness is evidence from that trusted adapter, not a material-capability override.
     /// </summary>

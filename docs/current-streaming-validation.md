@@ -9,6 +9,11 @@ separate rebuilt-input validation; those earlier numbers do not certify the
 new mapping. See [current ownership rules](skyline-ownership.md) and the later
 live webcam limits in [viewport validation](physical-viewport-validation.md).
 
+The full v5 rebuild and matched native fixed-pose result are now recorded in
+[beige wall validation](beige-wall-validation.md), on runtime `9deb78f`. This
+static surface proof does not transfer the older performance/memory acceptance
+to that build.
+
 ## Source and immutable city inputs
 
 The measured scheduling policy is in viewer runtime commit
