@@ -180,19 +180,19 @@ namespace Manhattan.Viewer
             var text = new StringBuilder();
             foreach (Transform item in root.GetComponentsInChildren<Transform>(true))
             {
-                text.Append(item.GetInstanceID()).Append('|').Append(item.gameObject.activeSelf).Append('|');
+                text.Append(item.GetEntityId().ToString()).Append('|').Append(item.gameObject.activeSelf).Append('|');
                 Append(text, item.localPosition); Append(text, item.localRotation); Append(text, item.localScale);
-                var mesh = item.GetComponent<MeshFilter>(); if (mesh != null) text.Append(mesh.sharedMesh != null ? mesh.sharedMesh.GetInstanceID() : 0).Append('|');
+                var mesh = item.GetComponent<MeshFilter>(); if (mesh != null) text.Append(mesh.sharedMesh != null ? mesh.sharedMesh.GetEntityId().ToString() : "0").Append('|');
             }
             return Hash(text.ToString());
         }
         private static string MaterialFingerprint(Material[] materials)
         {
-            Array.Sort(materials, (a, b) => a.GetInstanceID().CompareTo(b.GetInstanceID()));
+            Array.Sort(materials, (a, b) => a.GetEntityId().CompareTo(b.GetEntityId()));
             var text = new StringBuilder();
             foreach (var material in materials)
             {
-                text.Append(material.GetInstanceID()).Append('|').Append(material.shader.name).Append('|').Append(material.renderQueue).Append('|');
+                text.Append(material.GetEntityId().ToString()).Append('|').Append(material.shader.name).Append('|').Append(material.renderQueue).Append('|');
                 string[] keywords = material.shaderKeywords; Array.Sort(keywords, StringComparer.Ordinal); text.AppendJoin(",", keywords).Append('|');
                 for (int i = 0; i < material.shader.GetPropertyCount(); i++)
                 {
@@ -202,7 +202,7 @@ namespace Manhattan.Viewer
                         case ShaderPropertyType.Color: Append(text, material.GetColor(property)); break;
                         case ShaderPropertyType.Vector: Append(text, material.GetVector(property)); break;
                         case ShaderPropertyType.Texture:
-                            var texture = material.GetTexture(property); text.Append(texture != null ? texture.GetInstanceID() : 0).Append('|');
+                            var texture = material.GetTexture(property); text.Append(texture != null ? texture.GetEntityId().ToString() : "0").Append('|');
                             Append(text, material.GetTextureScale(property)); Append(text, material.GetTextureOffset(property)); break;
                         case ShaderPropertyType.Int: text.Append(material.GetInteger(property)).Append('|'); break;
                         default: Append(text, material.GetFloat(property)); break;
@@ -218,7 +218,7 @@ namespace Manhattan.Viewer
             Append(text, RenderSettings.fogColor); Append(text, RenderSettings.fogDensity);
             foreach (var light in FindObjectsByType<Light>(FindObjectsSortMode.InstanceID))
             {
-                text.Append(light.GetInstanceID()).Append('|').Append(light.type).Append('|').Append(light.shadows).Append('|').Append(light.enabled).Append('|');
+                text.Append(light.GetEntityId().ToString()).Append('|').Append(light.type).Append('|').Append(light.shadows).Append('|').Append(light.enabled).Append('|');
                 Append(text, light.transform.position); Append(text, light.transform.rotation); Append(text, light.color); Append(text, light.intensity);
             }
             foreach (var volume in FindObjectsByType<Volume>(FindObjectsSortMode.InstanceID))
@@ -231,7 +231,7 @@ namespace Manhattan.Viewer
         private static string PipelineFingerprint(Camera camera)
         {
             var text = new StringBuilder(); var asset = GraphicsSettings.currentRenderPipeline;
-            text.Append(asset != null ? asset.GetInstanceID() : 0).Append('|').Append(camera.allowHDR).Append('|').Append(camera.allowMSAA).Append('|').Append(camera.allowDynamicResolution).Append('|');
+            text.Append(asset != null ? asset.GetEntityId().ToString() : "0").Append('|').Append(camera.allowHDR).Append('|').Append(camera.allowMSAA).Append('|').Append(camera.allowDynamicResolution).Append('|');
             var data = camera.GetUniversalAdditionalCameraData(); text.Append(data.antialiasing).Append('|').Append(data.renderPostProcessing).Append('|');
             Append(text, camera.nearClipPlane); Append(text, camera.farClipPlane); Append(text, camera.fieldOfView);
             text.Append(data.taaSettings.quality).Append('|'); Append(text, data.taaSettings.baseBlendFactor); Append(text, data.taaSettings.jitterScale);

@@ -27,15 +27,15 @@ namespace Manhattan.Editor
         private static readonly Dictionary<string, Material> Materials = new Dictionary<string, Material>();
         private static readonly Dictionary<string, Texture> Textures = new Dictionary<string, Texture>();
         // Instance IDs are useful only inside one imported model's lifetime.
-        private static readonly Dictionary<int, string> ImportedMaterialKeys = new Dictionary<int, string>();
-        private static readonly Dictionary<int, string> ImportedTextureKeys = new Dictionary<int, string>();
+        private static readonly Dictionary<EntityId, string> ImportedMaterialKeys = new Dictionary<EntityId, string>();
+        private static readonly Dictionary<EntityId, string> ImportedTextureKeys = new Dictionary<EntityId, string>();
         private sealed class Registration
         {
             public string address, groupName;
             public bool separate;
         }
         private static readonly Dictionary<string, Registration> PendingRegistrations = new Dictionary<string, Registration>();
-        private static readonly Dictionary<int, string> GeneratedAssetPaths = new Dictionary<int, string>();
+        private static readonly Dictionary<EntityId, string> GeneratedAssetPaths = new Dictionary<EntityId, string>();
         private static readonly Dictionary<string, Object> PendingNativeAssets = new Dictionary<string, Object>();
         private sealed class PrefabPart
         {
@@ -506,7 +506,7 @@ namespace Manhattan.Editor
 
         private static string MaterialKey(Material source)
         {
-            if(ImportedMaterialKeys.TryGetValue(source.GetInstanceID(),out string cached))return cached;
+            if(ImportedMaterialKeys.TryGetValue(source.GetEntityId(),out string cached))return cached;
             var key=new StringBuilder("gltf-material-v1|").Append(source.shader.name).Append('|').Append(source.doubleSidedGI);
             Color color=source.HasProperty("baseColorFactor")?source.GetColor("baseColorFactor"):source.HasProperty("_BaseColor")?source.GetColor("_BaseColor"):Color.white;
             key.Append('|').Append(ColorKey(color));
@@ -519,12 +519,12 @@ namespace Manhattan.Editor
                 if(texture!=null){Vector2 scale=source.GetTextureScale(property),offset=source.GetTextureOffset(property);key.Append('|').Append(FloatKey(scale.x)).Append(',').Append(FloatKey(scale.y)).Append(',').Append(FloatKey(offset.x)).Append(',').Append(FloatKey(offset.y));}
             }
             foreach(string keyword in source.shaderKeywords.OrderBy(k=>k,StringComparer.Ordinal))key.Append('|').Append(keyword);
-            string result=Digest(key.ToString());ImportedMaterialKeys.Add(source.GetInstanceID(),result);return result;
+            string result=Digest(key.ToString());ImportedMaterialKeys.Add(source.GetEntityId(),result);return result;
         }
 
         private static string TextureKey(Texture texture)
         {
-            if(ImportedTextureKeys.TryGetValue(texture.GetInstanceID(),out string cached))return cached;
+            if(ImportedTextureKeys.TryGetValue(texture.GetEntityId(),out string cached))return cached;
             Hash128 contents=texture.imageContentsHash;
             string identity;
             if(!contents.Equals(default(Hash128)))identity="content:"+contents;
@@ -532,7 +532,7 @@ namespace Manhattan.Editor
             else throw new InvalidDataException("Texture lacks a persistent content/asset identity: "+texture.name);
             int mipCount=texture is Texture2D texture2D?texture2D.mipmapCount:1;
             string key=Digest(identity+"|"+texture.width+"x"+texture.height+"|"+texture.graphicsFormat+"|"+mipCount+"|"+texture.wrapModeU+"|"+texture.wrapModeV+"|"+texture.filterMode);
-            ImportedTextureKeys.Add(texture.GetInstanceID(),key);return key;
+            ImportedTextureKeys.Add(texture.GetEntityId(),key);return key;
         }
 
         private static string FloatKey(float value)=>value.ToString("R",CultureInfo.InvariantCulture);
@@ -602,17 +602,17 @@ namespace Manhattan.Editor
                 // Meshes have no asset references and can safely be written in a batch.
                 if(value is Material || value is Texture) PendingNativeAssets[path]=value;
                 else AssetDatabase.CreateAsset(value,path);
-                GeneratedAssetPaths[value.GetInstanceID()]=path;
+                GeneratedAssetPaths[value.GetEntityId()]=path;
                 return value;
             }
             EditorUtility.CopySerialized(value,old);Object.DestroyImmediate(value);EditorUtility.SetDirty(old);
-            GeneratedAssetPaths[old.GetInstanceID()]=path;
+            GeneratedAssetPaths[old.GetEntityId()]=path;
             return old;
         }
         private static string GeneratedPath(Object value)
         {
             if(value==null)throw new InvalidDataException("Missing generated native asset.");
-            if(GeneratedAssetPaths.TryGetValue(value.GetInstanceID(),out string path))return path;
+            if(GeneratedAssetPaths.TryGetValue(value.GetEntityId(),out string path))return path;
             path=AssetDatabase.GetAssetPath(value);
             if(string.IsNullOrEmpty(path))throw new InvalidDataException("Generated asset lacks a known persistent path: "+value.name);
             return path;
@@ -645,7 +645,7 @@ namespace Manhattan.Editor
                         GameObject child=new GameObject("Part "+part++);child.transform.SetParent(go.transform,false);
                         if(pending.layer==CityLayer.Collision)
                         {
-                            var collider=child.AddComponent<MeshCollider>();collider.sharedMesh=mesh;Physics.BakeMesh(mesh.GetInstanceID(),false);
+                            var collider=child.AddComponent<MeshCollider>();collider.sharedMesh=mesh;Physics.BakeMesh(mesh.GetEntityId(),false);
                         }
                         else
                         {
@@ -699,7 +699,7 @@ namespace Manhattan.Editor
             var catalog=AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset");
             IEnumerable<CityTileRecord> records=Records.Count>0?Records:catalog!=null?catalog.tiles:throw new InvalidDataException("Bake a catalog before validating tile dependencies.");
             int validated=0,total=Records.Count>0?Records.Count:catalog.tiles.Length;
-            var checkedMaterials=new HashSet<int>();var paths=new List<string>(total);
+            var checkedMaterials=new HashSet<EntityId>();var paths=new List<string>(total);
             foreach(var record in records)
             {
                 string path=Output+"/Tiles/"+record.id+".prefab";
@@ -710,7 +710,7 @@ namespace Manhattan.Editor
                 foreach(var renderer in prefab.GetComponentsInChildren<MeshRenderer>(true))
                     foreach(var material in renderer.sharedMaterials)
                     {
-                        if(material!=null&&!checkedMaterials.Add(material.GetInstanceID()))continue;
+                        if(material!=null&&!checkedMaterials.Add(material.GetEntityId()))continue;
                         ValidateNative(material,Output+"/Materials/",record.id);
                         foreach(string property in material.GetTexturePropertyNames())
                         {
