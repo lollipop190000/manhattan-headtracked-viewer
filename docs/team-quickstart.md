@@ -1,3 +1,5 @@
+> **실행만 하는 팀원:** [v0.1.1 Release](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/v0.1.1)의 Windows ZIP을 전부 압축 해제하고 `Run-HeadTrackedDemo.cmd`를 더블 클릭합니다. 메뉴 1은 웹캠 없는 탐색, 메뉴 2는 웹캠 추적입니다. Python·Git·Unity 설치는 필요하지 않습니다. [빠른 실행 안내](windows-release-ko.md)를 참고하세요. 아래는 소스를 직접 수정하는 개발자용 과정입니다.
+
 # 맨해튼: 팀원 실행 안내
 
 공유 저장소: [sshs-ai-club/manhattan-headtracked-viewer](https://github.com/sshs-ai-club/manhattan-headtracked-viewer). 조직의 현재 구성원 전원에게 [manhattan-contributors 팀](https://github.com/orgs/sshs-ai-club/teams/manhattan-contributors)을 통해 쓰기 권한을 부여했습니다. 새 조직 구성원이 들어오면 조직 관리자나 팀 관리자가 이 팀에도 추가합니다.
@@ -74,7 +76,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 
 ## 처음 화면과 조작
 
-실제 게임 표시 영역의 너비·높이와 눈에서 화면까지의 거리를 **cm**로 입력하고 `Enter Manhattan`을 누릅니다. 웹캠을 사용하면 정면 자세에서 Settings의 `Capture current face reference`로 기준을 잡고 `Save physical calibration`으로 저장합니다. 패널 전체 치수와 창 모드 보정은 [상세 보정 안내](windows-release.md#실측-입력과-개인-보정)를 따릅니다.
+실제 게임 표시 영역의 너비·높이와 눈에서 화면까지의 거리를 **cm**로 입력하고 `Enter Manhattan`을 누릅니다. 웹캠을 사용하면 정면 자세에서 Settings의 `Capture current face reference`로 기준을 잡고 `Save physical calibration`으로 저장합니다. 패널 전체 치수와 창 모드 보정은 [상세 보정 안내](windows-release.md#first-launch-and-physical-measurement)를 따릅니다.
 
 | 조작 | 동작 |
 | --- | --- |

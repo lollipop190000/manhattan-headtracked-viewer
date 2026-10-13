@@ -2,25 +2,28 @@
 
 A Windows Unity viewer for exploring a streamed Manhattan city with keyboard, mouse and optional webcam head tracking. A measured physical screen and off-axis projection make the monitor behave like a window into the city. Head tracking is single-viewer and monoscopic.
 
-[Download for Windows](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/latest) · [한국어 실행 안내](docs/windows-release.md) · [Report a bug](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/issues) · [MIT code license](LICENSE)
+[Download for Windows](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/latest) · [Windows guide](docs/windows-release.md) · [Report a bug](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/issues) · [MIT code license](LICENSE)
 
 ![Manhattan rendered in the Windows viewer](docs/images/manhattan.png)
 
 The city stays fixed while the observer moves. Buildings, roads and trees stream around the viewer; distant skyline coverage remains available. Optional afternoon sunlight moves only when explicitly started in Settings.
 
-## Run on Windows
+## Run on another Windows PC
 
-1. Download **ManhattanViewer-v0.1.0-Windows-x64.zip** from [Releases](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/v0.1.0).
-2. Extract the **whole ZIP** into a writable folder, for example `C:\Games\ManhattanViewer`. Keep the executable, data folders and `Notices` together.
-3. Open PowerShell in that folder and run:
+1. Download **ManhattanViewer-v0.1.1-Windows-x64.zip** from [Releases](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/v0.1.1). This single download supports both modes.
+2. Extract the **whole ZIP** into a writable folder such as `C:\Games\ManhattanViewer`. Keep every folder together; do not launch from inside the ZIP.
+3. Double-click **Run-HeadTrackedDemo.cmd** and choose:
 
-```powershell
-.\ManhattanViewer.exe --no-tracker
-```
+| Menu | Mode | Included |
+|---|---|---|
+| **1 — Explore without a webcam** | Keyboard, mouse and city exploration | Player, city and runtime; the webcam is not opened |
+| **2 — Use webcam head tracking** | The same city with head-driven perspective | Everything above, plus private Python, tracker packages and the face model |
 
-This includes the city and Unity runtime. **No Unity Editor, Python, Git, source assets or account is needed to explore without a webcam.** After extraction, this mode works offline. Use Windows x64 with DirectX 11; the measured machine is an RTX 4070 Laptop at 1920×1200. Other GPUs need their own performance check.
+**No Unity Editor, Python installation, Git, pip, source download or account is required for either mode.** The webcam mode uses the Python bundled in this ZIP; it does not replace or depend on an installed Python. Frames are processed locally and are not uploaded or saved.
 
-First launch asks for visible screen width, height and eye-to-screen distance in **centimetres**. Measure the display area, then select **Enter Manhattan**. Click the city to capture the mouse; `Esc` releases it and opens Settings. `Alt+F4` exits.
+Use Windows 10/11 x64, a DirectX 11 GPU and a webcam for mode 2. If a new PC reports a missing Microsoft DLL, choose **4 — Install Microsoft runtime** in the launcher. This downloads the official Microsoft prerequisite and may ask for Windows administrator approval. No prerequisites are installed during normal game startup. Once that Windows prerequisite is present, both modes run offline.
+
+First launch asks for visible screen width, height and eye-to-screen distance in **centimetres**. Measure the display area, then select **Enter Manhattan**. For webcam mode, open Settings → **WEBCAM**, select your camera by name, face forward and use **Capture current face reference**. Allow camera access for desktop apps in Windows if needed. See the [English Windows guide](docs/windows-release.md) or [한국어 빠른 안내](docs/windows-release-ko.md).
 
 | Input | Action |
 |---|---|
@@ -28,34 +31,27 @@ First launch asks for visible screen width, height and eye-to-screen distance in
 | Q / E | Descend / rise |
 | Mouse | Look around |
 | Esc / Settings | Release the pointer and open settings |
-| Alt+F4 | Quit |
+| Alt+F4 | Quit the viewer; its launcher stops the tracker |
 
-The default flight speed is 10m/s; Settings supports 1–100m/s. Saved bookmarks load only when requested. Keep personal calibration outside Git.
+Click the city to capture the mouse. Flight defaults to 10m/s; Settings supports 1–100m/s. Saved bookmarks load only when requested. A paired HID controller can also move: left stick/D-pad plus shoulder buttons on a gamepad, or stick/hat plus buttons 1/2 on a generic joystick. Add `--no-controller` to the player arguments to disable controller input.
 
-A Windows-paired HID controller can also move through the city. On a gamepad, use the left stick or D-pad to move, and the left/right shoulder buttons to descend/rise. Generic HID joysticks use the stick or hat and buttons 1/2 for descend/rise; device mappings can vary. Keyboard and mouse remain available. Add `--no-controller` to disable controller input.
-
-## Add webcam head tracking
-
-Install **Git** and **Python 3.13.5** first. Internet is required once to download the pinned tracker dependencies and face model. The webcam is processed locally; the tracker sends observations to Unity over localhost.
-
-Clone the matching release, prepare the tracker, then point the launcher at your extracted player:
+For direct mode selection, open PowerShell **in the extracted release folder**:
 
 ```powershell
-git clone --branch v0.1.0 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
-cd manhattan-headtracked-viewer
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
+.\Run-HeadTrackedDemo.cmd -NoTracker
+.\Run-HeadTrackedDemo.cmd -Webcam
 ```
 
-Change `-PlayerPath` to your actual absolute path. If `python` points to another version, add `-PythonExe 'C:\Path\To\Python313\python.exe'` to setup. Select another webcam with `-Camera 1` or the Settings **WEBCAM** section. After measuring the display, face forward and use **Capture current face reference**.
-
-The launcher manages both processes and stops its tracker when the player closes. To stop that session explicitly:
+The same entry point supports camera selection, checks and stop:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Stop
+.\Run-HeadTrackedDemo.cmd -Check -ListCameras
+.\Run-HeadTrackedDemo.cmd -Camera 1
+.\Run-HeadTrackedDemo.cmd -Camera 1 -CameraBackend msmf
+.\Run-HeadTrackedDemo.cmd -Stop
 ```
 
-See the [Windows guide](docs/windows-release.md) for camera permissions, saved calibration, camera switching, logs and troubleshooting. Webcam operation depends on the camera and physical calibration; this release's rendering checks use a synthetic observer.
+`-Webcam` restores the saved camera when possible, otherwise uses camera 0. `-Camera` overrides that selection for the launch. Camera changes in Settings are saved separately from physical calibration and bookmarks.
 
 ## Comparison controls
 
@@ -87,7 +83,7 @@ Run these commands from a new checkout. Setup downloads the public city source r
 ```powershell
 gh auth login
 git lfs install
-git clone --branch v0.1.0 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch v0.1.1 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs pull
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1
@@ -98,6 +94,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -NoTracker
 
 Wait for each step to finish successfully. `build.ps1` builds city bundles, generates their matching Skyline ownership data, builds the player and copies attribution notices. Output: `Builds/ManhattanViewer/ManhattanViewer.exe`. Use `-EditorPath 'C:\Path\To\Editor\Unity.exe'` if automatic Editor discovery fails. Setup accepts `-PythonExe`; source files and generated tiles are not included in Git's source ZIP.
 
+To reproduce the application-local webcam ZIP, follow the [portable distribution build guide](docs/portable-release-build.md). v0.1.1 is a packaging update using the unchanged, verified v0.1.0 city player; the distribution and embedded player revisions are recorded separately.
+
 ## Validation and contributing
 
 ```powershell
@@ -105,7 +103,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -DataOnly
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -EditorPlayMode
 ```
 
-The second command needs Unity and a graphics-capable desktop for rendered tests. Exact release checks and remaining limits are in the [v0.1.0 validation report](docs/release-v0.1.0.md). Historical reports remain tied to their recorded revisions; targets are not measured results.
+The second command needs Unity and a graphics-capable desktop for rendered tests. Exact release checks and remaining limits are in the [v0.1.1 validation report](docs/release-v0.1.1.md). Historical reports remain tied to their recorded revisions; targets are not measured results.
 
 Open an issue with the release version, GPU, resolution, camera/no-camera mode, screenshot and reproduction steps. For code changes, branch from `main`, preserve Unity `.meta` files, run the relevant tests and open a pull request. See [CONTRIBUTING](CONTRIBUTING.md) and the [architecture guide](docs/architecture.md). Experimental model-import tools are explicit developer workflows and do not change normal startup content.
 
