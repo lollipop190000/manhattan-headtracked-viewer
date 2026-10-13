@@ -1,0 +1,6 @@
+{
+  "name": "WebShooter.Input",
+  "rootNamespace": "WebShooter.Input",
+  "references": ["HeadTracked.Display"],
+  "autoReferenced": true
+}
