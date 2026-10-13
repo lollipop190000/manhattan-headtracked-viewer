@@ -1,0 +1,6 @@
+{
+  "name": "WebShooter.Swing.Core",
+  "rootNamespace": "WebShooter.Swing",
+  "references": [],
+  "autoReferenced": true
+}
