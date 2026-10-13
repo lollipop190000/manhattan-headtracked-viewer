@@ -12,9 +12,9 @@ git switch -c codex/my-feature
 git push -u origin HEAD
 ```
 
-GitHub에서 `codex/city-sunlight-20261013`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
+GitHub에서 `codex/tree-visibility-20261013`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
 
-조명 개선과 선택형 태양 이동까지 확인할 실행 대상은 **`codex/city-sunlight-20261013`** 브랜치입니다. `codex/roof-flicker-20261013`의 외벽·지붕 수정을 포함한 후속 작업이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 검증 범위는 [조명 기록](sunlight-validation.md), [지붕 기록](roof-flicker-validation.md), [외벽 기록](aerial-overlap-validation.md), [투영 기록](physical-viewport-validation.md)과 [스트리밍 기록](current-streaming-validation.md)에 있습니다.
+나무 표시 거리 수정까지 포함한 실행 대상은 **`codex/tree-visibility-20261013`** 브랜치입니다. `codex/city-sunlight-20261013`의 외벽·지붕·조명 수정을 포함한 후속 작업이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 검증 범위는 [나무 표시 기록](vegetation-visibility-validation.md), [조명 기록](sunlight-validation.md), [지붕 기록](roof-flicker-validation.md), [외벽 기록](aerial-overlap-validation.md), [투영 기록](physical-viewport-validation.md)과 [스트리밍 기록](current-streaming-validation.md)에 있습니다.
 
 조명 개선과 선택형 태양 이동은 [PR #8](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/8)에서 검토할 수 있습니다.
 
@@ -36,7 +36,7 @@ PowerShell에서 아래 명령을 순서대로 실행합니다. 각 단계가 �
 ```powershell
 gh auth login
 git lfs install
-git clone --branch codex/city-sunlight-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch codex/tree-visibility-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs pull
 git branch --show-current
