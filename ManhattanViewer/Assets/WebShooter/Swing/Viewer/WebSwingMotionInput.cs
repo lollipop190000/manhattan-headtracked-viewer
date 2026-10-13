@@ -7,8 +7,7 @@ namespace WebShooter.Swing
     /// <summary>
     /// 뷰어의 이동 입력(IMotionInputSource)을 거미줄 스윙 물리로 바꿔 끼운다. 팀 코드는 수정하지 않는다.
     /// 마우스 시선과 WASD/QE는 기존 입력(look)에서 받고, 위치는 SwingPhysics가 계산해서 절대 위치(hasAbsolutePose)로 돌려준다.
-    /// 건물 충돌은 FreeFlightController.TranslationConstraint(CityCollisionConstraint)가 처리하고,
-    /// 막히면 다음 프레임에 이 클래스가 실제 위치와 비교해서 알아채고 물리에 알려 준다.
+    /// 각 물리 하위 스텝에서 TraversalCollision이 몸의 이동 경로를 검사하고 접촉을 물리에 전달한다.
     /// 모든 위치는 도시 좌표(떠 있는 원점 보정 전)다.
     /// </summary>
     public sealed class WebSwingMotionInput : IMotionInputSource
@@ -28,6 +27,19 @@ namespace WebShooter.Swing
         public int CollisionMask { get; set; } = 1 << 30;
         public float MaxRange { get; set; } = 250f;
         public bool Enabled { get; set; } = true;
+        public bool Paused { get; set; }
+        public Func<bool> CanSimulate { get; set; }
+        public bool JumpRequested { get; set; }
+        public float ReelInput { get; set; }
+        public bool AutoFollow { get; set; } = true;
+        private float manualLookHold, flightAssistTime;
+        public int CollisionReleaseCount { get; private set; }
+        public TraversalCollision Collision { get; }
+        public bool Flying { get; private set; }
+        public Vector3 ShotTarget { get; private set; }
+        public float ShotProgress { get; private set; }
+        private float shotDuration;
+        private Collider shotCollider;
 
         public event Action<Vector3> WebAttached;
         public event Action WebReleased;
@@ -39,6 +51,7 @@ namespace WebShooter.Swing
             flight = flightController ?? throw new ArgumentNullException(nameof(flightController));
             origin = floatingOrigin;
             Body = new SwingPhysics(settings);
+            Collision = new TraversalCollision(origin, Body);
         }
 
         /// <summary>
@@ -49,10 +62,24 @@ namespace WebShooter.Swing
         {
             EnsureInitialized();
             Release();
+            if (!Finite(ray.origin) || !Finite(ray.direction) || ray.direction.sqrMagnitude < .0001f) return false;
             if (!Physics.Raycast(ray, out RaycastHit hit, MaxRange, CollisionMask, QueryTriggerInteraction.Ignore)) return false;
             Vector3 anchorCity = hit.point + (origin != null ? origin.Offset : Vector3.zero);
-            if (!Body.Attach(anchorCity)) return false;
-            WebAttached?.Invoke(anchorCity);
+            if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
+            ShotTarget = anchorCity;
+            shotCollider = hit.collider;
+            ShotProgress = 0f;
+            shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
+            Flying = true;
+            // A successful high shot is sufficient to start from the street. The
+            // jump is not rope tension: the projectile still has to arrive first.
+            if (Body.AssistStrength > 0f && Body.Grounded && anchorCity.y > Body.Position.y + 3f)
+            {
+                Body.Jump();
+                var direction = Vector3.ProjectOnPlane(anchorCity - Body.Position, Vector3.up).normalized;
+                Body.Velocity += direction * (12f * Body.AssistStrength);
+                flightAssistTime = 1f;
+            }
             return true;
         }
 
@@ -70,6 +97,7 @@ namespace WebShooter.Swing
 
         public void Release()
         {
+            Flying = false;
             if (!Body.Attached) return;
             Body.Release();
             WebReleased?.Invoke();
@@ -90,15 +118,19 @@ namespace WebShooter.Swing
             MotionCommand input = look != null ? look.Sample(deltaTime) : default;
             if (!Enabled) return input;
             EnsureInitialized();
+            if (CanSimulate != null) Paused = !CanSimulate();
+            if (Paused) { JumpRequested = false; return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
 
             // 지난 프레임에 요청한 위치와 실제 위치를 비교: 크게 다르면 순간이동, 조금 다르면 충돌로 막힌 것
             Vector3 actual = flight.CityPosition;
+            if (!Finite(Body.Position) || !Finite(Body.Velocity)) { Release(); Body.Reset(actual); }
             if (hasRequested)
             {
                 Vector3 shortfall = lastRequested - actual;
                 if (shortfall.magnitude > TeleportDistance)
                 {
                     Body.Reset(actual);          // SetPose 등으로 옮겨졌다: 속도와 거미줄을 버린다
+                    Flying = false;
                     WebReleased?.Invoke();
                 }
                 else if (shortfall.magnitude > BlockedEpsilon)
@@ -110,9 +142,80 @@ namespace WebShooter.Swing
 
             yaw += input.lookDegrees.x;
             pitch = Mathf.Clamp(pitch - input.lookDegrees.y, -85f, 85f);
+            if (input.lookDegrees.sqrMagnitude > .001f) manualLookHold = 1.5f;
+            else manualLookHold = Mathf.Max(0f, manualLookHold - deltaTime);
             Quaternion heading = Quaternion.Euler(0f, yaw, 0f);
             Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
-            Body.Step(deltaTime, steer, Body.Attached ? input.localMovement.y : 0f);                    // E: 감기, Q: 풀기
+            if (input.localMovement.z < 0f)
+                steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
+            if (Flying)
+            {
+                ShotProgress = Mathf.Min(1f, ShotProgress + deltaTime / shotDuration);
+                if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy) Release();
+                else if (ShotProgress >= 1f)
+                {
+                    Flying = false;
+                    if (Body.Attach(ShotTarget)) WebAttached?.Invoke(ShotTarget);
+                }
+            }
+            if (Body.Attached)
+            {
+                Vector3 segment = Body.Anchor - Body.Position;
+                Vector3 start = Body.Position - (origin != null ? origin.Offset : Vector3.zero);
+                if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy ||
+                    Physics.Raycast(start, segment.normalized, out var obstruction, Mathf.Max(0f, segment.magnitude - .1f), CollisionMask, QueryTriggerInteraction.Ignore)) Release();
+            }
+            if (JumpRequested)
+            {
+                bool attached = Body.Attached;
+                bool jumped = Body.Jump(); JumpRequested = false;
+                Debug.Log($"TRAVERSAL_JUMP accepted={jumped} position={Body.Position} velocity={Body.Velocity}");
+                if (attached && !Body.Attached) WebReleased?.Invoke();
+            }
+            float remaining = Mathf.Min(deltaTime, .1f);
+            while (remaining > .000001f)
+            {
+                float h = Mathf.Min(remaining, Body.Settings.maxStep);
+                bool attached = Body.Attached;
+                Body.UpdateWall(Collision.FindWall(Body.Position, heading * Vector3.forward), input.localMovement.z > .1f, h);
+                if (attached && !Body.Attached) WebReleased?.Invoke();
+                Vector3 before = Body.Position;
+                if (Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
+                if (Body.Attached && Body.AssistStrength > 0f && input.localMovement.z >= 0f && Body.Velocity.magnitude < 22f)
+                {
+                    var tangent = Vector3.ProjectOnPlane(Vector3.ProjectOnPlane(Body.Velocity, Vector3.up), (Body.Position - Body.Anchor).normalized);
+                    if (tangent.sqrMagnitude > .1f)
+                        Body.Velocity += tangent.normalized * (6f * Body.AssistStrength * h);
+                }
+                Body.Step(h, steer, Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
+                Vector3 requested = Body.Position;
+                Body.Position = Collision.Constrain(before, requested);
+                // A solid wall wins over rope length. Repeatedly projecting into
+                // the wall and back out produced violent oscillation at short ropes.
+                if (Body.Attached && Vector3.Distance(Body.Position, Body.Anchor) > Body.RopeLength + .12f)
+                {
+                    Release(); CollisionReleaseCount++;
+                }
+                if (!Finite(Body.Position) || !Finite(Body.Velocity))
+                {
+                    Release(); Body.Reset(Finite(before) ? before : actual);
+                }
+                remaining -= h;
+            }
+
+            if (Body.Attached || Flying || Body.State == TraversalState.WallRunning) flightAssistTime = 1f;
+            else flightAssistTime = Mathf.Max(0f, flightAssistTime - deltaTime);
+            if (AutoFollow && Body.AssistStrength > 0f && manualLookHold <= 0f && flightAssistTime > 0f && !Body.Grounded)
+            {
+                Vector3 horizontal = Vector3.ProjectOnPlane(Body.Velocity, Vector3.up);
+                if (horizontal.magnitude > 5f)
+                {
+                    float targetYaw = Mathf.Atan2(horizontal.x, horizontal.z) * Mathf.Rad2Deg;
+                    yaw = Mathf.MoveTowardsAngle(yaw, targetYaw, 40f * Mathf.Min(deltaTime, .1f) * Body.AssistStrength);
+                    float targetPitch = Mathf.Clamp(-Mathf.Atan2(Body.Velocity.y, horizontal.magnitude) * Mathf.Rad2Deg * .35f, -18f, 18f);
+                    pitch = Mathf.MoveTowards(pitch, targetPitch, 20f * Mathf.Min(deltaTime, .1f));
+                }
+            }
 
             lastRequested = Body.Position;
             hasRequested = true;
@@ -123,5 +226,6 @@ namespace WebShooter.Swing
                 cityRotation = Quaternion.Euler(pitch, yaw, 0f)
             };
         }
+        private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }
 }

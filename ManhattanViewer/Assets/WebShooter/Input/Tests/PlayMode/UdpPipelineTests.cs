@@ -119,6 +119,21 @@ namespace WebShooter.Input.Tests
         }
 
         [UnityTest]
+        public IEnumerator OldQueuedFireIsDiscardedEvenAfterFreshData()
+        {
+            yield return WaitUntil(() => receiver.Status.StartsWith("Listening"));
+            Send("0,0,0"); yield return WaitUntil(() => aim.Calibrated);
+            aim.enabled = false;
+            Send("0,0,1");
+            yield return new WaitForSecondsRealtime(1.2f);
+            Send("0,0,0");
+            yield return new WaitForSecondsRealtime(.1f);
+            aim.enabled = true;
+            yield return null; yield return null;
+            Assert.That(fired, Is.Zero);
+        }
+
+        [UnityTest]
         public IEnumerator HeadTrackedDisplayExposesTheEyeAndScreenUsedForAiming()
         {
             // 패키지 API 계약 확인: HeadTrackedDisplay가 눈 위치/화면 평면/화면 크기를 노출하고, 조준 레이가 이를 쓴다.

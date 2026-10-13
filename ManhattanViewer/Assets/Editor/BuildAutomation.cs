@@ -203,9 +203,11 @@ namespace Manhattan.Editor
 
         public static async Task BuildWindowsAsync()
         {
+            using var profile = new CityBuildProfileScope();
             if(AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset")==null)throw new InvalidOperationException("Run CityBake.BuildAll first.");
             WriteBuildIdentity();
             var addressableSettings = RebindGeneratedAddressables();
+            profile.Apply(AssetDatabase.LoadAssetAtPath<CityCatalog>("Assets/Resources/CityCatalog.asset"), addressableSettings);
             ConfigureProject();
             AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult addressableResult);
             if(!string.IsNullOrEmpty(addressableResult.Error))throw new InvalidOperationException(addressableResult.Error);
