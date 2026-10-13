@@ -69,10 +69,9 @@ namespace Manhattan.Editor
             var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Settings/ManhattanURP.asset");
             if (pipeline == null) { pipeline = UniversalRenderPipelineAsset.Create(renderer); AssetDatabase.CreateAsset(pipeline, "Assets/Settings/ManhattanURP.asset"); }
             pipeline.msaaSampleCount = 1; pipeline.renderScale = 1; pipeline.supportsHDR = true;
-            pipeline.shadowDistance = 150; pipeline.shadowCascadeCount = 4; pipeline.cascade4Split = new Vector3(.08f,.22f,.50f);
+            AfternoonRenderProfile.ConfigureShadows(pipeline);
             var props = new SerializedObject(pipeline);
             SetBool(props,"m_SoftShadowsSupported",true);SetBool(props,"m_UseSRPBatcher",true);SetBool(props,"m_EnableLODCrossFade",true);
-            var resolution=props.FindProperty("m_MainLightShadowmapResolution");if(resolution!=null)resolution.intValue=2048;
             props.ApplyModifiedPropertiesWithoutUndo();
             GraphicsSettings.defaultRenderPipeline = pipeline;
             for(int i=0;i<QualitySettings.names.Length;i++){QualitySettings.SetQualityLevel(i);QualitySettings.renderPipeline=pipeline;QualitySettings.vSyncCount=1;}

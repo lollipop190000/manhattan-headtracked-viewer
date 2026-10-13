@@ -20,6 +20,9 @@ namespace Manhattan.Viewer
         private Transform cameraOptions;
         private string cameraListFingerprint;
         private float nextDiagnostics;
+        private UnityEngine.UI.Text sunMotionLabel, sunStatus;
+        private UnityEngine.UI.Button sunMotionButton;
+        private UnityEngine.UI.Slider sunPosition;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
         private static readonly Color Accent = new Color(.27f, .79f, .67f);
@@ -84,6 +87,7 @@ namespace Manhattan.Viewer
             scroll.viewport = viewport; scroll.content = content;
             Heading(content, "SETTINGS");
             TextRow(content, "Physical values use centimetres. Changes preserve city position.", 54);
+            BuildLightingSection(content);
             BuildWebcamSection(content);
             var c = app.Display.Calibration;
             NumericRow(content, "Screen width (cm)", c.screenWidth * 100f, v => { if (v >= 10 && v <= 300) { c.screenWidth = v / 100f; app.UpdateCalibration(); } });
@@ -209,6 +213,15 @@ namespace Manhattan.Viewer
         {
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
+            if (sunPosition != null)
+            {
+                var sun = app.Rendering.Sunlight;
+                sunPosition.SetValueWithoutNotify(sun.Position);
+                sunMotionLabel.text = sun.Moving ? "Pause sun movement" : "Move sun slowly";
+                sunMotionButton.interactable = !sun.AtEnd;
+                sunStatus.text = sun.AtEnd ? "End of afternoon. Move the slider or reset to continue." :
+                    sun.Moving ? "Sun is moving. Shadows follow the sunlight." : "Sun paused. Camera movement does not move the sun.";
+            }
             if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe() + "\n" + app.WindowViewport.Status;
             if (captureMessage != null)
             {
@@ -224,6 +237,29 @@ namespace Manhattan.Viewer
                 app.Benchmark.CpuMemoryBytes / 1048576f, app.Benchmark.GpuMemoryBytes / 1048576f,
                 ViewerTrackingDiagnostics.Format(app.Display) + "\n" + ViewerTrackingDiagnostics.FormatNear(app.Streamer.GetNearDiagnostics()),
                 app.Benchmark.Recording ? "\nRecording benchmark…" : "") : "";
+        }
+
+        private void BuildLightingSection(Transform content)
+        {
+            Heading(content, "LIGHTING");
+            var sun = app.Rendering.Sunlight;
+            TextRow(content, "Afternoon preview for this session. Starts paused each time.", 44);
+            sunMotionButton = Button(Row(content, 38), "Move sun slowly", () => sun.SetMoving(!sun.Moving));
+            sunMotionLabel = sunMotionButton.GetComponentInChildren<UnityEngine.UI.Text>();
+            TextRow(content, "Earlier afternoon                          Later afternoon", 24);
+            var row = Row(content, 34);
+            var track = Rect("Sun Position", row, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            track.offsetMin = new Vector2(10, 4); track.offsetMax = new Vector2(-10, -4);
+            track.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color(.12f, .16f, .21f);
+            sunPosition = track.gameObject.AddComponent<UnityEngine.UI.Slider>();
+            sunPosition.minValue = 0; sunPosition.maxValue = 1; sunPosition.value = sun.Position;
+            var handle = Rect("Handle", track, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(18, 0));
+            var handleImage = handle.gameObject.AddComponent<UnityEngine.UI.Image>(); handleImage.color = Accent;
+            sunPosition.handleRect = handle; sunPosition.targetGraphic = handleImage;
+            sunPosition.onValueChanged.AddListener(value => { sun.SetMoving(false); sun.SetPosition(value); });
+            ActionRow(content, "Reset afternoon light", sun.ResetAfternoon);
+            sunStatus = Text(Row(content, 44), "Sun paused. Camera movement does not move the sun.", 14, 0, 0, 380, 44);
+            Stretch(sunStatus.rectTransform);
         }
 
         private void UpdateCameraChoices()
