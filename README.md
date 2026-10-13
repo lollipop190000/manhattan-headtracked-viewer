@@ -68,7 +68,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 | Esc / Settings | 포인터 해제·오른쪽 설정창 |
 | Alt+F4 | 플레이어 종료·추적기 정리 |
 
-Windows Bluetooth 설정에서 페어링한 HID 게임패드(예: ESP32 BLE 게임패드)로도 이동할 수 있습니다. 스틱 또는 햇(D-pad)의 X/Y가 A·D와 W·S, 버튼 1이 Q(아래), 버튼 2가 E(위)입니다. 키보드·마우스는 그대로 동작하며 `--no-controller`로 끕니다.
+Windows Bluetooth 설정에서 페어링한 HID 게임패드(예: ESP32 Bluetooth 게임패드)로도 이동할 수 있습니다. 스틱 또는 햇(D-pad)의 X/Y가 A·D와 W·S, 버튼 1이 Q(아래), 버튼 2가 E(위)입니다. 키보드·마우스는 그대로 동작하며 `--no-controller`로 끕니다.
 
 첫 실행에서 실제 화면 **너비·높이·관찰 거리**를 입력합니다. 머리 이동은 실측 단위 그대로 투영하며, 먼 스카이라인보다 가까운 창틀·창문·건물 모서리에서 효과를 확인하기 쉽습니다. 상세 카메라 보정·IPD·이동 속도·진단은 오른쪽 Settings에 있습니다.
 
