@@ -133,5 +133,5 @@ source revision from the unchanged v0.1.0 player revision. The `.sha256` beside
 the download checks the entire ZIP. Keep `Notices/` when redistributing.
 
 This is a packaging update to the tested v0.1.0 city player. Exact checks and
-their scope are in [release validation](release-v0.1.1.md). Building from source
-is a separate developer workflow in the [README](../README.md#build-from-source).
+their scope are in [release validation](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.1/docs/release-v0.1.1.md). Building from source
+is a separate developer workflow in the [README](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.1/README.md#build-from-source).
