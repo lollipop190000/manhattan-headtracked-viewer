@@ -43,15 +43,37 @@ pitch0/yaw-151.5; ROI (450,200), size750×450. These are region metrics, not a
 claim of that reduction on every individual line or complete removal of aliasing.
 Camera positions matched exactly across each sequence. No city load failed.
 
+Movement was checked separately at both poses with normal motion input:
+121 frames of lateral travel (9.6m total) and a 3-degree turn, followed by a
+stationary hold. Captures were saved at travel frames 30/60/120 and stop frames
+1/8/64. Representative movement and stopping images were inspected.
+No persistent doubled roof or road edge was apparent in the
+inspected captures. The stronger history can retain a small transient after
+movement; this is not a claim of zero ghosting. At stop frame 8 versus 64,
+the candidate's mean absolute RGB byte difference was .675 in the street view
+and .476 in the roof view, excluding the surrounding frame.
+
 ## Tests and setup
 
-All **178 PlayMode cases passed** in a graphics-enabled interactive Editor,
+All **180 PlayMode cases and 263 EditMode cases passed** after integrating
+the current main branch's controller support and Unity entity-ID API update.
+PlayMode ran in a graphics-enabled interactive Editor,
 including tracking, physical viewport, comparison, streaming, wall/roof depth
 and sunlight checks. No cases were skipped. The first whole-suite run exposed
 an existing tiny-budget starvation condition: timer overhead could consume a
 positive allowance before the first resumable ownership step. Positive budgets
 now advance one step; zero still performs no work. Existing coverage and atomic
 publication tests passed after the fix.
+
+The checked-in render pipeline settings now match the existing sunlight
+profile applied by the build and runtime. This avoids an outdated Inspector
+configuration; it does not introduce a second lighting preset. Controller
+mapping and disabled-input behavior passed automated tests; a physical BLE
+controller was not exercised during this release check.
+
+Portable tooling validation passed 153 Python cases (two existing skips) and
+eight PowerShell parser assertions. The GitHub workflow runs these portable
+checks separately; it does not replace the local Unity and Windows checks.
 
 The tracker setup was exercised in a new checkout with Python 3.13.5. Pinned
 dependencies installed, `pip check` passed, the face model digest was verified,
