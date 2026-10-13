@@ -15,6 +15,8 @@ namespace WebShooter.Swing
         private IMotionInputSource previousInput;
         private ITranslationConstraint previousConstraint;
         private int lastFireFrame = -1;
+        private readonly TrackedLeanSteering trackedLean = new TrackedLeanSteering();
+        private bool headAssist = true;
         private void OnEnable() { Application.wantsToQuit += LogQuit; }
         private void OnDisable() { Application.wantsToQuit -= LogQuit; }
         private bool LogQuit()
@@ -42,6 +44,11 @@ namespace WebShooter.Swing
             swing.Paused = !active;
             var keys = Keyboard.current;
             var mouse = Mouse.current;
+            if (active && capturedLastFrame && keys != null && keys.hKey.wasPressedThisFrame) headAssist = !headAssist;
+            var display = app.Display;
+            bool fresh = active && swing.Enabled && headAssist && display != null && display.TrackingEnabled &&
+                display.IsTracking && display.HasFreshEyeEstimate && display.Confidence >= .6f && display.ResultAgeMilliseconds < 200f;
+            swing.TrackedSteering = trackedLean.Sample(display != null ? display.EyePositionMeters.x : 0f, fresh, Time.unscaledDeltaTime);
             if (active && capturedLastFrame)
             {
                 if (keys != null && keys.rKey.wasPressedThisFrame)
@@ -93,8 +100,8 @@ namespace WebShooter.Swing
                 return;
             }
             GUI.Label(new Rect(Screen.width * .5f - 8, Screen.height * .5f - 12, 20, 24), "+");
-            GUI.Label(new Rect(12, Screen.height - 52, 1100, 24), "Aim high + LMB: launch | RMB: release | W: boost | E/Q: reel in/out | R: flight | V: auto view");
-            GUI.Label(new Rect(12, Screen.height - 28, 800, 24), swing.Enabled ? $"{swing.Body.State} | {swing.Body.Velocity.magnitude:0.0} m/s | Assist {swing.Body.AssistStrength:0.00} ([ / ]) | Auto view {(swing.AutoFollow ? "ON" : "OFF")}" : "Free flight (wall collision ON)");
+            GUI.Label(new Rect(12, Screen.height - 52, 1100, 24), "Aim high + LMB: launch | RMB: release | W: boost | E/Q: reel in/out | R: flight | V: auto view | H: head assist");
+            GUI.Label(new Rect(12, Screen.height - 28, 800, 24), swing.Enabled ? $"Head {(headAssist ? "ON" : "OFF")} | {swing.Body.State} | {swing.Body.Velocity.magnitude:0.0} m/s | Assist {swing.Body.AssistStrength:0.00} ([ / ]) | Auto view {(swing.AutoFollow ? "ON" : "OFF")}" : "Free flight (wall collision ON)");
         }
         private void OnDestroy()
         {

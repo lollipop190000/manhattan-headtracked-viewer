@@ -32,6 +32,7 @@ namespace WebShooter.Swing
         public bool JumpRequested { get; set; }
         public float ReelInput { get; set; }
         public bool AutoFollow { get; set; } = true;
+        public float TrackedSteering { get; set; }
         private float manualLookHold, flightAssistTime;
         public int CollisionReleaseCount { get; private set; }
         public TraversalCollision Collision { get; }
@@ -148,6 +149,9 @@ namespace WebShooter.Swing
             Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
             if (input.localMovement.z < 0f)
                 steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
+            // Explicit keyboard steering wins over tracked head lean.
+            if (!Body.Grounded && Mathf.Abs(input.localMovement.x) < .1f && (Body.Attached || flightAssistTime > 0f))
+                steer += heading * Vector3.right * (Mathf.Clamp(TrackedSteering, -1f, 1f) * .4f);
             if (Flying)
             {
                 ShotProgress = Mathf.Min(1f, ShotProgress + deltaTime / shotDuration);
@@ -177,19 +181,16 @@ namespace WebShooter.Swing
             {
                 float h = Mathf.Min(remaining, Body.Settings.maxStep);
                 bool attached = Body.Attached;
-                Body.UpdateWall(Collision.FindWall(Body.Position, heading * Vector3.forward), input.localMovement.z > .1f, h);
+                Body.UpdateWall(Collision.FindWall(Body.Position, heading * Vector3.forward), input.localMovement.z > .1f && !Body.Attached, h);
                 if (attached && !Body.Attached) WebReleased?.Invoke();
                 Vector3 before = Body.Position;
                 if (Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
-                if (Body.Attached && Body.AssistStrength > 0f && input.localMovement.z >= 0f && Body.Velocity.magnitude < 22f)
-                {
-                    var tangent = Vector3.ProjectOnPlane(Vector3.ProjectOnPlane(Body.Velocity, Vector3.up), (Body.Position - Body.Anchor).normalized);
-                    if (tangent.sqrMagnitude > .1f)
-                        Body.Velocity += tangent.normalized * (6f * Body.AssistStrength * h);
-                }
+                Body.AssistCruise(h, input.localMovement.z < 0f);
                 Body.Step(h, steer, Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
                 Vector3 requested = Body.Position;
+                bool ropeBeforeContact = Body.Attached;
                 Body.Position = Collision.Constrain(before, requested);
+                if (ropeBeforeContact && !Body.Attached) { WebReleased?.Invoke(); CollisionReleaseCount++; }
                 // A solid wall wins over rope length. Repeatedly projecting into
                 // the wall and back out produced violent oscillation at short ropes.
                 if (Body.Attached && Vector3.Distance(Body.Position, Body.Anchor) > Body.RopeLength + .12f)

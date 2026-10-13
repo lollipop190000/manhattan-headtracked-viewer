@@ -58,6 +58,19 @@ namespace WebShooter.Swing
                 input.Body.Reset(start); input.Body.Velocity = Vector3.forward * 70;
                 Vector3 stopped = input.Collision.Constrain(start, start + Vector3.forward * 40);
                 Check(stopped.z < 19.3f, "high speed wall sweep");
+                input.Body.Reset(start); input.Body.Attach(start + Vector3.up * 40);
+                input.Body.Velocity = new Vector3(12, 0, 30);
+                var deflected = input.Collision.Constrain(start, start + new Vector3(12, 0, 40));
+                Check(deflected.z < 19.3f && !input.Body.Attached && input.Body.Velocity.z < -10,
+                    "swing wall collision detaches and reflects outward");
+                Check(input.Body.Velocity.x > 11 && input.Body.WallDeflections == 1,
+                    "glancing collision preserves tangential speed without repeated bounce");
+                var lean = new TrackedLeanSteering(); lean.Sample(0, true, 1f / 60);
+                float steering = 0;
+                for (int i = 0; i < 60; i++) steering = lean.Sample(.1f, true, 1f / 60);
+                Check(steering > .9f && lean.Sample(.1f, false, 1f / 60) == 0,
+                    "tracked lean builds gradually and stale tracking cancels immediately");
+                input.Body.Reset(start);
                 input.Enabled = false;
                 var gate = new MouseWebShooter.FlightCollisionGate(input);
                 Check(gate.Constrain(start, start + Vector3.forward * 100).z < 19.3f, "ghost mode blocks wall");

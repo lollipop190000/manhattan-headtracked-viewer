@@ -6,6 +6,47 @@ namespace WebShooter.Swing.Tests
 {
     public class TraversalTests
     {
+        [Test] public void SwingWallDeflectsOnceAndPreservesGlancingMomentum()
+        {
+            var b = Body(); b.Attach(b.Position + Vector3.up * 30);
+            b.Velocity = new Vector3(-12, 0, 24); float speed = b.Velocity.magnitude;
+            b.Contact(Vector3.right);
+            Assert.That(b.Attached, Is.False);
+            Assert.That(b.Velocity.x, Is.GreaterThan(7));
+            Assert.That(b.Velocity.z, Is.GreaterThan(23));
+            Assert.That(b.Velocity.magnitude, Is.LessThan(speed));
+            b.Contact(Vector3.right); Assert.That(b.WallDeflections, Is.EqualTo(1));
+            b.Step(.1f, Vector3.left);
+            Assert.That(b.Velocity.x, Is.GreaterThan(7));
+        }
+        [Test] public void LandingDoesNotBounceOrDetachRope()
+        {
+            var b = Body(); b.Attach(b.Position + Vector3.up * 30); b.Velocity = Vector3.down * 20;
+            b.Contact(Vector3.up);
+            Assert.That(b.Grounded, Is.True); Assert.That(b.Attached, Is.True);
+            Assert.That(b.Velocity, Is.EqualTo(Vector3.zero));
+        }
+        [Test] public void CruiseAssistanceCanBeBrakedAndDisabled()
+        {
+            var b = Body(); b.Attach(b.Position + Vector3.up * 30); b.Velocity = Vector3.forward * 20;
+            b.AssistCruise(.1f, true); Assert.That(b.Velocity.z, Is.EqualTo(20));
+            b.AssistStrength = 0; b.AssistCruise(.1f, false); Assert.That(b.Velocity.z, Is.EqualTo(20));
+            b.AssistStrength = 1; b.AssistCruise(.1f, false); Assert.That(b.Velocity.z, Is.EqualTo(21.2f).Within(.001f));
+            b.Release(); var v = b.Velocity; b.AssistCruise(.1f, false); Assert.That(b.Velocity, Is.EqualTo(v));
+        }
+        [TestCase(30)] [TestCase(60)] [TestCase(120)]
+        public void TrackedLeanRejectsJitterAndDropsStaleInput(int fps)
+        {
+            var lean = new TrackedLeanSteering(); float dt = 1f / fps;
+            lean.Sample(.03f, true, dt);
+            for (int i = 0; i < fps; i++) Assert.That(lean.Sample(.04f, true, dt), Is.Zero);
+            float value = 0;
+            for (int i = 0; i < fps; i++) value = lean.Sample(.13f, true, dt);
+            Assert.That(value, Is.EqualTo(1f).Within(.001f));
+            Assert.That(lean.Sample(.13f, false, dt), Is.Zero);
+            Assert.That(lean.Sample(.13f, true, dt), Is.Zero);
+            Assert.That(lean.Sample(float.NaN, true, dt), Is.Zero);
+        }
         [Test] public void HighShotAutomaticallyLaunchesButMissDoesNot()
         {
             var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);

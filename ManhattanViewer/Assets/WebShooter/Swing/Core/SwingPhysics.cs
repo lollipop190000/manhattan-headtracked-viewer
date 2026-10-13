@@ -47,12 +47,32 @@ namespace WebShooter.Swing
         private bool wallRunning;
         private float wallTime, wallCooldown;
         private bool wallExhausted;
+        private float wallEscapeTime;
+        private Vector3 escapeNormal;
+        public int WallDeflections { get; private set; }
+        public void AssistCruise(float dt, bool braking)
+        {
+            if (!Attached || AssistStrength <= 0f || braking || Velocity.magnitude >= 34f) return;
+            Vector3 tangent = Vector3.ProjectOnPlane(Velocity, (Position - Anchor).normalized);
+            if (tangent.sqrMagnitude > 1f)
+                Velocity += tangent.normalized * (12f * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
+        }
 
         public void Contact(Vector3 normal)
         {
             ContactNormal = normal;
             float into = Vector3.Dot(Velocity, normal);
-            if (into < 0f) Velocity -= normal * into;
+            if (into < 0f)
+            {
+                // Preserve tangential momentum and detach so tension cannot pull back into the wall.
+                if (Attached && !wallRunning && Mathf.Abs(normal.y) < .2f && -into > 2f && Velocity.magnitude > 5f)
+                {
+                    Velocity = Vector3.ProjectOnPlane(Velocity, normal) * .98f + normal * Mathf.Min(18f, -into * .65f);
+                    Release(); wallEscapeTime = .4f; escapeNormal = normal;
+                    wallCooldown = .45f; WallDeflections++;
+                }
+                else Velocity -= normal * into;
+            }
             if (normal.y > .65f) Grounded = true;
         }
 
@@ -89,7 +109,7 @@ namespace WebShooter.Swing
             Grounded = position.y <= FloorY + .03f;
             wallRunning = false;
             wallExhausted = false;
-            wallTime = wallCooldown = 0f;
+            wallTime = wallCooldown = wallEscapeTime = 0f; WallDeflections = 0;
             Release();
         }
 
@@ -143,6 +163,12 @@ namespace WebShooter.Swing
             {
                 float intoWall = Mathf.Max(0f, -Vector3.Dot(steering, ContactNormal));
                 steering = Vector3.ProjectOnPlane(steering, ContactNormal) + Vector3.up * intoWall;
+            }
+            if (wallEscapeTime > 0f)
+            {
+                float inward = Vector3.Dot(steering, escapeNormal);
+                if (inward < 0f) steering -= escapeNormal * inward;
+                wallEscapeTime = Mathf.Max(0f, wallEscapeTime - dt);
             }
             Vector3 gravity = Vector3.down * Settings.gravity * (wallRunning ? .2f : 1f);
             for (int i = 0; i < steps; i++) Substep(h, steering, gravity, reel);
