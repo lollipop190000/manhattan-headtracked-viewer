@@ -18,6 +18,7 @@ import statistics
 ROOT = Path(__file__).resolve().parents[1]
 GIB = 1024 ** 3
 REGIONS = ("Midtown", "Downtown", "Park", "Uptown", "Air")
+SPEEDS = (10, 50, 100)
 REGION_CIRCUIT_METRES = math.hypot(400, 400) + 2 * math.hypot(600, 400) + math.hypot(600, 200)
 
 
@@ -61,9 +62,48 @@ def read_frames(path):
                 continue
             parsed = {key: number(value) for key, value in row.items()}
             parsed.update(seconds=seconds, frame_ms=frame_ms)
+            if rows and seconds <= rows[-1]["seconds"]:
+                parsed["trace_order_invalid"] = True
             rows.append(parsed)
     rows.sort(key=lambda row: row["seconds"])
     return rows, ([f"Ignored {invalid} malformed/non-finite frame rows"] if invalid else [])
+
+
+def executed_speed(rows, requested, applied):
+    """Independently measure city-space displacement / wall time, not a nominal speed column.
+
+    5% tolerance allows float positions/timestamps and the short chord at a route corner.
+    At least 20 short intervals must cover 90% of the trace; sparse old traces stay pending.
+    """
+    result = dict(medianMetresPerSecond=None, p10MetresPerSecond=None, p90MetresPerSecond=None,
+                  sampleCount=0, coveredTimeFraction=None, passed=None,
+                  basis="city-space position differences / recorded seconds; 5% tolerance; >=20 intervals; >=90% time coverage")
+    if requested is None or applied is None or not rows:
+        return result
+    if requested <= 0 or applied <= 0 or any(r.get("trace_order_invalid") for r in rows):
+        result["passed"] = False
+        return result
+    coordinates = ("city_x", "city_y", "city_z")
+    if not any(any(r.get(k) is not None for k in coordinates) for r in rows):
+        return result
+    if any(any(r.get(k) is None for k in coordinates) for r in rows):
+        result["passed"] = False
+        return result
+    speeds, covered = [], 0.0
+    for previous, current in zip(rows, rows[1:]):
+        seconds = current["seconds"] - previous["seconds"]
+        if 0 < seconds <= .5:
+            distance = math.sqrt(sum((current[k] - previous[k]) ** 2 for k in coordinates))
+            speeds.append(distance / seconds)
+            covered += seconds
+    span = rows[-1]["seconds"] - rows[0]["seconds"]
+    result.update(sampleCount=len(speeds), coveredTimeFraction=covered / span if span > 0 else None,
+                  medianMetresPerSecond=statistics.median(speeds) if speeds else None,
+                  p10MetresPerSecond=percentile(speeds, .1), p90MetresPerSecond=percentile(speeds, .9))
+    if len(speeds) >= 20 and span > 0 and covered / span >= .9:
+        result["passed"] = all(abs(value - requested) <= requested * .05 for value in
+                               (result["medianMetresPerSecond"], result["p10MetresPerSecond"], result["p90MetresPerSecond"]))
+    return result
 
 
 def memory_trend(rows, region, speed, measured_duration, circuit_duration=None, memory_key="process_working_set_bytes"):
@@ -247,10 +287,18 @@ def analyze_run(directory):
     rows, warnings = read_frames(directory / "frames.csv")
     driver = driver_gpu(directory / "gpu.csv", report)
     process = external_process_memory(directory / "process.csv", report)
-    speed, duration = number(report.get("speed")), number(report.get("durationSeconds"))
+    applied_speed = number(report.get("actualRouteSpeed"))
+    speed, duration = applied_speed if applied_speed is not None else number(report.get("speed")), number(report.get("durationSeconds"))
     region = report.get("routeRegion") or "unspecified"
     environment_path = directory / "benchmark-environment.json"
     environment = read_json(environment_path) if environment_path.exists() else None
+    options = (environment or {}).get("benchmarkOptions", {})
+    launch_speed = number(options.get("requestedSpeedMetresPerSecond", options.get("speedMetresPerSecond")))
+    requested_speed = number(report.get("requestedSpeed"))
+    speed_matches = None if requested_speed is None or applied_speed is None else (
+        1 <= requested_speed <= 100 and applied_speed == requested_speed and
+        number(report.get("speed")) == applied_speed and (launch_speed is None or launch_speed == requested_speed))
+    speed_trace = executed_speed(rows, requested_speed, applied_speed)
     tracker_requested = (environment or {}).get("benchmarkOptions", {}).get("trackerRequested")
     if not isinstance(tracker_requested, bool):
         tracker_requested = None
@@ -281,8 +329,14 @@ def analyze_run(directory):
         gfx_peak = None
     run = dict(directory=str(directory), measured=bool(frame_count and frame_count > 0), utcTime=report.get("utcTime"),
                unityVersion=report.get("unityVersion"), sourceVersion=report.get("sourceVersion"), gpu=report.get("gpu"), cpu=report.get("cpu"),
-               region=region, speed=speed, durationSeconds=duration, width=report.get("width"), height=report.get("height"),
+               region=region, speed=speed, requestedSpeed=requested_speed, actualRouteSpeed=applied_speed,
+               launchRequestedSpeed=launch_speed, executedSpeed=speed_trace,
+               durationSeconds=duration, width=report.get("width"), height=report.get("height"),
                renderWidth=report.get("renderWidth"), renderHeight=report.get("renderHeight"), fullscreenMode=report.get("fullscreenMode"),
+               cameraAntiAliasing=report.get("cameraAntiAliasing"), vSyncCount=number(report.get("vSyncCount")),
+               targetFrameRate=number(report.get("targetFrameRate")),
+               frameTimingStatisticsEnabled=report.get("frameTimingStatisticsEnabled"),
+               reportedTrackerRequested=report.get("trackerRequested"),
                displayModeWidth=report.get("displayModeWidth"), displayModeHeight=report.get("displayModeHeight"), environment=environment,
                routeDurationSeconds=route_duration, routeDistanceMeters=number(report.get("routeDistanceMeters")),
                routeCoverageFraction=coverage, completedMeasuredCircuits=completed, traceDurationSeconds=trace_duration,
@@ -306,6 +360,8 @@ def analyze_run(directory):
     checks = {
         "measuredSamples": run["measured"],
         "frameTrace": True if rows else None,
+        "requestedSpeed": speed_matches,
+        "executedSpeed": speed_trace["passed"],
         "buildIdentity": None if not run["buildIdentityAvailable"] else
             run["dirtyWorkingTree"] is False and bool(re.fullmatch(r"[a-fA-F0-9]{40}", str(run["viewerRevision"] or ""))) and
             bool(re.fullmatch(r"[a-fA-F0-9]{40}", str(run["technologyRevision"] or ""))) and
@@ -381,14 +437,14 @@ def aggregate(directories, repository=ROOT, technology_revision=None, viewer_rev
     pending = []
     proxy_pairs = []
     def qualifies(run):
-        return run["measured"] and all(run["checks"][key] is True for key in ("frameTrace", "buildIdentity", "webcamTracking", "resolution", "fullscreen", "routeCoverage", "repeatedCircuits")) and run["driverGpu"]["timeAligned"]
+        return run["measured"] and all(run["checks"][key] is True for key in ("frameTrace", "requestedSpeed", "executedSpeed", "buildIdentity", "webcamTracking", "resolution", "fullscreen", "routeCoverage", "repeatedCircuits")) and run["driverGpu"]["timeAligned"]
     for region in REGIONS:
-        for speed in (10, 50):
+        for speed in SPEEDS:
             measured = [r for r in runs if r["measured"] and r["region"] == region and r["speed"] == speed]
             complete = [r for r in measured if qualifies(r)]
             if not complete:
                 pending.append(dict(region=region, speed=speed, reason="missing measured run" if not measured else
-                                    "requires clean matching embedded build identity, >=2 complete recorded circuits, full route coverage, actual 1920x1200 render/output fullscreen, >=90% fresh webcam tracking and frame/driver GPU traces"))
+                                    "requires matching requested/applied speed with position/time verification, clean matching embedded build identity, >=2 complete recorded circuits, full route coverage, actual 1920x1200 render/output fullscreen, >=90% fresh webcam tracking and frame/driver GPU traces"))
             off = [r for r in complete if not r["collisionProxies"]]
             on = [r for r in complete if r["collisionProxies"]]
             for baseline in off:
@@ -436,7 +492,18 @@ def markdown(result):
             format_number(run["workingSetPeakBytes"], 3, GIB), format_number(run["driverGpu"]["peakBytes"], 3, GIB), format_number(run["gfxApproxPeakBytes"], 3, GIB)]) + " |")
     if not result["runs"]:
         lines += ["", "No measured benchmark files are available."]
-    lines += ["", "Regional acceptance needs two complete recorded circuits at each of the five regions and both speeds. Each region does not need a 20-minute run. The separate memory round trip needs at least one measured 1200-second trace. Proxy cost needs a matched OFF/ON pair at the same region/speed, hardware and source.", "",
+    lines += ["", "These rendering values are end-of-run settings, not achieved FPS or proof of unchanged settings throughout the run. Missing fields in historical reports remain pending.", "",
+              "| Region / m/s | Camera AA setting | VSync count | Target FPS setting | Frame timing enabled | Tracker requested |", "|---|---|---:|---:|---|---|"]
+    for run in result["runs"]:
+        boolean = lambda value: "pending" if value is None else str(value)
+        lines.append(f"| {run['region']} / {format_number(run['speed'], 0)} | {run.get('cameraAntiAliasing') or 'pending'} | "
+                     f"{format_number(run.get('vSyncCount'), 0)} | {format_number(run.get('targetFrameRate'), 0)} | "
+                     f"{boolean(run.get('frameTimingStatisticsEnabled'))} | {boolean(run.get('reportedTrackerRequested'))} |")
+    lines += ["", "| Region | Requested m/s | Applied route m/s | Position/time median m/s | Speed verified |", "|---|---:|---:|---:|---|"]
+    for run in result["runs"]:
+        lines.append(f"| {run['region']} | {format_number(run['requestedSpeed'])} | {format_number(run['actualRouteSpeed'])} | "
+                     f"{format_number(run['executedSpeed']['medianMetresPerSecond'])} | {run['checks']['executedSpeed']} |")
+    lines += ["", "Regional acceptance needs two complete recorded circuits at each of the five regions and all three speeds (10, 50, 100m/s). Requested and applied speeds must agree; city position/time traces independently verify execution. Missing or sparse speed traces remain pending. Each region does not need a 20-minute run. The separate memory round trip needs at least one measured 1200-second trace. Proxy cost needs a matched OFF/ON pair at the same region/speed, hardware and source.", "",
               "| Region / m/s / proxies | Recorded complete circuits | Route coverage | Display mode pixels | Launch environment |", "|---|---:|---:|---|---|"]
     for run in result["runs"]:
         coverage = format_number(run["routeCoverageFraction"] * 100 if run["routeCoverageFraction"] is not None else None, 1)
@@ -498,7 +565,7 @@ def markdown(result):
     for pending in result["pendingRuns"]:
         lines.append(f"- {pending['region']} at {pending['speed']}m/s: {pending['reason']}.")
     if not result["pendingRuns"]:
-        lines.append("All ten regional speed cases have qualifying repeated route samples; numeric and manual review still determine acceptance.")
+        lines.append("All fifteen regional speed cases have qualifying repeated route samples; numeric and manual review still determine acceptance.")
     lines.append("- Separate 20-minute memory round trip: " + ("pending (requires raw memory trace, repeated circuit, correct fullscreen render and fresh webcam tracking)." if result["memoryRoundtripPending"] else "measured; inspect medians/slope and repeated residency before accepting stability."))
     lines.append("- Matched proxy OFF/ON comparison: " + ("pending." if result["proxyComparisonPending"] else "measured; paired probe costs below."))
     if result["proxyComparisons"]:

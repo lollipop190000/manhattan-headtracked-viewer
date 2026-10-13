@@ -1,0 +1,10 @@
+{
+  "name": "WebShooter.Swing.Viewer",
+  "rootNamespace": "WebShooter.Swing",
+  "references": [
+    "WebShooter.Swing.Core",
+    "Manhattan.Viewer.Runtime",
+    "Unity.InputSystem"
+  ],
+  "autoReferenced": true
+}

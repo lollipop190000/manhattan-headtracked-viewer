@@ -9,6 +9,54 @@ using UnityEngine.Rendering.Universal;
 
 public sealed class ViewerCompositionTests
 {
+    private sealed class RelativeTestInput : IMotionInputSource
+    {
+        public Vector3 movement;
+        public MotionCommand Sample(float deltaTime) => new MotionCommand { localMovement = movement };
+    }
+
+    [UnityTest]
+    public IEnumerator RelativeWasdKeepsGroundHeightThroughPitchAndOriginRebase()
+    {
+        var root = new GameObject("planar observer regression");
+        var rig = new GameObject("observer"); rig.transform.SetParent(root.transform);
+        var origin = root.AddComponent<FloatingOrigin>(); origin.observer = rig.transform;
+        var flight = rig.AddComponent<FreeFlightController>(); flight.Origin = origin; flight.Speed = 100;
+        var camera = new GameObject("head camera child"); camera.transform.SetParent(rig.transform);
+        camera.transform.localPosition = new Vector3(.1f, .2f, .3f);
+        Vector3 localCameraPosition = camera.transform.localPosition;
+        flight.SetPose(new Vector3(600, 27, 20), Quaternion.Euler(85, 37, 0));
+        flight.InputSource = new RelativeTestInput { movement = Vector3.ClampMagnitude(new Vector3(1, 0, 1), 1) };
+        yield return null;
+        Assert.That(flight.CityPosition.y, Is.EqualTo(27f).Within(.0001f));
+        Assert.That(flight.Velocity.y, Is.EqualTo(0f).Within(.0001f));
+        Assert.That(flight.Velocity.magnitude, Is.EqualTo(100f).Within(.15f));
+        Assert.That(origin.Offset.sqrMagnitude, Is.GreaterThan(0));
+        Assert.That(camera.transform.localPosition, Is.EqualTo(localCameraPosition));
+        flight.InputSource = new RelativeTestInput { movement = Vector3.up };
+        yield return null;
+        Assert.That(flight.CityPosition.y, Is.GreaterThan(27f));
+        Assert.That(flight.Velocity.x, Is.EqualTo(0f).Within(.0001f));
+        Assert.That(flight.Velocity.z, Is.EqualTo(0f).Within(.0001f));
+        Assert.That(flight.Velocity.y, Is.EqualTo(100f).Within(.1f));
+        Object.Destroy(root); yield return null;
+    }
+
+    [UnityTest]
+    public IEnumerator AbsoluteBenchmarkRouteStillMovesVerticallyAtRequestedSpeed()
+    {
+        var rig = new GameObject("absolute airborne route regression");
+        var flight = rig.AddComponent<FreeFlightController>();
+        Vector3 initial = new Vector3(100, 400, 100);
+        flight.SetPose(initial, Quaternion.identity);
+        flight.InputSource = new BenchmarkRouteInput(new[] { initial, initial + new Vector3(300, 200, 400) }, 100);
+        yield return null;
+        Assert.That(flight.CityPosition.y, Is.GreaterThan(initial.y));
+        Assert.That(flight.Velocity.y, Is.GreaterThan(0));
+        Assert.That(flight.Velocity.magnitude, Is.EqualTo(100f).Within(.2f));
+        Object.Destroy(rig); yield return null;
+    }
+
     private sealed class AbsoluteTestInput : IMotionInputSource
     {
         public MotionCommand Sample(float deltaTime) => new MotionCommand { hasAbsolutePose = true, cityPosition = new Vector3(10, 0, 0), cityRotation = Quaternion.identity };
@@ -251,3 +299,75 @@ public sealed class ViewerCompositionTests
         Object.Destroy(host); Object.Destroy(first); Object.Destroy(second); Object.Destroy(source); yield return null;
     }
 }
+
+public sealed class NearRuntimeDiagnosticsTests
+{
+    [Test]
+    public void SnapshotReadsInstantiatedNearActivityBoundsAndRealPropertyBlocksWithoutMutation()
+    {
+        var host = new GameObject("near diagnostic fixture");
+        var streamer = host.AddComponent<CityStreamer>(); streamer.enabled = false;
+        var surfaces = host.AddComponent<SurfaceDetailComparison>(); streamer.surfaces = surfaces;
+        var observer = new GameObject("observer"); observer.transform.SetParent(host.transform);
+        var flight = observer.AddComponent<FreeFlightController>(); flight.enabled = false; streamer.flight = flight;
+        var catalog = ScriptableObject.CreateInstance<CityCatalog>(); catalog.sourceVersion = "test-v2"; streamer.catalog = catalog;
+        var source = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        var fixtures = new System.Collections.Generic.List<GameObject>();
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var entries = (IList)typeof(CityStreamer).GetField("residents", flags).GetValue(streamer);
+        var type = typeof(CityStreamer).GetNestedType("Residency", System.Reflection.BindingFlags.NonPublic);
+        try
+        {
+            Add("active-partial", CityLayer.Near, 100, true, .25f);
+            Add("inactive-nearest", CityLayer.Near, 50, false, 1f);
+            Add("active-zero", CityLayer.Near, 180, true, 0f);
+            Add("core-not-near", CityLayer.Core, 0, true, 1f);
+            long writes = surfaces.OpacityPropertyWrites, visits = surfaces.OpacityTileVisits;
+            var state = streamer.GetNearDiagnostics();
+            Assert.That(state.sourceVersion, Is.EqualTo("test-v2"));
+            Assert.That(state.loadedTiles, Is.EqualTo(3)); Assert.That(state.activeTiles, Is.EqualTo(2));
+            Assert.That(state.nearestLoadedTile, Is.EqualTo("inactive-nearest"));
+            Assert.That(state.nearestLoadedBoundsDistance, Is.EqualTo(50));
+            Assert.That(state.activeRenderers, Is.EqualTo(2)); Assert.That(state.opacityAvailable, Is.True);
+            Assert.That(state.minimumOpacity, Is.EqualTo(0)); Assert.That(state.maximumOpacity, Is.EqualTo(.25f));
+            Assert.That(state.visibleRendererFlags, Is.InRange(0, state.activeRenderers));
+            Assert.That(surfaces.OpacityPropertyWrites, Is.EqualTo(writes));
+            Assert.That(surfaces.OpacityTileVisits, Is.EqualTo(visits));
+            for (int i = 0; i < 100; i++) streamer.GetNearDiagnostics();
+            long allocatedBefore = System.GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++) streamer.GetNearDiagnostics();
+            long allocated = System.GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            Assert.That(allocated, Is.EqualTo(0L), "Repeated snapshot queries must not allocate or create material variants.");
+            flight.SetPose(Vector3.right * 40, Quaternion.identity);
+            Assert.That(streamer.GetNearDiagnostics().nearestLoadedBoundsDistance, Is.EqualTo(10));
+            surfaces.EnabledDetails = false;
+            state = streamer.GetNearDiagnostics(); Assert.That(state.surfaceDetailsEnabled, Is.False);
+            Assert.That(state.loadedTiles, Is.EqualTo(3)); Assert.That(state.activeTiles, Is.EqualTo(2));
+            Assert.That(state.minimumOpacity, Is.EqualTo(0)); Assert.That(state.maximumOpacity, Is.EqualTo(.25f));
+            streamer.flight = null;
+            Assert.That(streamer.GetNearDiagnostics().nearestLoadedTile, Is.Null);
+        }
+        finally
+        {
+            // Fixture residents have no Addressables handles; clear them before component teardown.
+            entries.Clear();
+            foreach (var fixture in fixtures) surfaces.Unregister(fixture);
+            UnityEngine.Object.DestroyImmediate(host); UnityEngine.Object.DestroyImmediate(source); UnityEngine.Object.DestroyImmediate(catalog);
+        }
+        void Add(string id, CityLayer layer, float x, bool active, float opacity)
+        {
+            var fixture = GameObject.CreatePrimitive(PrimitiveType.Cube); fixture.transform.SetParent(host.transform);
+            fixture.GetComponent<Renderer>().sharedMaterial = source; fixtures.Add(fixture);
+            surfaces.Register(fixture, layer == CityLayer.Near);
+            if (layer == CityLayer.Near) surfaces.SetOpacity(fixture, opacity);
+            fixture.SetActive(active);
+            var entry = System.Activator.CreateInstance(type, true);
+            type.GetField("tile").SetValue(entry, new CityTileRecord { id = id, layer = layer, cityBounds = new Bounds(Vector3.right * x, Vector3.zero) });
+            type.GetField("instance").SetValue(entry, fixture);
+            entries.Add(entry);
+        }
+    }
+}
+
+// Oracle is the evaluation policy at 78bd313. Compare production decisions and exact
+// requested priorities, including the original List.Sort behavior for equal priorities.

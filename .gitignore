@@ -1,4 +1,4 @@
-# Original city inputs are versioned as a private GitHub Release.
+# Original city inputs are versioned in a separate source Release.
 /3d_modeling/
 /need_to_change/
 /.cache/
@@ -55,6 +55,7 @@
 **/face_landmarker.task*
 **/*runtime_calibration.json
 **/monitor_hint.json
+**/tracker_camera_*.json
 **/physical-calibration.json
 **/viewer-preferences.json
 **/position-bookmark.json
@@ -62,3 +63,9 @@
 .env.*
 .DS_Store
 Thumbs.db
+
+# Derived offline ownership data is regenerated from the exact built city bundles.
+**/Assets/Resources/CityOwnership.json
+**/Assets/Resources/CityOwnership.json.meta
+**/Assets/Resources/CityOwnershipHash.txt
+**/Assets/Resources/CityOwnershipHash.txt.meta

@@ -12,8 +12,17 @@ namespace Manhattan.Viewer
         private ManhattanBootstrap app;
         private Font font;
         private GameObject drawer, setup;
-        private UnityEngine.UI.Text diagnostics, message;
+        private UnityEngine.UI.Text diagnostics, message, captureMessage, viewportMessage;
+        private ViewerViewportRuler viewportRuler;
+        private ViewerMeasurementWorkflow measurement;
+        private ViewerCameraSelection cameras;
+        private UnityEngine.UI.Text cameraMessage;
+        private Transform cameraOptions;
+        private string cameraListFingerprint;
         private float nextDiagnostics;
+        private UnityEngine.UI.Text sunMotionLabel, sunStatus;
+        private UnityEngine.UI.Button sunMotionButton;
+        private UnityEngine.UI.Slider sunPosition;
         private static readonly Color Ink = new Color(.91f, .95f, .99f);
         private static readonly Color Panel = new Color(.045f, .063f, .085f, .96f);
         private static readonly Color Accent = new Color(.27f, .79f, .67f);
@@ -41,8 +50,12 @@ namespace Manhattan.Viewer
             CompareButton(comparisons, "Surface", 348, () => app.Preferences.surfaceDetail, value => { app.Preferences.surfaceDetail = value; app.Surfaces.EnabledDetails = value; app.SavePreferences(); });
             var settings = Rect("Settings Anchor", canvas.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-184, -24), new Vector2(160, 40));
             settings.pivot = new Vector2(0, 1); Button(settings, "Settings  /  Esc", () => ShowDrawer(drawer == null || !drawer.activeSelf));
-            var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(900, 130)); diag.pivot = Vector2.zero;
-            diagnostics = Text(diag, "", 15, 0, 0, 900, 130); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
+            var diag = Rect("Diagnostics", canvas.transform, Vector2.zero, Vector2.zero, new Vector2(24, 24), new Vector2(1100, 360)); diag.pivot = Vector2.zero;
+            diagnostics = Text(diag, "", 14, 0, 0, 1100, 360); diagnostics.rectTransform.anchorMin = diagnostics.rectTransform.anchorMax = Vector2.zero; diagnostics.rectTransform.pivot = Vector2.zero;
+            diagnostics.supportRichText = false;
+            viewportRuler = new GameObject("Viewport measurement aid", typeof(RectTransform)).AddComponent<ViewerViewportRuler>();
+            viewportRuler.Initialize(canvas, app.Display.GetComponent<Camera>(), app.Display.Calibration, font);
+            measurement = gameObject.AddComponent<ViewerMeasurementWorkflow>(); measurement.Initialize(app, canvas, font);
             BuildDrawer(canvas.transform); BuildSetup(canvas.transform);
             app.KeyboardInput.EscapePressed += OnEscape;
             bool requiresSetup = !ViewerPersistence.HasCalibration && !ManhattanBootstrap.HasArgument("--benchmark") && !ManhattanBootstrap.HasArgument("--screenshot-out") && !ManhattanBootstrap.HasArgument("--comparison-captures-out") && !ManhattanBootstrap.HasArgument("--fade-proof-out");
@@ -74,12 +87,38 @@ namespace Manhattan.Viewer
             scroll.viewport = viewport; scroll.content = content;
             Heading(content, "SETTINGS");
             TextRow(content, "Physical values use centimetres. Changes preserve city position.", 54);
+            BuildLightingSection(content);
+            BuildWebcamSection(content);
             var c = app.Display.Calibration;
             NumericRow(content, "Screen width (cm)", c.screenWidth * 100f, v => { if (v >= 10 && v <= 300) { c.screenWidth = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Screen height (cm)", c.screenHeight * 100f, v => { if (v >= 10 && v <= 200) { c.screenHeight = v / 100f; app.UpdateCalibration(); } });
             NumericRow(content, "Viewing distance (cm)", c.referenceEyeDistanceFromScreen * 100f, v => { if (v >= 25 && v <= 150) { c.referenceEyeDistanceFromScreen = v / 100f; app.UpdateCalibration(); } });
-            ActionRow(content, "Save physical calibration", () => { ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); app.Rendering.ResetHistory(); });
-            ActionRow(content, "Capture current face reference", () => { if (app.Display.CaptureReference()) { ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); app.Rendering.ResetHistory(); } });
+            ActionRow(content, "Save physical calibration", () => { bool saved = ViewerPersistence.Save(ViewerPersistence.CalibrationFile, c); measurement.CalibrationSaved(saved); app.Rendering.ResetHistory(); });
+            Heading(content, "MEASURED TRACKING CHECK");
+            TextRow(content, "Use a ruler and match both 10 cm viewport aids first. These declarations do not measure IPD or camera FOV.", 72);
+            NumericRow(content, "Measured eye distance (cm)", measurement.DeclaredDistanceMeters * 100f, v => measurement.DeclaredDistanceMeters = v / 100f);
+            NumericRow(content, "Measured RIGHT motion (cm)", measurement.DeclaredMotionMeters * 100f, v => measurement.DeclaredMotionMeters = v / 100f);
+            TextRow(content, "Optional ruler uncertainty: -1 means UNKNOWN, not zero error.", 44);
+            NumericRow(content, "Distance uncertainty (cm)", -1, v => measurement.DeclaredDistanceUncertaintyMeters = v < 0 ? -1 : v / 100f);
+            NumericRow(content, "Motion uncertainty (cm)", -1, v => measurement.DeclaredMotionUncertaintyMeters = v < 0 ? -1 : v / 100f);
+            ActionRow(content, "Confirm ruler values and viewport match", () => measurement.ConfirmMeasurements());
+            ActionRow(content, "Start A / B / RETURN check", () => { if (measurement.Begin()) ShowDrawer(false); });
+            ActionRow(content, "Cancel measurement / F9", measurement.Cancel);
+            ActionRow(content, "Preview current face reference", CaptureFaceReference);
+            ActionRow(content, "Apply preview for this session", measurement.ApplyReference);
+            ActionRow(content, "Revert applied preview", measurement.RevertReference);
+            var captureRow = Row(content, 260);
+            captureMessage = Text(captureRow, "Reference preview does not apply or save changes.", 14, 0, 0, 380, 260);
+            captureMessage.supportRichText = false;
+            Stretch(captureMessage.rectTransform);
+            Heading(content, "VIEWPORT CHECK");
+            TextRow(content, "Default: width/height measure the whole game render surface. Full panel mode uses the entire monitor panel and maps the player window automatically. Webcam offsets use that same centre.", 100);
+            ToggleRow(content, "Dimensions are full monitor panel", app.Preferences.fullPanelDimensions, value =>
+            { app.Preferences.fullPanelDimensions = value; app.WindowViewport.SetPanelMapping(value); app.Frame.Refresh(); app.Rendering.ResetHistory(); app.SavePreferences(); });
+            ToggleRow(content, "Show manual 10 cm rulers", false, viewportRuler.SetVisible);
+            var viewportRow = Row(content, 240);
+            viewportMessage = Text(viewportRow, viewportRuler.Describe(), 14, 0, 0, 380, 240);
+            Stretch(viewportMessage.rectTransform);
             Heading(content, "FLIGHT & IMAGE");
             NumericRow(content, "Movement speed (m/s)", app.Flight.Speed, v => { app.Flight.Speed = v; app.Preferences.movementSpeed = app.Flight.Speed; app.SavePreferences(); });
             NumericRow(content, "Mouse sensitivity", app.KeyboardInput.MouseSensitivity, v => { app.KeyboardInput.MouseSensitivity = Mathf.Clamp(v, .01f, 1f); app.Preferences.mouseSensitivity = app.KeyboardInput.MouseSensitivity; app.SavePreferences(); });
@@ -116,6 +155,30 @@ namespace Manhattan.Viewer
             ActionRow(content, "Close settings", () => ShowDrawer(false));
         }
 
+        private void BuildWebcamSection(Transform content)
+        {
+            Heading(content, "WEBCAM");
+            cameras = new ViewerCameraSelection(ViewerPersistence.DirectoryPath);
+            var cameraStatusRow = Row(content, 120);
+            cameraMessage = Text(cameraStatusRow, "Waiting for tracker camera list", 14, 0, 0, 380, 120);
+            cameraMessage.supportRichText = false; Stretch(cameraMessage.rectTransform);
+            ActionRow(content, "Refresh webcam list", () => cameras.Refresh());
+            var options = new GameObject("Webcam choices", typeof(RectTransform));
+            options.transform.SetParent(content, false); cameraOptions = options.transform;
+            var cameraLayout = options.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            cameraLayout.spacing = 6; cameraLayout.childControlHeight = cameraLayout.childControlWidth = true;
+            cameraLayout.childForceExpandHeight = false;
+            TextRow(content, "Choose a camera below. The tracker switches without moving the city. After changing cameras, check calibration and capture a new face reference. Black video means the camera source is not supplying an image.", 108);
+        }
+
+        private void CaptureFaceReference()
+        {
+            measurement.PreviewReference();
+            captureMessage.text = measurement.Describe();
+            // Refresh visible diagnostics after every explicit attempt, including a failed one.
+            nextDiagnostics = 0f;
+        }
+
         private void BuildSetup(Transform parent)
         {
             var overlay = Rect("First Physical Setup", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -143,19 +206,84 @@ namespace Manhattan.Viewer
         {
             if (setup != null && setup.activeSelf) return;
             drawer.SetActive(show); app.KeyboardInput.Capture(false);
-            app.KeyboardInput.InputEnabled = !show && !app.Benchmark.Recording;
+            measurement.SetSettingsVisible(show);
+            app.KeyboardInput.InputEnabled = !show && !app.Benchmark.Recording && !measurement.Active;
         }
         private void Update()
         {
             if (app == null || diagnostics == null || Time.unscaledTime < nextDiagnostics) return;
             nextDiagnostics = Time.unscaledTime + .25f;
+            if (sunPosition != null)
+            {
+                var sun = app.Rendering.Sunlight;
+                sunPosition.SetValueWithoutNotify(sun.Position);
+                sunMotionLabel.text = sun.Moving ? "Pause sun movement" : "Move sun slowly";
+                sunMotionButton.interactable = !sun.AtEnd;
+                sunStatus.text = sun.AtEnd ? "End of afternoon. Move the slider or reset to continue." :
+                    sun.Moving ? "Sun is moving. Shadows follow the sunlight." : "Sun paused. Camera movement does not move the sun.";
+            }
+            if (viewportMessage != null) viewportMessage.text = viewportRuler.Describe() + "\n" + app.WindowViewport.Status;
+            if (captureMessage != null)
+            {
+                captureMessage.text = measurement.Describe();
+                var row = captureMessage.transform.parent.GetComponent<UnityEngine.UI.LayoutElement>();
+                row.minHeight = row.preferredHeight = Mathf.Max(260, captureMessage.preferredHeight + 12);
+            }
+            UpdateCameraChoices();
             diagnostics.text = app.Preferences.diagnostics ? string.Format(CultureInfo.InvariantCulture,
-                "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}  ·  tracking {10}  ·  age {11:F0} ms{12}",
+                "{0:F1} ms  ·  {1} tiles / {2} pending  ·  stream {3:F2} ms\nCity ({4:F1}, {5:F1}, {6:F1})  ·  CPU {7:F0} MB  ·  Gfx {8:F0} MB\n{9}{10}",
                 app.Benchmark.CurrentFrameMs, app.Streamer.LoadedTiles, app.Streamer.PendingLoads, app.Streamer.FrameWorkMilliseconds,
                 app.Flight.CityPosition.x, app.Flight.CityPosition.y, app.Flight.CityPosition.z,
                 app.Benchmark.CpuMemoryBytes / 1048576f, app.Benchmark.GpuMemoryBytes / 1048576f,
-                app.Display.SourceStatus, app.Display.IsTracking, app.Display.ResultAgeMilliseconds,
+                ViewerTrackingDiagnostics.Format(app.Display) + "\n" + ViewerTrackingDiagnostics.FormatNear(app.Streamer.GetNearDiagnostics()),
                 app.Benchmark.Recording ? "\nRecording benchmark…" : "") : "";
+        }
+
+        private void BuildLightingSection(Transform content)
+        {
+            Heading(content, "LIGHTING");
+            var sun = app.Rendering.Sunlight;
+            TextRow(content, "Afternoon preview for this session. Starts paused each time.", 44);
+            sunMotionButton = Button(Row(content, 38), "Move sun slowly", () => sun.SetMoving(!sun.Moving));
+            sunMotionLabel = sunMotionButton.GetComponentInChildren<UnityEngine.UI.Text>();
+            TextRow(content, "Earlier afternoon                          Later afternoon", 24);
+            var row = Row(content, 34);
+            var track = Rect("Sun Position", row, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            track.offsetMin = new Vector2(10, 4); track.offsetMax = new Vector2(-10, -4);
+            track.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color(.12f, .16f, .21f);
+            sunPosition = track.gameObject.AddComponent<UnityEngine.UI.Slider>();
+            sunPosition.minValue = 0; sunPosition.maxValue = 1; sunPosition.value = sun.Position;
+            var handle = Rect("Handle", track, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(18, 0));
+            var handleImage = handle.gameObject.AddComponent<UnityEngine.UI.Image>(); handleImage.color = Accent;
+            sunPosition.handleRect = handle; sunPosition.targetGraphic = handleImage;
+            sunPosition.onValueChanged.AddListener(value => { sun.SetMoving(false); sun.SetPosition(value); });
+            ActionRow(content, "Reset afternoon light", sun.ResetAfternoon);
+            sunStatus = Text(Row(content, 44), "Sun paused. Camera movement does not move the sun.", 14, 0, 0, 380, 44);
+            Stretch(sunStatus.rectTransform);
+        }
+
+        private void UpdateCameraChoices()
+        {
+            if (cameras == null) return;
+            cameras.ReadStatus(); cameraMessage.text = cameras.Describe();
+            string fingerprint = "offline";
+            if (cameras.Online)
+            {
+                fingerprint = cameras.Current.session + ":" + cameras.Current.selected?.id;
+                foreach (var device in cameras.Current.devices ?? Array.Empty<ViewerCameraSelection.Device>()) fingerprint += ":" + device.id;
+            }
+            if (fingerprint == cameraListFingerprint) return;
+            cameraListFingerprint = fingerprint;
+            foreach (Transform child in cameraOptions) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            if (!cameras.Online) return;
+            foreach (var item in cameras.Current.devices ?? Array.Empty<ViewerCameraSelection.Device>())
+            {
+                var device = item;
+                string label = device.name + " (" + device.backend + ", " + device.index + ")";
+                if (device.id == cameras.Current.selected?.id) label = "Selected: " + label;
+                var button = Button(Row(cameraOptions, 52), label, () => cameras.Select(device));
+                button.GetComponentInChildren<UnityEngine.UI.Text>().supportRichText = false;
+            }
         }
 
         private RectTransform Row(Transform parent, float height)

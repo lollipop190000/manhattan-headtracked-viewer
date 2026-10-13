@@ -20,6 +20,7 @@ namespace Manhattan.Viewer
         public AfternoonRenderProfile Rendering { get; private set; }
         public ViewerBenchmark Benchmark { get; private set; }
         public ViewerPreferences Preferences { get; private set; }
+        public ViewerWindowViewport WindowViewport { get; private set; }
         private Camera renderCamera;
         private Material frameMaterial;
         private Transform plane;
@@ -63,11 +64,16 @@ namespace Manhattan.Viewer
             if (!HasArgument("--no-tracker")) source = gameObject.AddComponent<PythonBridgeSource>();
             Display = cameraObject.AddComponent<HeadTrackedDisplay>();
             ViewerPersistence.RestoreCalibration(Display.Calibration); Display.Configure(plane, source);
+            WindowViewport = gameObject.AddComponent<ViewerWindowViewport>(); WindowViewport.Configure(Display);
+            WindowViewport.SetPanelMapping(Preferences.fullPanelDimensions);
             Frame = gameObject.AddComponent<ScreenWindowFrame>();
             var frameTemplate = windowFrameMaterial != null ? windowFrameMaterial : Resources.Load<Material>("WindowFrameMaterial");
             if (frameTemplate == null) throw new InvalidOperationException("Window frame material is missing. Run Manhattan/Create viewer scene and render settings before building.");
             frameMaterial = new Material(frameTemplate) { name = "Physical Window Frame", hideFlags = HideFlags.DontSave };
             frameMaterial.SetColor("_BaseColor", new Color(.13f, .16f, .19f)); frameMaterial.SetFloat("_Metallic", .4f); frameMaterial.SetFloat("_Smoothness", .65f);
+            // URP Lit uses a material keyword, not Renderer.receiveShadows. The physical
+            // window dressing must not acquire city shadows as the observer moves.
+            frameMaterial.SetFloat("_ReceiveShadows", 0f); frameMaterial.EnableKeyword("_RECEIVE_SHADOWS_OFF");
             Frame.FrameMaterial = frameMaterial; Frame.Configure(Display);
             Surfaces = gameObject.AddComponent<SurfaceDetailComparison>();
             Rendering = gameObject.AddComponent<AfternoonRenderProfile>(); Rendering.Configure(renderCamera);

@@ -1,0 +1,124 @@
+using System;
+using UnityEngine;
+
+namespace WebShooter.Swing
+{
+    /// <summary>튜닝 가능한 물리 값. 모든 길이는 미터, 시간은 초. 도시 좌표(y가 위)에서 쓴다.</summary>
+    [Serializable]
+    public sealed class SwingSettings
+    {
+        [Tooltip("중력 가속도 (m/s^2, 아래 방향)")] public float gravity = 9.81f;
+        [Tooltip("선형 공기 저항 계수 (1/s). 클수록 속도가 빨리 줄어든다")] public float airDrag = 0.05f;
+        [Tooltip("최대 속도 (m/s)")] public float maxSpeed = 70f;
+        [Tooltip("지면의 도시 좌표 y")] public float groundHeight = 0f;
+        [Tooltip("지면 위 눈높이 (m). 이동 기준점은 눈 위치다")] public float eyeHeight = 1.85f;
+        [Tooltip("지면에 닿아 있을 때 수평 속도가 줄어드는 정도 (1/s)")] public float groundFriction = 5f;
+        [Tooltip("공중 조향 가속도 (m/s^2). 공중에서 WASD로 살짝 방향을 튼다")] public float airControl = 6f;
+        [Tooltip("줄을 감거나 푸는 속도 (m/s)")] public float reelSpeed = 8f;
+        [Tooltip("이보다 가까운 곳에는 거미줄을 붙일 수 없다 (m)")] public float minRopeLength = 2f;
+        [Tooltip("물리 하위 스텝의 최대 시간 (s). 프레임이 길어도 이 값 이하로 나눠 적분한다")] public float maxStep = 1f / 120f;
+        [Tooltip("거미줄이 붙는 순간 앵커 쪽으로 더해 주는 속도 (m/s). 0이면 끔. 줄은 안쪽으로 당기지 않으므로 지상에서 시작하려면 필요하다")] public float attachPull = 0f;
+        [Tooltip("true면 앵커에 가까워진 만큼 줄 길이도 줄인다(래칫). 끌려 올라간 뒤 줄이 다시 팽팽해지며 진자로 이어진다")] public bool ratchetRope = false;
+    }
+
+    /// <summary>
+    /// 거미줄 스윙 물리: 점 질량 + 늘어나지 않는 줄(진자). 중력, 공기 저항, 지면, 공중 조향, 줄 감기.
+    /// Unity 물리 엔진을 쓰지 않는 순수 코드라서 결정적이고 단위 테스트가 가능하다. 건물 충돌은 바깥(이동 제약)이 처리하고
+    /// 막혔을 때 <see cref="OnBlocked"/>로 알려 주면 된다.
+    /// </summary>
+    public sealed class SwingPhysics
+    {
+        public SwingSettings Settings { get; }
+        public Vector3 Position { get; set; }
+        public Vector3 Velocity { get; set; }
+        public bool Attached { get; private set; }
+        public Vector3 Anchor { get; private set; }
+        public float RopeLength { get; private set; }
+        public bool Grounded { get; private set; }
+
+        public SwingPhysics(SwingSettings settings = null) => Settings = settings ?? new SwingSettings();
+
+        public float FloorY => Settings.groundHeight + Settings.eyeHeight;
+
+        public void Reset(Vector3 position)
+        {
+            Position = position;
+            Velocity = Vector3.zero;
+            Release();
+        }
+
+        /// <summary>거미줄을 붙인다. 줄 길이는 지금 거리이므로 붙이는 순간에는 팽팽하다. 너무 가까우면 거부한다.</summary>
+        public bool Attach(Vector3 anchor)
+        {
+            float distance = Vector3.Distance(Position, anchor);
+            if (distance < Settings.minRopeLength) return false;
+            Anchor = anchor;
+            RopeLength = distance;
+            Attached = true;
+            if (Settings.attachPull > 0f) Velocity += (anchor - Position) / distance * Settings.attachPull;
+            return true;
+        }
+
+        public void Release() => Attached = false;
+
+        /// <summary>이동이 장애물에 막혔을 때 호출한다. 장애물 쪽으로 향하는 속도 성분만 지운다.</summary>
+        public void OnBlocked(Vector3 towardsObstacle)
+        {
+            if (towardsObstacle.sqrMagnitude < 1e-12f) return;
+            Vector3 n = towardsObstacle.normalized;
+            float into = Vector3.Dot(Velocity, n);
+            if (into > 0f) Velocity -= n * into;
+        }
+
+        /// <summary>
+        /// 시간을 dt만큼 진행한다. steer는 공중 조향 입력(월드 방향, 크기 1 이하로 잘림), reel은 +면 줄 감기, -면 풀기.
+        /// </summary>
+        public void Step(float dt, Vector3 steer = default, float reel = 0f)
+        {
+            if (dt <= 0f) return;
+            dt = Mathf.Min(dt, 0.1f);   // 멈췄다 재개할 때 폭주하지 않도록
+            int steps = Mathf.Max(1, Mathf.CeilToInt(dt / Settings.maxStep));
+            float h = dt / steps;
+            Vector3 steering = Vector3.ClampMagnitude(steer, 1f) * Settings.airControl;
+            Vector3 gravity = Vector3.down * Settings.gravity;
+            for (int i = 0; i < steps; i++) Substep(h, steering, gravity, reel);
+        }
+
+        private void Substep(float h, Vector3 steering, Vector3 gravity, float reel)
+        {
+            Vector3 v = Velocity + (gravity + steering) * h;
+            v *= Mathf.Exp(-Settings.airDrag * h);
+            Vector3 p = Position + v * h;
+
+            if (Attached)
+            {
+                if (reel != 0f) RopeLength = Mathf.Max(Settings.minRopeLength, RopeLength - reel * Settings.reelSpeed * h);
+                Vector3 d = p - Anchor;
+                float dist = d.magnitude;
+                if (Settings.ratchetRope && dist < RopeLength) RopeLength = Mathf.Max(Settings.minRopeLength, dist);
+                if (dist > RopeLength && dist > 1e-6f)
+                {
+                    Vector3 n = d / dist;
+                    p = Anchor + n * RopeLength;          // 줄이 늘어나지 않게 위치를 구 위로 되돌린다
+                    float outward = Vector3.Dot(v, n);
+                    if (outward > 0f) v -= n * outward;   // 줄 방향 바깥쪽 속도를 지운다 (장력)
+                }
+            }
+
+            Grounded = false;
+            if (p.y <= FloorY)
+            {
+                p.y = FloorY;
+                if (v.y < 0f) v.y = 0f;
+                float friction = Mathf.Exp(-Settings.groundFriction * h);
+                v.x *= friction; v.z *= friction;
+                Grounded = true;
+            }
+
+            float speed = v.magnitude;
+            if (speed > Settings.maxSpeed) v *= Settings.maxSpeed / speed;
+            Position = p;
+            Velocity = v;
+        }
+    }
+}

@@ -1,84 +1,137 @@
-# Windows 배포본 실행
+# Windows quick start — v0.1.1
 
-Windows x64 배포 ZIP을 전부 압축 해제하면 Unity Editor 설치나 도시 원본 다운로드·변환 없이 맨해튼을 탐색할 수 있습니다. 웹캠 Head Tracking은 아래 절차로 고정 버전의 Python 추적기를 별도로 준비합니다.
+One Windows x64 ZIP includes the city viewer and optional webcam head tracking.
+You do not need to install Unity, Python, pip, Git or source assets to use it.
+The webcam mode runs a private Python included with this application.
 
-## 웹캠 없이 바로 실행
+## Download and launch
 
-`ManhattanViewer.exe`가 있는 폴더에서 PowerShell을 열고 실행합니다.
+1. Open the [v0.1.1 Release](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/v0.1.1).
+2. Download **ManhattanViewer-v0.1.1-Windows-x64.zip**, not `Source code.zip`.
+3. Extract the whole archive into a writable, reasonably short path, for example
+   `C:\Games\ManhattanViewer`. Keep `ManhattanViewer_Data`, `.runtime`, `tools`
+   and `Notices` beside the executable. Do not run from inside the ZIP.
+4. Double-click **Run-HeadTrackedDemo.cmd**.
+5. Choose **1** to explore without a webcam, or **2** for webcam head tracking.
 
-```powershell
-.\ManhattanViewer.exe --no-tracker
-```
+No webcam is opened in mode 1. Mode 2 starts the viewer and its bundled tracker;
+closing the game with Alt+F4 also stops the tracker. Keep the launcher window
+open while using the game. Menu **5** stops this copy of the application.
 
-처음에는 실제 화면 너비·높이와 눈에서 화면까지의 거리를 **cm**로 입력하고 `Enter Manhattan`을 누릅니다. `--no-tracker`는 웹캠 추적기를 시작하지 않고 플레이어의 추적 수신도 끕니다. WASD·마우스 이동, 창틀, 도시 렌더링은 사용할 수 있습니다.
+Supported target: Windows 10/11 x64 and a DirectX 11 graphics device. Other
+operating systems are not included in this build. GPU performance varies.
 
-배포 폴더 전체를 함께 이동합니다. 실행 파일과 `ManhattanViewer_Data`를 분리하면 실행에 필요한 도시 타일과 데이터가 누락됩니다.
+## A new PC reports a missing DLL
 
-## 웹캠 추적기 준비와 실행
+Choose menu **4 — Install Microsoft runtime**. The launcher downloads the pinned
+Microsoft Visual C++ Redistributable directly from Microsoft, checks its SHA-256
+and Microsoft digital signature, then opens the Microsoft installer. Internet
+and Windows administrator approval may be needed for this prerequisite. Restart
+if Windows requests it, then run the launcher again. Normal game startup does
+not install software or download a model.
 
-이 비공개 저장소를 읽을 수 있는 GitHub 계정, Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다.
+Once the Windows prerequisite is installed, both modes work offline. A webcam's
+driver and Windows camera permission must also be available for mode 2.
 
-```powershell
-git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
-cd manhattan-headtracked-viewer
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
-```
+## First launch and physical measurement
 
-`-PlayerPath`를 압축 해제한 실행 파일의 **절대 경로**로 바꿉니다. 이후의 `tools/...` 명령은 이 저장소 루트에서 실행합니다. `setup`은 고정 기술 저장소를 `.tools/head-tracked-display`에 받고, 버전이 고정된 Python 환경과 SHA-256으로 고정된 얼굴 모델을 준비합니다. `-SkipSource -SkipUnity`로 도시 원본과 Unity 준비를 생략하므로 다음 `run` 명령으로 배포본을 실행하면 됩니다.
+Enter visible screen **width**, **height** and **eye-to-screen distance**, all in
+**cm**, then select **Enter Manhattan**. Measure the display area rather than its
+resolution or the outside bezel. The package uses those physical dimensions for
+off-axis projection; it is single-viewer and monoscopic.
 
-`python`이 다른 버전이라면 setup 명령에 `-PythonExe 'C:\Path\To\Python313\python.exe'`를 추가합니다. 다른 웹캠은 `-Camera 1`처럼 선택합니다. 런처는 플레이어와 추적기를 함께 관리하며, 게임을 `Alt+F4`로 닫을 때 추적기도 정리합니다. 강제로 정리해야 할 때는 새 PowerShell 창에서 **같은 실행 파일 경로**를 전달합니다.
+In webcam mode, open **Settings → WEBCAM**, choose your camera by name, face
+forward and select **Capture current face reference**. Detailed lens calibration,
+camera position, IPD and diagnostics remain in the right-hand Settings drawer.
+If you change cameras, recheck their position and calibration.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Stop
-```
+For dimensions measured across the full monitor while playing in a window,
+enable **Dimensions are full monitor panel** in Viewport check. Keep the entire
+window on the measured monitor. In the usual measured render-surface mode,
+measure the application's visible display area and recheck after resizing it.
 
-## 실측 입력과 개인 보정
+Use **Save physical calibration** explicitly. Calibration, comparison preferences
+and position bookmarks are separate files. A bookmark is never auto-loaded at
+startup. Default personal location:
+`%USERPROFILE%\AppData\LocalLow\HeadTrackedDisplay\ManhattanViewer`.
+Moving the game folder does not copy another person's calibration into it.
 
-화면의 실제 표시 영역 너비·높이를 재고, 평소 정면을 보는 자세에서 눈과 화면 평면 사이의 거리를 입력합니다. 화면 베젤 크기나 해상도 픽셀 수를 물리 길이 대신 입력하지 않습니다. 기본 전체 화면에서는 표시 패널의 물리 크기를 사용하고, 창 모드로 변경했다면 게임 화면이 차지하는 실제 너비·높이에 맞춰 다시 보정합니다.
+## Controls
 
-오른쪽 `Settings`에서 `Screen width (cm)`, `Screen height (cm)`, `Viewing distance (cm)`를 수정한 뒤 `Save physical calibration`으로 저장합니다. 웹캠을 켠 상태에서 정면 기준 자세를 잡고 `Capture current face reference`를 누릅니다. IPD·웹캠 위치·카메라 보정과 필터는 같은 설정창의 상세 항목에 있습니다.
-
-기본 개인 저장 위치는 `%USERPROFILE%\AppData\LocalLow\HeadTrackedDisplay\ManhattanViewer`입니다. 별도 개인 폴더를 사용하려면 첫 실행부터 같은 `-CalibrationDirectory`를 전달합니다. 이 옵션은 플레이어와 추적기에 함께 적용됩니다.
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0 -CalibrationDirectory "$env:LOCALAPPDATA\ManhattanViewer-Private"
-```
-
-이후 실행과 벤치마크에도 같은 개인 경로를 사용합니다. 웹캠 없이 이 보정을 사용할 때는 같은 명령에 `-NoTracker`를 추가합니다. `physical-calibration.json`, `tracker_runtime_calibration.json`, `viewer-preferences.json`, `position-bookmark.json`은 용도별로 저장되며 Git이나 배포 ZIP에 넣지 않습니다. 위치 북마크는 `Settings`에서 명시적으로 불러올 때만 적용됩니다.
-
-## 조작과 확인
-
-| 조작 | 동작 |
+| Input | Action |
 |---|---|
-| 도시 화면 클릭 | 포인터 잠금·이동 시작 |
-| W / S | 바라보는 방향으로 전진·후진 |
-| A / D | 좌우 이동 |
-| Q / E | 아래·위 이동 |
-| 마우스 | yaw·pitch 회전 |
-| Esc / Settings | 포인터 해제·오른쪽 설정창 |
-| Alt+F4 | 게임 종료 |
+| Click the city | Capture mouse input |
+| W/S, A/D | Move forward/back and sideways on the horizontal plane |
+| Q/E | Descend/rise |
+| Mouse | Look around |
+| Esc / Settings | Release the pointer and open settings |
+| Alt+F4 | Quit the viewer and its tracker |
 
-기본 속도는 10m/s이며 `Movement speed (m/s)`에서 1~50m/s로 바꿉니다. `Tracking`, `Window`, `Surface`는 각각 머리 오프셋 적용, 얇은 입체 창틀, 재질 표면 디테일을 제어합니다. Tracking OFF는 현재 머리 오프셋을 유지하면서 WASD 이동을 계속합니다. 가까운 창틀·창문·건물 모서리를 보며 천천히 좌우·상하·앞뒤로 머리를 움직여 투영을 확인합니다.
+Speed defaults to 10m/s and is adjustable from 1–100m/s. HID gamepads use the
+left stick/D-pad and left/right shoulder buttons; generic joysticks use stick/hat
+and buttons 1/2, subject to the device's mapping. Keyboard and mouse continue to
+work. Tracking, Window and Surface each change only their named feature. Pause
+the optional sun movement in **LIGHTING** for repeatable comparisons. Each
+launch starts with the sun paused at the original afternoon position.
 
-웹캠이 열리지 않으면 다른 카메라 앱을 닫고 Windows의 카메라 접근 권한과 `-Camera` 번호를 확인합니다. `Settings`의 `Show diagnostics`는 추적 상태·결과 지연·프레임 시간·타일 로딩 상태를 표시합니다. 런처 실행 로그는 실행 파일 옆 `Player.log`, `tracker-output.log`, `tracker-error.log`에 생성됩니다. 직접 실행한 플레이어의 기본 로그는 위 개인 저장 위치의 `Player.log`입니다.
+## Commands and troubleshooting
 
-1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/lollipop190000/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
+Open PowerShell **in the extracted release folder**. Choose one launch command:
 
-## 배포 ZIP에 포함할 파일
+```powershell
+.\Run-HeadTrackedDemo.cmd -NoTracker
+.\Run-HeadTrackedDemo.cmd -Webcam
+```
 
-배포 준비자는 아래 항목만 빌드 폴더에서 복사하고, 이 가이드를 ZIP 루트의 `README-Windows.md`로 함께 넣습니다.
+Useful actions through the same launcher:
 
-| 항목 | 포함 범위 |
-|---|---|
-| `ManhattanViewer.exe` | 실행 파일 |
-| `UnityPlayer.dll` | Unity 런타임 |
-| `UnityCrashHandler64.exe` | 크래시 처리 |
-| `ManhattanViewer_Data/` | 하위 파일 전체, 도시 Addressables 포함 |
-| `MonoBleedingEdge/` | 하위 파일 전체 |
-| `D3D12/` | 하위 파일 전체 |
-| `Notices/` | 하위 파일 전체와 `manifest.json` |
+```powershell
+.\Run-HeadTrackedDemo.cmd -Check -ListCameras
+.\Run-HeadTrackedDemo.cmd -Camera 1
+.\Run-HeadTrackedDemo.cmd -Camera 1 -CameraBackend msmf
+.\Run-HeadTrackedDemo.cmd -Stop
+.\Run-HeadTrackedDemo.cmd -Verify
+```
 
-`tools/build.ps1`는 빌드 후 원본 라이선스·이용 조건·출처를 `Notices/`에 복사하고 크기와 SHA-256을 검증합니다. 현재 검증한 목록은 **67개 원문 파일**이며 Unity·추적 패키지·도시 원본과 `CityDetailRenderer`의 Unity 라이선스·NOTICE를 포함합니다. 목록은 `Notices/manifest.json`을 기준으로 보존하며 파일 내용을 수정하지 않습니다. 이 manifest에는 도시 소스 버전과 기술 커밋도 기록됩니다.
+`-Check` loads the bundled model on the CPU without opening a webcam.
+`-ListCameras` lists device names and backend-specific indices without recording
+frames. `-Webcam` restores the saved camera selection when possible, otherwise
+uses camera 0. Explicit `-Camera` takes precedence. The game Settings also offers
+**Refresh webcam list** and camera selection by name. EShare or OBS virtual
+cameras may produce black frames until their source application is connected.
+Select a physical camera to check the built-in webcam first.
 
-`ManhattanViewer.provenance.json`의 로컬 개발 경로, `ManhattanViewer_BurstDebugInformation_DoNotShip/`, 실행·추적기 로그, `tracker-session-*.heartbeat`, 개인 보정, 소스 ZIP, 추적기 가상환경·얼굴 모델은 배포 ZIP에서 제외합니다. 배포 ZIP의 SHA-256과 해당 빌드의 검증 기록은 Release에 함께 제공합니다.
+If a webcam fails, close other camera applications, enable **camera access for
+desktop apps** in Windows Privacy settings, and select the correct device.
+Try `msmf` if `dshow` fails with your camera. Tracking OFF holds the current head
+offset while observations and keyboard travel continue; it is not a webcam
+privacy switch. Quit the application to release its webcam, or use mode 1.
+
+Missing files: extract the whole ZIP into a new folder. For white-line stability,
+leave **Temporal anti-aliasing** enabled in **FLIGHT & IMAGE**. For a runtime
+error, choose menu 3 first and review the printed message. Session logs are
+`Player.log`, `tracker-output.log` and `tracker-error.log` beside the executable.
+Do not post personal calibration or raw webcam frames in bug reports.
+
+An optional private calibration directory can be supplied from PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\run_demo.ps1 -Webcam -CalibrationDirectory "$env:LOCALAPPDATA\ManhattanViewer-Private"
+```
+
+Use that same directory with `-Stop` and subsequent launches. For explicit QA
+player arguments, call this backing PowerShell script directly to preserve
+quoted paths; the single public CMD entry point remains Run-HeadTrackedDemo.cmd.
+
+## What is included
+
+The ZIP contains the player, city bundles, Unity runtime, an isolated Python
+3.13.5 distribution, pinned tracker dependencies, the Face Landmarker model and
+license notices. System Python, Git and Unity are not consulted during play.
+`INTEGRITY.json` records every shipped file and distinguishes the distribution
+source revision from the unchanged v0.1.0 player revision. The `.sha256` beside
+the download checks the entire ZIP. Keep `Notices/` when redistributing.
+
+This is a packaging update to the tested v0.1.0 city player. Exact checks and
+their scope are in [release validation](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.1/docs/release-v0.1.1.md). Building from source
+is a separate developer workflow in the [README](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.1/README.md#build-from-source).

@@ -1,0 +1,44 @@
+{
+  "python": {
+    "url": "https://www.python.org/ftp/python/3.13.5/python-3.13.5-embed-amd64.zip",
+    "filename": "python-3.13.5-embed-amd64.zip",
+    "sha256": "7d2650fd9d1b9d002d4a315d5f354247fd6a44f30517c7ef577b08f57a0fb6d9",
+    "bytes": 10903542
+  },
+  "pythonSbom": {
+    "url": "https://www.python.org/ftp/python/3.13.5/python-3.13.5-embed-amd64.zip.spdx.json",
+    "filename": "python.spdx.json",
+    "sha256": "0fc26ce547dc881a7b2ecb35f9ecd680845236d352ef47c313c6f0865a47b38d",
+    "bytes": 15334
+  },
+  "vcRuntime": {
+    "url": "https://download.visualstudio.microsoft.com/download/pr/ebdab8e5-1d7b-4d9f-a11b-cbb1720c3b12/843068991DAAA1F73AD9F6239BCE4D0F6A07A51F18C37EA2A867E9BECA71295C/VC_redist.x64.exe",
+    "filename": "VC_redist.x64.exe",
+    "sha256": "843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c",
+    "bytes": 18731856
+  },
+  "faceModel": {
+    "url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+    "filename": "face_landmarker.task",
+    "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+    "bytes": 3758596
+  },
+  "faceDetectorCard": {
+    "url": "https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20%28Short%20Range%29.pdf",
+    "filename": "FaceDetector.pdf",
+    "sha256": "cd335c06fc0de7807cd815a0777a697932598bcdb28fa98adaaabf847485f758",
+    "bytes": 434425
+  },
+  "faceMeshCard": {
+    "url": "https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Face%20Mesh%20V2.pdf",
+    "filename": "FaceMesh.pdf",
+    "sha256": "c6add060f4ebfb37b2690136b6c711c7e5fcb7038baa2649ae3338b83979565a",
+    "bytes": 3476420
+  },
+  "blendshapeCard": {
+    "url": "https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Blendshape%20V2.pdf",
+    "filename": "Blendshape.pdf",
+    "sha256": "c8e9cf60a39998f4b341740623917590e050d1c97004e2de4568d84e026445ae",
+    "bytes": 2324099
+  }
+}

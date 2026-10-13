@@ -4,13 +4,72 @@ The acceptance target is a webcam-enabled standalone Windows player on RTX 4070 
 
 ## Automated checks
 
+Current integration results and incomplete checks are recorded in [physical viewport validation](physical-viewport-validation.md) and [current streaming validation](current-streaming-validation.md). Earlier measurements below remain historical and do not certify the current package pin. For a live Windows GPU test run, use `tools/test.ps1 -EditorPlayMode -PythonExe '<Python 3.13 executable>'`; it opens the isolated test Game View, uses `-runTests --no-tracker`, and keeps personal calibration separate. Batch-mode results cannot certify frame-end rendering tests.
+
 `tools/test.ps1 -DataOnly` runs Python data tests using only the standard library, plus eight PowerShell assertions for GPU CSV and environment metadata. These cover source integrity/extraction, catalog/fixture/notice invariants, build preflight and measured-report analysis. GitHub Actions also verifies technology/UPM revision agreement and prevents tracked downloads, personal calibration, build output or generated city files.
+
+The later tolerance-matching correction passed 228/228 EditMode and 129/129 live
+GPU PlayMode, with zero Unity skips. Its eight focused EditMode cases were first
+run against the original compiler: four failed, including a reproduced native
+wall missed across a rounding boundary and a false match beyond 1mm inside the
+same rounded cell. The final suite includes partial-wall preservation, Surface
+OFF/ON, fallback restoration before departure, reentry, imported-asset invariants
+and rejection of the previous mapping rule. Python remained 150 cases (148 passed,
+two Windows symlink-privilege skips) and eight PowerShell assertions passed. The
+generated correspondence must be rebuilt using the
+[current v5 rule](skyline-ownership.md); older measured runs remain tied to their
+recorded source and mapping digests.
+
+The following Editor-generation refactor passed 235/235 EditMode and 129/129 live
+GPU PlayMode with zero Unity skips, plus 155 Python cases (153 passed, the same
+two Windows symlink-privilege skips) and eight PowerShell assertions. Seven new
+Editor cases exercise real output-pair publication, locked-file rollback with
+exact previous bytes or no previous data file, staging cleanup, and validation
+output guards including Windows casing. Five new PowerShell-process cases cover
+delayed completion, nonzero exit, owned timeout cleanup, launch arguments and
+Editor executable validation. The final scoped-registration cleanup was followed
+by another complete 235-case EditMode run; it does not change runtime code.
+
+The subsequent controlled source-loader and material-family hooks passed
+241/241 EditMode and initially 150/150 live GPU PlayMode, with zero Unity skips. The 21
+loader cases exercise publication, exact neighboring-primitive preservation,
+Surface OFF/ON, rollback-before-release, stale/cancelled/timed-out loads, version
+replacement, invalid leases, foreign mesh pointers, common-frame rebasing and
+matching-receipt renderability failures. Six EditMode cases cover factory-aware
+Surface caching, snapshot isolation, registration failure cleanup, restoration
+and unsupported custom fade conversion. Python remains 155 cases (153 passed,
+two Windows symlink-privilege skips), and all eight PowerShell assertions pass.
+These executed synthetic fixture cases do not approve a production optical
+profile, live CityStreamer coordination or real-source pixel quality.
+
+A subsequent actual Windows compilation exposed an Editor-only texture hash API
+in the new loader. Native material evidence now hashes readable Texture2D bytes
+and format/color-space/mip/sampler metadata identically in Editor and Player.
+Unreadable or non-Texture2D content fails closed. Three new staging-mutation cases
+cover changed pixels, lost readability and a RenderTexture substitution. The
+complete rerun passed 241/241 EditMode and 153/153 live GPU PlayMode, zero Unity
+skips, with the same 153 passed Python cases, two privilege skips and eight
+PowerShell assertions. Player compilation and appearance are separate evidence;
+Editor tests alone did not detect the original platform API mismatch.
+
+A separate private native-asset probe deliberately fails an unknown Skyline
+group, preserves its previous output sentinels and input digests, restores a
+borrowed non-null path transform and exact locator/provider references and order,
+then successfully compiles the real `Skyline_1_6` group from ten exact built
+prefabs. It reports no additional hidden clone instances or private ownership
+meshes after cleanup. An earlier version failed locator restoration and was
+corrected to include the catalog's additional dynamic locator/provider
+registrations. This proves the scoped failure/retry path; it does not inject a
+mid-group failure or establish process-memory stability. File rollback handles
+ordinary managed exceptions; a two-file pair is not atomic across power loss.
 
 `tools/test.ps1` adds Unity EditMode and PlayMode suites and writes JUnit reports into ignored `TestResults/`. Preserve the head-tracking package's projection, calibration and lifecycle tests. Validate any package changes in a minimal project without URP, Manhattan or demo dependencies before publishing its pinned commit.
 
 ## Fixed route acceptance
 
-Use the benchmark source rather than hand-driven paths. Select separate closed circuits for dense Midtown, Downtown, Central Park, Uptown and an elevated view using `--benchmark-region Midtown|Downtown|Park|Uptown|Air`; repeat at 10m/s and 50m/s. The first 15 seconds warm assets and histories after the initial region teleport, before samples are collected. Each of the ten region/speed cases needs at least two complete recorded circuits and full route coverage. A separate qualifying trace of at least 1200 measured seconds tests memory over repeated round trips; every regional run does not need to last 20 minutes. A qualifying 20-minute regional run can supply that memory trace. `Full` is an optional connected city route; it cannot reach every district in 20 minutes at 10m/s and does not substitute for regional coverage. The report records the selected region and completed circuits.
+Benchmark start, warmup, measured duration and CSV timestamps consistently use `Time.unscaledTimeAsDouble`. This avoids float-clock quantization causing a false speed failure after long application uptime. Regression checks simulate 20s, 20,000s and 100,000s clock baselines at 100m/s and 60Hz; they are arithmetic checks, not an hours-long GPU run.
+
+Use the benchmark source rather than hand-driven paths. Select separate closed circuits for dense Midtown, Downtown, Central Park, Uptown and an elevated view using `--benchmark-region Midtown|Downtown|Park|Uptown|Air`; repeat at 10m/s, 50m/s and 100m/s. The first 15 seconds warm assets and histories after the initial region teleport, before samples are collected. Each of the fifteen region/speed cases needs at least two complete recorded circuits and full route coverage. A separate qualifying trace of at least 1200 measured seconds tests memory over repeated round trips; every regional run does not need to last 20 minutes. A qualifying 20-minute regional run can supply that memory trace. `Full` is an optional connected city route; it cannot reach every district in 20 minutes at 10m/s and does not substitute for regional coverage. The report records the selected region and completed circuits. `requestedSpeed` is the requested value; `actualRouteSpeed` and legacy `speed` describe the applied route setting. The analyzer independently checks city-position differences against recorded wall time (20 or more intervals, at least 90% trace-time coverage, median/P10/P90 within 5% of the request). Missing or sparse speed traces remain pending. A request of 100m/s with a 50m/s route cannot qualify. Benchmark mode temporarily replaces the motion input; it does not change or save the ordinary movement speed. Runtime `performanceTargetPassed` includes streaming P95 <=2ms, but remains provisional; the analyzer still checks driver VRAM, build identity, routes and webcam telemetry separately.
 
 Before automated measurements, start a normal webcam run, enter the actual display width/height and viewing distance, and save physical calibration. Automated benchmark/capture modes bypass the startup form. The shared launcher and benchmark accept `-CalibrationDirectory '<private calibration directory>'` to use the same local calibration files; first prepare that directory through a normal run with the same option. Keep its contents outside Git and source Releases. No personal dimensions or calibration files belong in the public validation record.
 
@@ -33,9 +92,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/benchmark.ps1 -Region 
 
 Repeat with `Park`, `Uptown` and `Air`, and pair each measured circuit with the same speed/settings when comparing a change. `maxProcessWorkingSetBytes` samples actual process working set at 1Hz; `maxCpuBytes` records Unity allocation separately. CPU working set and the approximate GPU counter do not establish dedicated GPU memory usage by themselves.
 
-At least one matched proxy OFF/ON pair at the same region, speed, source, hardware and settings measures the added collision workload. The analyzer keeps this paired comparison and the long memory trace separate from the ten regional cases; it does not require a second ten-case proxy matrix.
+At least one matched proxy OFF/ON pair at the same region, speed, source, hardware and settings measures the added collision workload. The analyzer keeps this paired comparison and the long memory trace separate from the fifteen regional cases; it does not require a second fifteen-case proxy matrix.
 
-`tools/benchmark_suite.ps1` runs those cases sequentially with the webcam enabled (camera 0 by default): five regional cases at each speed, Midtown 50m/s proxy ON paired with its regional OFF run, and Full 50m/s proxy ON for the long memory trace. Regional durations are 900s at 10m/s and 180s at 50m/s; the paired run is 180s. Full memory uses **1900s**, allowing at least two recorded full circuits after the player excludes the initial partial circuit. The planned measured total is 2h04m40s, plus twelve 15s warmups and loading.
+`tools/benchmark_suite.ps1` runs those cases sequentially with the webcam enabled (camera 0 by default): five regional cases at each speed, Midtown 50m/s proxy ON paired with its regional OFF run, and Full 50m/s proxy ON for the long memory trace. Regional durations are 900s at 10m/s and 180s at 50m/s and 100m/s; the paired run is 180s. Full memory uses **1900s**, allowing at least two recorded full circuits after the player excludes the initial partial circuit. The planned measured total is 2h19m40s, plus seventeen 15s warmups and loading.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/benchmark_suite.ps1 -DryRun
@@ -109,7 +168,7 @@ The report records state checks, image writes, round-trip restoration and finger
 
 ## Standalone opaque distance-fade proof
 
-Use a separate rebuilt standalone run with `--fade-proof-out <directory> --quit-after-fade-proof` to test whether the actual converted Near materials honor the `_CityDetailOpacity` float property block on the GPU. The game uses its `Manhattan/CityDetailLit` shader for Near runtime variants and keeps the source Lit PBR maps, UV transforms and alpha state. Non-Near shaders and imported materials remain unchanged. A strong Resources material reference and source keyword-combination templates retain the shader/PBR variants in the player. Its opacity clip compiles without depending on an LOD keyword. This is separate from the eight comparison captures: only this explicit QA path temporarily selects AA=None and disables SSAO renderer features, fixes the physical eye with Tracking OFF, holds movement/streaming and hides UI. SSAO's per-frame blue-noise variation would otherwise invalidate exact repeated RGB controls. Normal startup and comparison switches do not alter AA or SSAO.
+Use a separate rebuilt standalone run with `--fade-proof-out <directory> --quit-after-fade-proof` to test whether the actual converted Near materials honor the `_CityDetailOpacity` float property block on the GPU. The game uses its `Manhattan/CityDetailLit` shader for Near runtime variants and keeps the source Lit PBR maps, UV transforms and alpha state. The Near fade path preserves imported materials. Legacy Skyline now has its separate private depth-priority variant described in [Skyline ownership](skyline-ownership.md). A strong Resources material reference and source keyword-combination templates retain the shader/PBR variants in the player. Its opacity clip compiles without depending on an LOD keyword. This is separate from the eight comparison captures: only this explicit QA path temporarily selects AA=None and disables SSAO renderer features, fixes the physical eye with Tracking OFF, holds movement/streaming and hides UI. SSAO's per-frame blue-noise variation would otherwise invalidate exact repeated RGB controls. Normal startup and comparison switches do not alter AA or SSAO.
 
 ```powershell
 $fadeDirectory = [System.IO.Path]::GetFullPath('BenchmarkResults/fade-proof-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -173,6 +232,20 @@ The first two 180-second Midtown 50m/s measurements recorded two complete circui
 A webcam startup run exited cleanly, released its owned tracker, and the camera could immediately be reopened to acquire a frame. No captured webcam image was retained. Ten regional measurements, matched proxy comparison, long memory stability and manual head-motion/TAA checks remain separate acceptance work.
 
 Local URP 17.3 code inspection confirms that the render pipeline applies TAA jitter to the camera's off-axis projection and keeps an unjittered matrix for motion vectors. Reset-history calls also reset the persistent motion-vector state. The custom Near shader uses the stock object-motion pass with matching opacity clipping. This source review and projection tests do not replace moving-head image checks for temporal ghosting, facade shimmer or the first frame after a history reset.
+
+## Resident Near feedback and visibility boundaries
+
+Instantiated Near details now refresh their bounds distance and opacity each frame, after flight movement and floating-origin rebasing. The fade retains full opacity at 120m and zero at 180m. Visibility enters at the existing layer radius and exits 20m farther out (always inside the load and release radii); Near stays at zero opacity throughout its exit band. Core, Ground, Vegetation and Collision retain the 0.15-second classification cadence with the same visibility hysteresis. Skyline stays available until its existing complete Core replacement coverage is present; partial overlap is preserved.
+
+Catalogue scans, sorting, predicted load requests, retry delays, residency limits and deferred handle release keep their existing cadence and budgets. Per-frame feedback walks instantiated Near residents rather than the catalogue or every renderer. Tile and renderer opacity caches avoid unchanged renderer-binding visits and material-property-block writes. `CatalogEvaluations`, `OpacityTileVisits` and `OpacityPropertyWrites` expose cumulative counters for repeatable checks; `FrameWorkMilliseconds` includes the feedback work. Lifecycle tests cover movement between scans, enter/exit round trips, delayed/failed/canceled loads, additive Core/Near visibility, material restoration and zero warmed stationary/moving allocations. Existing shader and TAA-history tests remain separate regression checks. These synthetic checks do not certify city FPS or moving-webcam image quality.
+
+## Catalog evaluation fast rejection
+
+The evaluation scan expands each tile's live bounds once and reuses fixed per-layer radius policies. Tiles whose current and predicted squared distances both exceed the applicable load/release radius plus a conservative 1cm pad skip both square roots. This pad retains the original rounded square-root comparisons at finite boundaries; it is larger than float rounding at the largest 1200m policy radius. Skyline's infinite radius never takes the rejection path. NaN comparisons fall through to the original distance path, and overflowing distances retain the existing finite/infinite radius decisions.
+
+Requested tiles retain the original metre distances, priority offsets and `List.Sort` comparison, including ties. Rejected tiles store unused infinite distance/priority sentinels; instantiated Near feedback still recomputes its exact distance before rendering. Live bounds and layers are not cached across scans, so catalog edits and floating-origin coordinates keep their existing behavior. Load/release scheduling, prediction horizon, evaluation cadence, Near execution order and opacity caches are unchanged.
+
+`CityEvaluationEquivalenceTests` compares production evaluation with the policy at `78bd313`: three deterministic randomized runs, every layer's radius and adjacent floats on faces/edges/corners, nonfinite/large/degenerate bounds, actual request sorting with equal priorities, live catalog edits and an actual origin rebase. The prior EditMode and PlayMode suites remain required. Real-catalog decision checks and same-condition Windows measurements are additional evidence; synthetic equivalence does not certify webcam tracking, temporal flicker, uncapped FPS or long-term memory behavior. Temporary phase timers must be identified separately from uninstrumented performance runs. Record actual runtime window mode, frame/elapsed/wall clocks, valid sample counts and observed rendered warmup separately from the configured warmup duration.
 
 ## Published source and initial fresh-clone record
 

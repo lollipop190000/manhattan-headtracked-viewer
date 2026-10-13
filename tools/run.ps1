@@ -1,5 +1,6 @@
 param(
     [ValidateRange(0, 20)][int]$Camera = 0,
+    [ValidateSet('dshow', 'msmf')][string]$CameraBackend = 'dshow',
     [switch]$NoTracker,
     [switch]$Stop,
     [string]$PlayerPath,
@@ -12,7 +13,8 @@ $technologyRoot = Join-Path $ViewerRepository '.tools\head-tracked-display'
 $launcher = Join-Path $technologyRoot 'Run-HeadTrackedDemo.cmd'
 if (-not (Test-Path -LiteralPath $launcher)) { throw 'Run tools/setup.ps1 first to prepare the pinned technology launcher.' }
 $arguments = @('-UnityProject', $ViewerProject, '-PlayerPath', $PlayerPath,
-    '-TrackerRoot', (Join-Path $technologyRoot 'python_tracker'), '-Camera', [string]$Camera)
+    '-TrackerRoot', (Join-Path $technologyRoot 'python_tracker'), '-CameraBackend', $CameraBackend)
+if ($PSBoundParameters.ContainsKey('Camera')) { $arguments += @('-Camera', [string]$Camera) }
 if ($NoTracker) { $arguments += '-NoTracker' }
 if ($Stop) { $arguments += '-Stop' }
 if ($CalibrationDirectory) { $arguments += @('-CalibrationDirectory', $CalibrationDirectory) }
@@ -22,9 +24,10 @@ if ($PlayerArguments) { $arguments += @('-PlayerArguments', $PlayerArguments) }
 # avoiding a second CMD parsing layer for paths containing shell characters.
 if ($PlayerArguments) {
     $parameters = @{ UnityProject = $ViewerProject; PlayerPath = $PlayerPath;
-        TrackerRoot = (Join-Path $technologyRoot 'python_tracker'); Camera = $Camera;
+        TrackerRoot = (Join-Path $technologyRoot 'python_tracker'); CameraBackend = $CameraBackend;
         NoTracker = $NoTracker; Stop = $Stop; PlayerArguments = $PlayerArguments }
     if ($CalibrationDirectory) { $parameters.CalibrationDirectory = $CalibrationDirectory }
+    if ($PSBoundParameters.ContainsKey('Camera')) { $parameters.Camera = $Camera }
     & (Join-Path $technologyRoot 'tools\run_demo.ps1') @parameters
 }
 else {

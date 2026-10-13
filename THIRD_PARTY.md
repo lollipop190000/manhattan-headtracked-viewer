@@ -4,7 +4,7 @@ The root MIT license applies to this project's code. It does not relicense origi
 
 ## Manhattan geometry and procedural art
 
-The private source release preserves the delivered `PROVENANCE.md`, `NYC_Open_Data_Terms.html`, raw/metric geometry, metadata and original procedural-authoring records. Source acquisition date is **2026-10-09**; underlying surveys and dataset revisions have mixed dates. Buildings are footprint/height representations; windows, signs, roof details, trees and facade treatments are procedural approximations rather than survey-accurate facade imagery.
+The public source release preserves the delivered `PROVENANCE.md`, `NYC_Open_Data_Terms.html`, raw/metric geometry, metadata and original procedural-authoring records. Source acquisition date is **2026-10-09**; underlying surveys and dataset revisions have mixed dates. Buildings are footprint/height representations; windows, signs, roof details, trees and facade treatments are procedural approximations rather than survey-accurate facade imagery.
 
 Credits retained from the source pack:
 
@@ -27,3 +27,14 @@ Original NYC sources retain [NYC Open Data Terms of Use](https://data.cityofnewy
 - `ManhattanViewer/Assets/Shaders/CityDetailLit.shader` and `CityDetailLitInput.hlsl` adapt the pinned URP 17.3.0 Lit renderer and retain the Unity Companion License. Original license bytes and upstream source hashes are in that folder's `LICENSE-Unity-URP.md` and `NOTICE.md`; Windows builds carry both under `Notices/CityDetailRenderer/`.
 
 No example vase, furniture or studio HDRI from the separate technical demo is required by the city viewer. If team-authored content imports additional external assets, add source, author, license and file fingerprint here before merging it.
+
+## Portable webcam application distribution
+
+The v0.1.1 Windows ZIP includes a freshly assembled CPython embeddable runtime,
+verified PyPI wheels, the pinned tracker, canonical geometry and the unmodified
+Face Landmarker float16 version-1 task bundle. It does not copy a machine-local
+development virtual environment. These generated files are excluded from Git.
+See [portable tracker notices](docs/portable-tracker-notices.md); the ZIP retains
+Python's original license/SBOM, dependency licenses and the three Apache-2.0
+model cards. The optional Microsoft prerequisite action downloads directly from
+Microsoft; its installer is not redistributed inside our ZIP.

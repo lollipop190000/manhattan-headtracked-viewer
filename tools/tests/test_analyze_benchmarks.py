@@ -1,15 +1,17 @@
 import json
 import hashlib
+import math
+import struct
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from analyze_benchmarks import aggregate, analyze_run, combined_private_memory, driver_gpu, external_process_memory, memory_trend, percentile, markdown
+from analyze_benchmarks import aggregate, analyze_run, combined_private_memory, driver_gpu, executed_speed, external_process_memory, memory_trend, percentile, markdown
 
 
-def measured_fixture(repository, name, duration=160, proxies=False, tracking=1, completed=2, render_width=1920, dirty=False):
+def measured_fixture(repository, name, duration=160, proxies=False, tracking=1, completed=2, render_width=1920, dirty=False, speed=50, requested=None, trace_speed=None):
     (repository / "assets").mkdir(exist_ok=True)
     manifest = repository / "assets/source-manifest.json"
     manifest.write_text(json.dumps(dict(sourceVersion="fixture", packs=[])), encoding="utf-8")
@@ -17,25 +19,92 @@ def measured_fixture(repository, name, duration=160, proxies=False, tracking=1, 
     (repository / "tools/technology-version.json").write_text(json.dumps(dict(revision="1" * 40)), encoding="utf-8")
     directory = repository / name
     directory.mkdir()
-    circuit = 52.807313
-    report = dict(routeRegion="Midtown", speed=50, durationSeconds=duration, utcTime="2026-10-10T00:30:00Z",
+    points = [(0, 0), (400, -400), (-200, -800), (-600, -200), (0, 0)]
+    lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
+    circuit = sum(lengths) / speed
+    report = dict(routeRegion="Midtown", speed=speed, requestedSpeed=speed if requested is None else requested,
+                  actualRouteSpeed=speed, durationSeconds=duration, utcTime="2026-10-10T00:30:00Z",
                   width=1920, height=1200, renderWidth=render_width, renderHeight=1200, fullscreenMode="ExclusiveFullScreen",
-                  frameCount=6, collisionProxies=proxies, trackingFraction=tracking, streamingFailures=0,
+                  frameCount=int(duration * 10) + 1, collisionProxies=proxies, trackingFraction=tracking, streamingFailures=0,
                   completedMeasuredCircuits=completed, measuredRouteCoverageFraction=1, routeDurationSeconds=circuit,
                   gpu="RTX4070", cpu="CPU", sourceVersion="fixture", buildIdentityAvailable=True, dirtyWorkingTree=dirty,
                   viewerRevision="2" * 40, technologyRevision="1" * 40, sourceManifestSha256=hashlib.sha256(manifest.read_bytes()).hexdigest())
     (directory / "benchmark.json").write_text(json.dumps(report), encoding="utf-8")
-    lines = ["seconds,frame_ms,streaming_ms,collision_ms,tracking,process_working_set_bytes,route_cycles,route_elapsed_seconds"]
-    for i in range(6):
-        seconds = duration * i / 5
+    lines = ["seconds,frame_ms,streaming_ms,collision_ms,tracking,process_working_set_bytes,route_cycles,route_elapsed_seconds,city_x,city_y,city_z"]
+    for i in range(int(duration * 10) + 1):
+        seconds = i / 10
         route_time = seconds + 15
-        lines.append(f"{seconds},16,1,{.5 if proxies else 0},{tracking},1073741824,{int(route_time // circuit)},{route_time % circuit}")
+        distance = (route_time * (speed if trace_speed is None else trace_speed)) % sum(lengths)
+        for a, b, length in zip(points, points[1:], lengths):
+            if distance <= length:
+                fraction = distance / length
+                x, z = a[0] + (b[0] - a[0]) * fraction, a[1] + (b[1] - a[1]) * fraction
+                break
+            distance -= length
+        lines.append(f"{seconds},16,1,{.5 if proxies else 0},{tracking},1073741824,{int(route_time // circuit)},{route_time % circuit},{x},2,{z}")
     (directory / "frames.csv").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (directory / "gpu.csv").write_text("sampleUtc,gpuName,memoryUsedMiB\n2026-10-10T00:29:30Z,RTX4070,3000\n", encoding="utf-8")
     return directory
 
 
 class BenchmarkAnalysisTests(unittest.TestCase):
+    def test_large_uptime_double_csv_clock_avoids_float_speed_false_failure(self):
+        def f32(value): return struct.unpack('f', struct.pack('f', value))[0]
+        for baseline in (20, 20000, 100000):
+            with self.subTest(uptime=baseline):
+                double_rows = [dict(seconds=float(f'{(baseline + i / 60) - baseline:.6f}'),
+                                    city_x=i * 100 / 60, city_y=0, city_z=0) for i in range(121)]
+                self.assertTrue(executed_speed(double_rows, 100, 100)['passed'])
+                if baseline == 20000:
+                    float_rows = [dict(row, seconds=float(f'{f32(baseline + i / 60) - f32(baseline):.6f}'))
+                                  for i, row in enumerate(double_rows)]
+                    old = executed_speed(float_rows, 100, 100)
+                    self.assertFalse(old['passed'])
+                    self.assertLess(old['p10MetresPerSecond'], 95)
+                    self.assertGreater(old['p90MetresPerSecond'], 105)
+
+    def test_100_request_clamped_to_50_cannot_qualify(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            run = measured_fixture(repository, "clamped", speed=50, requested=100)
+            result = aggregate([run], repository)
+            self.assertFalse(result["runs"][0]["checks"]["requestedSpeed"])
+            self.assertFalse(result["runs"][0]["checks"]["executedSpeed"])
+            self.assertEqual(15, len(result["pendingRuns"]))
+
+    def test_report_100_with_actual_50_positions_cannot_qualify(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            run = measured_fixture(repository, "false-label", speed=100, trace_speed=50)
+            result = aggregate([run], repository)
+            self.assertTrue(result["runs"][0]["checks"]["requestedSpeed"])
+            self.assertFalse(result["runs"][0]["checks"]["executedSpeed"])
+            self.assertAlmostEqual(50, result["runs"][0]["executedSpeed"]["medianMetresPerSecond"])
+            self.assertEqual(15, len(result["pendingRuns"]))
+
+    def test_real_100_positions_qualify_and_launch_conflict_rejects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            run = measured_fixture(repository, "actual-100", speed=100)
+            result = aggregate([run], repository)
+            self.assertTrue(result["runs"][0]["checks"]["executedSpeed"])
+            self.assertEqual(14, len(result["pendingRuns"]))
+            self.assertIn("Position/time median", markdown(result))
+            (run / "benchmark-environment.json").write_text(json.dumps(dict(benchmarkOptions=dict(requestedSpeedMetresPerSecond=50))), encoding="utf-8")
+            self.assertFalse(analyze_run(run)["checks"]["requestedSpeed"])
+
+    def test_missing_sparse_nonfinite_and_reordered_speed_traces_never_pass(self):
+        self.assertIsNone(executed_speed([], 100, 100)["passed"])
+        rows = [dict(seconds=i / 10, city_x=i * 10, city_y=0, city_z=0) for i in range(31)]
+        self.assertTrue(executed_speed(rows, 100, 100)["passed"])
+        sparse = [dict(row, seconds=row["seconds"] * 10) for row in rows]
+        self.assertIsNone(executed_speed(sparse, 100, 100)["passed"])
+        rows[5]["city_x"] = None
+        self.assertFalse(executed_speed(rows, 100, 100)["passed"])
+        rows[5]["city_x"] = 50
+        rows[5]["trace_order_invalid"] = True
+        self.assertFalse(executed_speed(rows, 100, 100)["passed"])
+
     def test_nearest_rank_matches_runtime_tail_definition(self):
         self.assertEqual(95, percentile(list(range(1, 101)), .95))
         self.assertEqual(99, percentile(list(range(1, 101)), .99))
@@ -210,7 +279,7 @@ class BenchmarkAnalysisTests(unittest.TestCase):
     def test_no_data_report_preserves_all_pending_combinations(self):
         with tempfile.TemporaryDirectory() as directory:
             result = aggregate([], Path(directory))
-            self.assertEqual(10, len(result["pendingRuns"]))
+            self.assertEqual(15, len(result["pendingRuns"]))
             self.assertTrue(result["memoryRoundtripPending"])
             self.assertTrue(result["proxyComparisonPending"])
             rendered = markdown(result)
@@ -223,7 +292,7 @@ class BenchmarkAnalysisTests(unittest.TestCase):
             repository = Path(directory)
             run = measured_fixture(repository, "short")
             result = aggregate([run], repository)
-            self.assertEqual(9, len(result["pendingRuns"]))
+            self.assertEqual(14, len(result["pendingRuns"]))
             self.assertTrue(result["memoryRoundtripPending"])
             self.assertEqual(2, result["runs"][0]["completedMeasuredCircuits"])
 
@@ -245,24 +314,46 @@ class BenchmarkAnalysisTests(unittest.TestCase):
             (wrong_render / "benchmark-environment.json").write_text(json.dumps(dict(requestedRenderResolution=dict(width=1920, height=1200, windowMode="exclusive"))), encoding="utf-8")
             partial = measured_fixture(repository, "partial", completed=0)
             result = aggregate([no_webcam, wrong_render, partial], repository)
-            self.assertEqual(10, len(result["pendingRuns"]))
+            self.assertEqual(15, len(result["pendingRuns"]))
             self.assertFalse(result["runs"][0]["checks"]["webcamTracking"])
             self.assertFalse(result["runs"][1]["checks"]["resolution"])
             self.assertEqual(1920, result["runs"][1]["environment"]["requestedRenderResolution"]["width"])
             self.assertEqual(1536, result["runs"][1]["renderWidth"])
             self.assertIn("pending", result["runs"][2]["acceptance"])
 
+    def test_render_settings_preserve_disabled_zero_and_missing_historical_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            legacy = measured_fixture(repository, "legacy-settings")
+            recorded = measured_fixture(repository, "recorded-settings")
+            path = recorded / "benchmark.json"
+            report = json.loads(path.read_text())
+            report.update(cameraAntiAliasing="None", vSyncCount=0, targetFrameRate=30,
+                          frameTimingStatisticsEnabled=False, trackerRequested=False)
+            path.write_text(json.dumps(report), encoding="utf-8")
+            result = aggregate([legacy, recorded], repository)
+            old, current = result["runs"]
+            for key in ("cameraAntiAliasing", "vSyncCount", "targetFrameRate", "frameTimingStatisticsEnabled", "reportedTrackerRequested"):
+                self.assertIsNone(old[key])
+            self.assertEqual("None", current["cameraAntiAliasing"])
+            self.assertEqual(0, current["vSyncCount"])
+            self.assertEqual(30, current["targetFrameRate"])
+            self.assertIs(current["frameTimingStatisticsEnabled"], False)
+            self.assertIs(current["reportedTrackerRequested"], False)
+            self.assertIn("None | 0 | 30 | False | False", markdown(result))
+            self.assertIn("pending | pending | pending | pending | pending", markdown(result))
+
     def test_embedded_identity_rejects_cli_mismatch_and_dirty_build(self):
         with tempfile.TemporaryDirectory() as directory:
             repository = Path(directory)
             clean = measured_fixture(repository, "clean")
             mismatch = aggregate([clean], repository, technology_revision="3" * 40)
-            self.assertEqual(10, len(mismatch["pendingRuns"]))
+            self.assertEqual(15, len(mismatch["pendingRuns"]))
             self.assertIn("identity mismatch", mismatch["runs"][0]["acceptance"])
             dirty = measured_fixture(repository, "dirty", dirty=True)
             result = aggregate([dirty], repository)
             self.assertFalse(result["runs"][0]["checks"]["buildIdentity"])
-            self.assertEqual(10, len(result["pendingRuns"]))
+            self.assertEqual(15, len(result["pendingRuns"]))
 
 
 if __name__ == "__main__":
