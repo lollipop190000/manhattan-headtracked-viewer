@@ -9,7 +9,7 @@ import zipfile
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import package_portable_windows as portable
-from build_portable_tracker import PYTHON_PATHS, extract_checked
+from build_portable_tracker import PYTHON_PATHS, CMD_ENTRY, extract_checked
 
 
 class PortableReleaseTests(unittest.TestCase):
@@ -27,6 +27,7 @@ class PortableReleaseTests(unittest.TestCase):
         self.base_data={'ManhattanViewer.exe':b'fixture player','README-Windows.md':b'old guide'}
         self.write_base()
         for name in portable.SHIPPING_TOOLS: self.write(name,b'fixture launcher')
+        self.write('Run-HeadTrackedDemo.cmd',CMD_ENTRY)
         self.write('README-Windows.md',b'English Windows guide')
         self.write('.runtime/tracker/face_landmarker.task',self.model)
         self.write('.runtime/tracker/portable-tracker.json',json.dumps({'technologyRevision':self.technology,'pythonVersion':'3.13.5'}).encode())
@@ -85,10 +86,14 @@ class PortableReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Shipping input differs'): self.package()
         self.assertFalse((self.root/'release.zip').exists())
 
-    def test_dirty_or_different_base_identity_is_rejected(self):
+    def test_different_base_identity_is_rejected(self):
         pin=json.loads((self.root/'tools/portable-player.json').read_text()); pin['viewerRevision']='9'*40
         (self.root/'tools/portable-player.json').write_text(json.dumps(pin))
         with self.assertRaisesRegex(ValueError,'identity'): self.package()
+
+    def test_cmd_that_loses_failure_status_or_depends_on_path_is_rejected(self):
+        self.write('Run-HeadTrackedDemo.cmd',b'@echo off\npowershell.exe -File tools/run_demo.ps1\nif errorlevel 1 pause\n')
+        with self.assertRaisesRegex(ValueError,'preserve its exit status'): self.package()
 
     def test_download_archive_traversal_and_case_alias_are_rejected(self):
         for names in (('../outside.txt',),('python.exe','PYTHON.exe')):

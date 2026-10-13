@@ -16,8 +16,11 @@ from package_windows import checked_relative, reject_link, sha256_file
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_FILES = ('tracker.py','pose_estimator.py','camera_control.py','session_lifetime.py',
                  'models/canonical_face_model.obj','models/LICENSE.mediapipe')
-LAUNCHER_FILES = ('tools/run_demo.ps1','tools/launcher_common.ps1','Run-HeadTrackedDemo.cmd','LICENSE','THIRD_PARTY.md')
+LAUNCHER_FILES = ('tools/run_demo.ps1','tools/launcher_common.ps1','LICENSE','THIRD_PARTY.md')
 PYTHON_PATHS = 'python313.zip\n.\n..\\Lib\\site-packages\\\n..\\..\\\n'
+CMD_ENTRY = (b'@echo off\r\nsetlocal DisableDelayedExpansion\r\n'
+             b'"%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\\run_demo.ps1" %*\r\n'
+             b'set "launcher_exit=%errorlevel%"\r\nif not "%launcher_exit%"=="0" pause\r\nexit /b %launcher_exit%\r\n')
 
 
 def read_json(path): return json.loads(Path(path).read_text(encoding='utf-8'))
@@ -91,9 +94,10 @@ def build_tracker(output, downloads, technology_root):
     shutil.copyfile(ROOT/'tools/tracker-requirements.lock.txt',tracker/'tracker-requirements.lock.txt')
     technology = output/'.runtime/technology'
     for relative in LAUNCHER_FILES:
-        destination = output/relative if relative.endswith('.cmd') else technology/relative
+        destination = technology/relative
         destination.parent.mkdir(parents=True,exist_ok=True)
         destination.write_bytes(subprocess.check_output(['git','-C',str(technology_root),'show',version['revision']+':'+relative]))
+    (output/'Run-HeadTrackedDemo.cmd').write_bytes(CMD_ENTRY)
     settings = output/'.runtime/viewer/ProjectSettings/ProjectSettings.asset'
     settings.parent.mkdir(parents=True)
     settings.write_text('PlayerSettings:\n  companyName: HeadTrackedDisplay\n  productName: ManhattanViewer\n',encoding='utf-8')

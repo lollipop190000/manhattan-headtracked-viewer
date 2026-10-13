@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 import package_windows as base
-from build_portable_tracker import PYTHON_PATHS
+from build_portable_tracker import PYTHON_PATHS, CMD_ENTRY
 
 ROOT = Path(__file__).resolve().parents[1]
 SHIPPING_TOOLS = {'Run-HeadTrackedDemo.cmd','tools/run_demo.ps1','tools/portable_check.py','tools/portable-runtime.json'}
@@ -73,6 +73,8 @@ def read_base(archive, pin):
 
 
 def validate_runtime(files):
+    if files['Run-HeadTrackedDemo.cmd'].read_bytes()!=CMD_ENTRY:
+        raise ValueError('Portable CMD must use Windows PowerShell directly and preserve its exit status')
     technology=json.loads((ROOT/'tools/technology-version.json').read_text(encoding='utf-8'))
     manifest=json.loads(files['.runtime/tracker/portable-tracker.json'].read_text(encoding='utf-8'))
     if manifest['technologyRevision']!=technology['revision'] or manifest['pythonVersion']!=technology['pythonVersion']:
