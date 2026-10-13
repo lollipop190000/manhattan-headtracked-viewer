@@ -19,6 +19,7 @@ RUNTIME_FILES = ('tracker.py','pose_estimator.py','camera_control.py','session_l
 LAUNCHER_FILES = ('tools/run_demo.ps1','tools/launcher_common.ps1','LICENSE','THIRD_PARTY.md')
 PYTHON_PATHS = 'python313.zip\n.\n..\\Lib\\site-packages\\\n..\\..\\\n'
 CMD_ENTRY = (b'@echo off\r\nsetlocal DisableDelayedExpansion\r\n'
+             b'set "PSModulePath=%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\Modules"\r\n'
              b'"%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\\run_demo.ps1" %*\r\n'
              b'set "launcher_exit=%errorlevel%"\r\nif not "%launcher_exit%"=="0" pause\r\nexit /b %launcher_exit%\r\n')
 MODEL_LOADING_PATCH = 'Windows Unicode model loading via Python bytes (MediaPipe BaseOptions.model_asset_buffer)'
