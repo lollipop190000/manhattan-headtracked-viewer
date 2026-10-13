@@ -38,6 +38,23 @@ namespace WebShooter.Swing.Tests
             }
             finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
         }
+        [Test] public void CancelledHighShotNeverLaunchesFromGround()
+        {
+            var rig=new GameObject(); var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                wall.layer=30; wall.transform.position=new Vector3(0,20,50); wall.transform.localScale=new Vector3(100,40,1);
+                var flight=rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up*1.85f,Quaternion.identity);
+                var input=new WebSwingMotionInput(null,flight,null); Physics.SyncTransforms();
+                Assert.That(input.HandleMouseHold(true,true,true,new Ray(flight.CityPosition,new Vector3(0,20,50))),Is.True);
+                input.HandleMouseHold(true,false,false,default);
+                for(int i=0;i<120;i++) { var c=input.Sample(1f/60); flight.transform.position=c.cityPosition; }
+                Assert.That(input.Body.Position,Is.EqualTo(Vector3.up*1.85f));
+                Assert.That(input.Body.Velocity,Is.EqualTo(Vector3.zero));
+                input.Collision.Dispose();
+            }
+            finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
+        }
         [Test] public void DefaultTraversalDoesNotRotateViewOrEnableAutomaticForces()
         {
             var rig = new GameObject();
@@ -102,8 +119,11 @@ namespace WebShooter.Swing.Tests
                 var flight = rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 1.85f, Quaternion.identity);
                 var input = new WebSwingMotionInput(null, flight, null); Physics.SyncTransforms();
                 Assert.That(input.TryFire(new Ray(flight.CityPosition, new Vector3(0, 10, 20))), Is.True);
-                Assert.That(input.Body.Velocity.y, Is.EqualTo(14)); Assert.That(input.Body.Velocity.z, Is.GreaterThan(10));
+                Assert.That(input.Body.Velocity, Is.EqualTo(Vector3.zero), "no launch before arrival");
                 Assert.That(input.Body.Attached, Is.False);
+                input.Sample(.1f);
+                Assert.That(input.Body.Attached, Is.True);
+                Assert.That(input.Body.Velocity.y, Is.GreaterThan(12)); Assert.That(input.Body.Velocity.z, Is.GreaterThan(10));
                 input.Activate(); input.Body.AssistStrength = 0;
                 input.TryFire(new Ray(flight.CityPosition, new Vector3(0, 10, 20)));
                 Assert.That(input.Body.Velocity, Is.EqualTo(Vector3.zero));

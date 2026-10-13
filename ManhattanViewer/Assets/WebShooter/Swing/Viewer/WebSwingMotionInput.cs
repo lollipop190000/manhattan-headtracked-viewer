@@ -85,15 +85,6 @@ namespace WebShooter.Swing
             ShotProgress = 0f;
             shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
             Flying = true;
-            // A successful high shot is sufficient to start from the street. The
-            // jump is not rope tension: the projectile still has to arrive first.
-            if (Body.AssistStrength > 0f && Body.Grounded && anchorCity.y > Body.Position.y + 3f)
-            {
-                Body.Jump();
-                var direction = Vector3.ProjectOnPlane(anchorCity - Body.Position, Vector3.up).normalized;
-                Body.Velocity += direction * (12f * Body.AssistStrength);
-                flightAssistTime = 1f;
-            }
             return true;
         }
 
@@ -180,6 +171,14 @@ namespace WebShooter.Swing
                 else if (ShotProgress >= 1f)
                 {
                     Flying = false;
+                    // Launch only after arrival. A cancelled tap must never impart an impulse.
+                    if (Body.AssistStrength > 0f && Body.Grounded && ShotTarget.y > Body.Position.y + 3f)
+                    {
+                        Body.Jump();
+                        var direction = Vector3.ProjectOnPlane(ShotTarget - Body.Position, Vector3.up).normalized;
+                        Body.Velocity += direction * (12f * Body.AssistStrength);
+                        flightAssistTime = 1f;
+                    }
                     if (Body.Attach(ShotTarget)) WebAttached?.Invoke(ShotTarget);
                 }
             }
