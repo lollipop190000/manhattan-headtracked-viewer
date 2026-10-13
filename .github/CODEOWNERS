@@ -1,0 +1,26 @@
+# Review routing. GitHub asks these people to review PRs touching these paths.
+# Areas 1 to 3 come from git history. Areas 4 to 7 are listed below. Add changes
+# in docs/team/ROLES.md first. Requiring code-owner approval
+# is a separate repository setting and is off by default.
+
+/ManhattanViewer/Assets/Scripts/            @lollipop190000
+/ManhattanViewer/Assets/Editor/             @lollipop190000
+/ManhattanViewer/Assets/Shaders/            @lollipop190000
+/ManhattanViewer/Assets/Settings/           @lollipop190000
+/ManhattanViewer/Assets/Scenes/             @lollipop190000
+/ManhattanViewer/Packages/                  @lollipop190000
+/ManhattanViewer/ProjectSettings/           @lollipop190000
+/tools/                                     @lollipop190000
+/.github/                                   @lollipop190000
+
+/ManhattanViewer/Assets/WebShooter/Swing/   @1213anthony
+/ManhattanViewer/Assets/WebShooter/Input/   @1213anthony @mirnim
+/ManhattanViewer/Assets/Scripts/ControllerMotionInput.cs @mirnim @lollipop190000
+/hardware/                                  @mirnim @1213anthony
+
+# Areas 4 to 7, assigned in docs/team/ROLES.md (pending each person's confirmation)
+/ManhattanViewer/Assets/Game/               @ailfor2-look
+/docs/game/                                 @ailfor2-look
+/ManhattanViewer/Assets/Art/                @Polaris-unreal
+/ManhattanViewer/Assets/Audio/              @edward0613
+/ManhattanViewer/Assets/World/              @SWTY7
