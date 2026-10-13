@@ -54,8 +54,11 @@ namespace Manhattan.Viewer
             if (cameraData.antialiasing == desired) return;
             cameraData.antialiasing = desired;
             ref var taa = ref cameraData.taaSettings;
-            taa.quality = TemporalAAQuality.Medium; taa.baseBlendFactor = .75f; taa.jitterScale = .75f;
-            taa.mipBias = 0f; taa.varianceClampScale = .9f; taa.contrastAdaptiveSharpening = 0f;
+            // Filter subpixel roof trim and road markings before accumulating history.
+            // A narrow clamp and low history weight expose the changing jitter samples
+            // even when both the city and observer are stationary.
+            taa.quality = TemporalAAQuality.VeryHigh; taa.baseBlendFactor = .95f; taa.jitterScale = .75f;
+            taa.mipBias = 0f; taa.varianceClampScale = 1.2f; taa.contrastAdaptiveSharpening = 0f;
             ResetHistory();
         }
         public void ResetHistory() { if (cameraData != null) cameraData.resetHistory = true; }

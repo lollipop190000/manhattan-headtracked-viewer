@@ -1,6 +1,8 @@
-# Windows 배포본 실행
+# Windows 배포본 실행 — v0.1.0
 
 Windows x64 배포 ZIP을 전부 압축 해제하면 Unity Editor 설치나 도시 원본 다운로드·변환 없이 맨해튼을 탐색할 수 있습니다. 웹캠 Head Tracking은 아래 절차로 고정 버전의 Python 추적기를 별도로 준비합니다.
+
+[정식 Release](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/v0.1.0)에서 `ManhattanViewer-v0.1.0-Windows-x64.zip`을 내려받고 전체 압축을 풉니다. GitHub가 자동 제공하는 **Source code.zip**은 실행 파일이 아닙니다. 웹캠 없는 탐색에는 Python·Git·Unity 설치나 로그인이 필요 없습니다.
 
 ## 웹캠 없이 바로 실행
 
@@ -16,10 +18,10 @@ Windows x64 배포 ZIP을 전부 압축 해제하면 Unity Editor 설치나 도�
 
 ## 웹캠 추적기 준비와 실행
 
-공개 저장소를 복제할 Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다. `codex/physical-projection-audit-20261012` 소스를 직접 실행하려면 [브랜치 지정 실행 안내](team-quickstart.md)를 따릅니다.
+공개 저장소를 복제할 Git, **Python 3.13.5**, 웹캠을 준비합니다. 의존성과 얼굴 모델을 내려받을 인터넷 연결이 필요합니다. 배포 빌드와 함께 안내된 저장소 커밋을 사용합니다. 추적기 커밋은 `tools/technology-version.json`에 고정되어 있습니다. 소스를 직접 빌드하려면 [개발 안내](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.0/README.md#build-from-source)를 따릅니다.
 
 ```powershell
-git clone https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch v0.1.0 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
@@ -43,7 +45,7 @@ Settings → **WEBCAM**에서 장치 이름·연결 방식·번호를 확인하�
 
 오른쪽 `Settings`에서 `Screen width (cm)`, `Screen height (cm)`, `Viewing distance (cm)`를 수정한 뒤 `Save physical calibration`으로 저장합니다. 웹캠을 켠 상태에서 정면 기준 자세를 잡고 `Capture current face reference`를 누릅니다. IPD·웹캠 위치·카메라 보정과 필터는 같은 설정창의 상세 항목에 있습니다.
 
-**LIGHTING**의 **Move sun slowly / Pause sun movement**는 오후 태양 이동을 켜고 멈춥니다. 슬라이더는 이동을 멈추고 오후 위치를 선택합니다. **Reset afternoon light**로 원래 오후를 복원합니다. 이 미리보기는 개인 보정·북마크·설정 파일에 저장하지 않으며 매 실행은 고정 오후로 시작합니다. 비교 촬영은 태양을 먼저 멈춘 뒤 진행합니다. [조명 검증 기록](sunlight-validation.md)을 참고합니다.
+**LIGHTING**의 **Move sun slowly / Pause sun movement**는 오후 태양 이동을 켜고 멈춥니다. 슬라이더는 이동을 멈추고 오후 위치를 선택합니다. **Reset afternoon light**로 원래 오후를 복원합니다. 이 미리보기는 개인 보정·북마크·설정 파일에 저장하지 않으며 매 실행은 고정 오후로 시작합니다. 비교 촬영은 태양을 먼저 멈춘 뒤 진행합니다. [조명 검증 기록](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.0/docs/sunlight-validation.md)을 참고합니다.
 
 기본 개인 저장 위치는 `%USERPROFILE%\AppData\LocalLow\HeadTrackedDisplay\ManhattanViewer`입니다. 별도 개인 폴더를 사용하려면 첫 실행부터 같은 `-CalibrationDirectory`를 전달합니다. 이 옵션은 플레이어와 추적기에 함께 적용됩니다.
 
@@ -58,7 +60,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 | 조작 | 동작 |
 |---|---|
 | 도시 화면 클릭 | 포인터 잠금·이동 시작 |
-| W / S | 바라보는 방향으로 전진·후진 |
+| W / S | 바라보는 수평 방향으로 전진·후진 |
 | A / D | 좌우 이동 |
 | Q / E | 아래·위 이동 |
 | 마우스 | yaw·pitch 회전 |
@@ -69,7 +71,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 
 웹캠이 열리지 않으면 다른 카메라 앱을 닫고 Windows의 카메라 접근 권한과 `-Camera` 번호를 확인합니다. `Settings`의 `Show diagnostics`는 추적 상태·결과 지연·프레임 시간·타일 로딩 상태를 표시합니다. 런처 실행 로그는 실행 파일 옆 `Player.log`, `tracker-output.log`, `tracker-error.log`에 생성됩니다. 직접 실행한 플레이어의 기본 로그는 위 개인 저장 위치의 `Player.log`입니다.
 
-1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/main/docs/validation.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
+1920×1200·60fps와 장시간 메모리·웹캠 수동 검증은 [검증 기준과 기록](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/blob/v0.1.0/docs/release-v0.1.0.md)에서 해당 배포 빌드의 결과를 확인합니다. 목표 수치가 성능 측정 결과를 대신하지 않습니다.
 
 벤치마크의 `benchmark.json`은 실행 마지막의 카메라 AA 설정, VSync,
 목표 프레임률, Frame Timing 통계 기능 상태와 추적기 요청 여부도 기록합니다.
@@ -78,6 +80,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C
 이 값들은 종료 시점의 설정이며 실행 내내 설정이 같았다는 증거나 달성한 FPS가
 아닙니다. 설정한 AA가 실제 모든 렌더 패스에서 사용됐는지는 별도 렌더 검사가
 필요합니다. CPU/GPU 프레임 시간, 관측 유효율과 화면 품질도 각각 확인합니다.
+
+## 문제가 생겼을 때
+
+- 실행 파일이 없으면 `Source code.zip` 대신 Windows x64 ZIP을 받았는지 확인합니다.
+- 데이터 폴더 오류가 나면 ZIP 전체를 새 빈 폴더에 압축 해제합니다. 파일 하나만 이동하지 않습니다.
+- 웹캠 없이 확인하려면 실행 파일 폴더에서 `./ManhattanViewer.exe --no-tracker`를 사용합니다.
+- 흰 선의 안정화는 Settings → FLIGHT & IMAGE의 **Temporal anti-aliasing**을 켠 상태에서 적용됩니다.
+- 추적기 준비에서 Python 버전 오류가 나면 3.13.5의 실행 파일을 `-PythonExe`로 지정합니다.
+- 웹캠은 Windows 개인정보 설정에서 데스크톱 앱 접근을 허용하고, 다른 카메라 앱을 닫은 뒤 올바른 장치를 고릅니다.
+- 버전·GPU·해상도·재현 순서와 개인 정보가 제거된 로그를 저장소 Issues에 남깁니다.
 
 ## 배포 ZIP에 포함할 파일
 

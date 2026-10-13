@@ -18,8 +18,8 @@ a 400m-high observer could have no visible vegetation even directly overhead.
 | Release beyond | 450m | 1,200m |
 
 Distances are measured to tile bounds in 3D, using the existing two-second
-motion prediction for requests. The 200m preload band gives four seconds of
-lead distance at the maximum 50m/s flight speed; this is not a loading-time
+motion prediction for requests. The 200m preload band gives two seconds of
+lead distance at the maximum 100m/s flight speed; this is not a loading-time
 guarantee. Vegetation now shares the streetscape's range. The existing memory
 and frame-work budgets, two pending loads, one instantiation per frame, request
 priority and boundary hysteresis remain unchanged.

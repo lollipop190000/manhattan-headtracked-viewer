@@ -234,8 +234,12 @@ namespace Manhattan.Viewer
             timer.Restart();
             try
             {
-            while(timer.Elapsed.TotalMilliseconds<budgetMilliseconds)
+            // A positive sub-timer-resolution allowance must still advance one
+            // resumable step. Zero allowance above continues to do no work.
+            bool firstStep=true;
+            while(firstStep||timer.Elapsed.TotalMilliseconds<budgetMilliseconds)
             {
+                firstStep=false;
                 if(work==null)
                 {
                     if(!dirty)return;

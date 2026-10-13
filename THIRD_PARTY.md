@@ -4,7 +4,7 @@ The root MIT license applies to this project's code. It does not relicense origi
 
 ## Manhattan geometry and procedural art
 
-The private source release preserves the delivered `PROVENANCE.md`, `NYC_Open_Data_Terms.html`, raw/metric geometry, metadata and original procedural-authoring records. Source acquisition date is **2026-10-09**; underlying surveys and dataset revisions have mixed dates. Buildings are footprint/height representations; windows, signs, roof details, trees and facade treatments are procedural approximations rather than survey-accurate facade imagery.
+The public source release preserves the delivered `PROVENANCE.md`, `NYC_Open_Data_Terms.html`, raw/metric geometry, metadata and original procedural-authoring records. Source acquisition date is **2026-10-09**; underlying surveys and dataset revisions have mixed dates. Buildings are footprint/height representations; windows, signs, roof details, trees and facade treatments are procedural approximations rather than survey-accurate facade imagery.
 
 Credits retained from the source pack:
 
