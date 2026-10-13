@@ -69,10 +69,9 @@ namespace Manhattan.Editor
             var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Settings/ManhattanURP.asset");
             if (pipeline == null) { pipeline = UniversalRenderPipelineAsset.Create(renderer); AssetDatabase.CreateAsset(pipeline, "Assets/Settings/ManhattanURP.asset"); }
             pipeline.msaaSampleCount = 1; pipeline.renderScale = 1; pipeline.supportsHDR = true;
-            pipeline.shadowDistance = 150; pipeline.shadowCascadeCount = 4; pipeline.cascade4Split = new Vector3(.08f,.22f,.50f);
+            AfternoonRenderProfile.ConfigureShadows(pipeline);
             var props = new SerializedObject(pipeline);
             SetBool(props,"m_SoftShadowsSupported",true);SetBool(props,"m_UseSRPBatcher",true);SetBool(props,"m_EnableLODCrossFade",true);
-            var resolution=props.FindProperty("m_MainLightShadowmapResolution");if(resolution!=null)resolution.intValue=2048;
             props.ApplyModifiedPropertiesWithoutUndo();
             GraphicsSettings.defaultRenderPipeline = pipeline;
             for(int i=0;i<QualitySettings.names.Length;i++){QualitySettings.SetQualityLevel(i);QualitySettings.renderPipeline=pipeline;QualitySettings.vSyncCount=1;}
@@ -89,6 +88,8 @@ namespace Manhattan.Editor
             var windowFrame = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/WindowFrameMaterial.mat");
             if(windowFrame==null){windowFrame=new Material(Shader.Find("Universal Render Pipeline/Lit"));AssetDatabase.CreateAsset(windowFrame,"Assets/Resources/WindowFrameMaterial.mat");}
             windowFrame.SetColor("_BaseColor",new Color(.13f,.16f,.19f));windowFrame.SetFloat("_Metallic",.4f);windowFrame.SetFloat("_Smoothness",.65f);EditorUtility.SetDirty(windowFrame);
+            // Keep the shader_feature_local variant in players, not only in the Editor.
+            windowFrame.SetFloat("_ReceiveShadows",0f);windowFrame.EnableKeyword("_RECEIVE_SHADOWS_OFF");
             const string scenePath = "Assets/Scenes/ManhattanViewer.unity";
             Scene scene = PrepareViewerScene(scenePath, windowFrame);
             RenderSettings.skybox = sky; RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
