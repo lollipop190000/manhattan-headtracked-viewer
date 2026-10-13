@@ -17,14 +17,13 @@ namespace WebShooter.Swing
         private Vector3 Offset => origin != null ? origin.Offset : Vector3.zero;
         private Vector3 Bottom(Vector3 eye) => eye - Vector3.up * (body.Settings.eyeHeight - Radius);
 
-        public Vector3 Constrain(Vector3 current, Vector3 requested)
+        public Vector3 Constrain(Vector3 current, Vector3 requested) => Constrain(current, requested, true);
+        public Vector3 Constrain(Vector3 current, Vector3 requested, bool synchronize)
         {
-            Physics.SyncTransforms();
+            if (synchronize) Physics.SyncTransforms();
             if (CitySolids != null)
             {
-                var recovered = CitySolids.Constrain(current, current);
-                requested = CitySolids.Constrain(recovered, recovered + requested - current);
-                current = recovered;
+                requested = CitySolids.Constrain(current, requested);
             }
             Vector3 p = current - Offset, remaining = requested - current;
             p = ResolveOverlap(p);
@@ -82,9 +81,9 @@ namespace WebShooter.Swing
             probe = null;
         }
 
-        public Vector3 FindWall(Vector3 position, Vector3 forward)
+        public Vector3 FindWall(Vector3 position, Vector3 forward, bool synchronize = true)
         {
-            Physics.SyncTransforms();
+            if (synchronize) Physics.SyncTransforms();
             Vector3 p = position - Offset;
             Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
             for (int i = 0; i < 3; i++)

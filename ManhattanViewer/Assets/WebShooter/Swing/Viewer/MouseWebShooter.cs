@@ -16,9 +16,11 @@ namespace WebShooter.Swing
         private ITranslationConstraint previousConstraint;
         private int lastFireFrame = -1;
         private readonly TrackedLeanSteering trackedLean = new TrackedLeanSteering();
-        private bool headAssist = true;
+        private bool headAssist;
+        public WebSwingMotionInput Motion => swing;
         private void OnEnable() { Application.wantsToQuit += LogQuit; }
-        private void OnDisable() { Application.wantsToQuit -= LogQuit; }
+        private void OnDisable() { Application.wantsToQuit -= LogQuit; swing?.Release(); }
+        private void OnApplicationFocus(bool focused) { if (!focused) swing?.Release(); }
         private bool LogQuit()
         {
             Debug.Log($"TRAVERSAL_QUIT_REQUEST state={swing?.Body.State} position={swing?.Body.Position} velocity={swing?.Body.Velocity}");
@@ -41,9 +43,17 @@ namespace WebShooter.Swing
                 if (hand != null) hand.Fired += Fire;
             }
             bool active = app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured;
+            active &= Application.isFocused;
             swing.Paused = !active;
             var keys = Keyboard.current;
             var mouse = Mouse.current;
+            bool mousePress = active && capturedLastFrame && swing.Enabled && mouse != null && mouse.leftButton.wasPressedThisFrame;
+            bool hadMouseRope = swing.MouseOwnsRope;
+            Ray aim = Camera.main != null ? Camera.main.ViewportPointToRay(new Vector3(.5f, .5f, 0f)) : default;
+            bool mouseHit = swing.HandleMouseHold(active && swing.Enabled, mousePress && Camera.main != null,
+                mouse != null && mouse.leftButton.isPressed, aim);
+            if (mousePress) { lastFireFrame = Time.frameCount; Debug.Log($"TRAVERSAL_MOUSE_PRESS hit={mouseHit} position={swing.Body.Position} target={swing.ShotTarget}"); }
+            if (hadMouseRope && !swing.MouseOwnsRope) Debug.Log($"TRAVERSAL_MOUSE_RELEASE attached={swing.Body.Attached} flying={swing.Flying} velocity={swing.Body.Velocity}");
             if (active && capturedLastFrame && keys != null && keys.hKey.wasPressedThisFrame) headAssist = !headAssist;
             var display = app.Display;
             bool fresh = active && swing.Enabled && headAssist && display != null && display.TrackingEnabled &&
@@ -62,8 +72,6 @@ namespace WebShooter.Swing
                     if (keys != null && keys.vKey.wasPressedThisFrame) swing.AutoFollow = !swing.AutoFollow;
                     if (keys != null && keys.leftBracketKey.wasPressedThisFrame) swing.Body.AssistStrength = Mathf.Max(0f, swing.Body.AssistStrength - .25f);
                     if (keys != null && keys.rightBracketKey.wasPressedThisFrame) swing.Body.AssistStrength = Mathf.Min(1f, swing.Body.AssistStrength + .25f);
-                    if (mouse != null && mouse.leftButton.wasPressedThisFrame && Camera.main != null)
-                        Fire(Camera.main.ViewportPointToRay(new Vector3(.5f, .5f, 0f)));
                     if (mouse != null && mouse.rightButton.wasPressedThisFrame) swing.Release();
                     if (keys != null && keys.spaceKey.wasPressedThisFrame) swing.JumpRequested = true;
                 }
@@ -78,7 +86,7 @@ namespace WebShooter.Swing
             previousConstraint = app.Flight.TranslationConstraint;
             swing = new WebSwingMotionInput(previousInput, app.Flight, app.Origin) { Paused = true };
             if (app.catalog != null) swing.Collision.CitySolids = new CitySolidRecovery(app.catalog.buildings, swing.Body);
-            swing.CanSimulate = () => app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured;
+            swing.CanSimulate = () => app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured && Application.isFocused;
             app.Flight.InputSource = swing;
             app.Flight.TranslationConstraint = new FlightCollisionGate(swing);
             app.Streamer.CollisionProxiesEnabled = true;
@@ -96,11 +104,11 @@ namespace WebShooter.Swing
             if (swing == null) return;
             if (!app.KeyboardInput.Captured)
             {
-                GUI.Box(new Rect(12, Screen.height - 60, 620, 48), "Click to play. Aim at a HIGH building, then click again to launch.\nAutomatic jump / swing assist / view follow. E: reel in | Q: reel out | R: flight");
+                GUI.Box(new Rect(12, Screen.height - 60, 620, 48), "Click to capture. Aim HIGH, then HOLD left mouse to swing. Release to detach.\nStable view by default. E: reel in | Q: reel out | R: flight");
                 return;
             }
             GUI.Label(new Rect(Screen.width * .5f - 8, Screen.height * .5f - 12, 20, 24), "+");
-            GUI.Label(new Rect(12, Screen.height - 52, 1100, 24), "Aim high + LMB: launch | RMB: release | W: boost | E/Q: reel in/out | R: flight | V: auto view | H: head assist");
+            GUI.Label(new Rect(12, Screen.height - 52, 1100, 24), "HOLD LMB: swing | Let go: release | RMB: cancel | W: boost | E/Q: reel in/out | R: flight | V: auto view | H: head assist");
             GUI.Label(new Rect(12, Screen.height - 28, 800, 24), swing.Enabled ? $"Head {(headAssist ? "ON" : "OFF")} | {swing.Body.State} | {swing.Body.Velocity.magnitude:0.0} m/s | Assist {swing.Body.AssistStrength:0.00} ([ / ]) | Auto view {(swing.AutoFollow ? "ON" : "OFF")}" : "Free flight (wall collision ON)");
         }
         private void OnDestroy()

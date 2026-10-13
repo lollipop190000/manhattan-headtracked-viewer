@@ -55,6 +55,10 @@ namespace WebShooter.Swing
                 bool corrected = false;
                 foreach (var b in list)
                 {
+                    // Reject distant footprints before walking their polygon edges.
+                    var bounds = b.cityBounds;
+                    if (p.x < bounds.min.x - Radius || p.x > bounds.max.x + Radius ||
+                        p.z < bounds.min.z - Radius || p.z > bounds.max.z + Radius) continue;
                     float roofEscape = b.height + body.Settings.eyeHeight + .02f - p.y;
                     if (roofEscape <= 0f || p.y + Radius <= b.groundHeight) continue;
                     var q = new Vector2(p.x, p.z); bool inside = false;

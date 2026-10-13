@@ -31,7 +31,20 @@ namespace WebShooter.Swing
         public Func<bool> CanSimulate { get; set; }
         public bool JumpRequested { get; set; }
         public float ReelInput { get; set; }
-        public bool AutoFollow { get; set; } = true;
+        public bool AutoFollow { get; set; }
+        public bool AutomaticRopeAssist { get; set; }
+        public bool AutomaticCruiseAssist { get; set; }
+        public bool MouseOwnsRope { get; private set; }
+        public double LastSampleMilliseconds { get; private set; }
+        public bool HandleMouseHold(bool active, bool pressed, bool held, Ray ray)
+        {
+            if (!active) { Release(); return false; }
+            if (MouseOwnsRope && !held) Release();
+            if (!pressed || !held) return false;
+            bool hit = TryFire(ray);
+            MouseOwnsRope = hit;
+            return hit;
+        }
         public float TrackedSteering { get; set; }
         private float manualLookHold, flightAssistTime;
         public int CollisionReleaseCount { get; private set; }
@@ -98,6 +111,7 @@ namespace WebShooter.Swing
 
         public void Release()
         {
+            MouseOwnsRope = false;
             Flying = false;
             if (!Body.Attached) return;
             Body.Release();
@@ -116,12 +130,19 @@ namespace WebShooter.Swing
 
         public MotionCommand Sample(float deltaTime)
         {
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            try { return SampleCore(deltaTime); }
+            finally { LastSampleMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency; }
+        }
+        private MotionCommand SampleCore(float deltaTime)
+        {
             MotionCommand input = look != null ? look.Sample(deltaTime) : default;
             if (!Enabled) return input;
             EnsureInitialized();
             if (CanSimulate != null) Paused = !CanSimulate();
-            if (Paused) { JumpRequested = false; return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
+            if (Paused) { JumpRequested = false; yaw = flight.transform.eulerAngles.y; pitch = Mathf.DeltaAngle(0f, flight.transform.eulerAngles.x); return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
 
+            Physics.SyncTransforms();
             // 지난 프레임에 요청한 위치와 실제 위치를 비교: 크게 다르면 순간이동, 조금 다르면 충돌로 막힌 것
             Vector3 actual = flight.CityPosition;
             if (!Finite(Body.Position) || !Finite(Body.Velocity)) { Release(); Body.Reset(actual); }
@@ -181,15 +202,16 @@ namespace WebShooter.Swing
             {
                 float h = Mathf.Min(remaining, Body.Settings.maxStep);
                 bool attached = Body.Attached;
-                Body.UpdateWall(Collision.FindWall(Body.Position, heading * Vector3.forward), input.localMovement.z > .1f && !Body.Attached, h);
+                bool wantsWall = input.localMovement.z > .1f && !Body.Attached && !Body.Grounded;
+                Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false) : Vector3.zero, wantsWall, h);
                 if (attached && !Body.Attached) WebReleased?.Invoke();
                 Vector3 before = Body.Position;
-                if (Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
-                Body.AssistCruise(h, input.localMovement.z < 0f);
+                if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
+                if (AutomaticCruiseAssist) Body.AssistCruise(h, input.localMovement.z < 0f);
                 Body.Step(h, steer, Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
                 Vector3 requested = Body.Position;
                 bool ropeBeforeContact = Body.Attached;
-                Body.Position = Collision.Constrain(before, requested);
+                Body.Position = Collision.Constrain(before, requested, false);
                 if (ropeBeforeContact && !Body.Attached) { WebReleased?.Invoke(); CollisionReleaseCount++; }
                 // A solid wall wins over rope length. Repeatedly projecting into
                 // the wall and back out produced violent oscillation at short ropes.

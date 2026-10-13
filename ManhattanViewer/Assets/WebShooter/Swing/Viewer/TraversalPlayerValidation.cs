@@ -55,6 +55,21 @@ namespace WebShooter.Swing
                 for (int i = 0; i < 30; i++) { var command = input.Sample(1f / 120); flight.transform.position = command.cityPosition; }
                 Check(input.Body.Attached, "continuous swing arrival");
                 input.Release();
+                input.Body.Reset(start); flight.SetPose(start, Quaternion.identity);
+                var holdRay = new Ray(start, Vector3.forward);
+                Check(input.HandleMouseHold(true, true, true, holdRay), "mouse hold press starts shot");
+                for (int i = 0; i < 20; i++)
+                {
+                    input.HandleMouseHold(true, false, true, holdRay);
+                    var command = input.Sample(1f / 120); flight.transform.position = command.cityPosition;
+                }
+                Check(input.Body.Attached, "held mouse keeps rope attached after arrival");
+                velocity = input.Body.Velocity;
+                input.HandleMouseHold(true, false, false, holdRay);
+                Check(!input.Body.Attached && !input.Flying && input.Body.Velocity == velocity, "mouse release detaches without impulse");
+                input.HandleMouseHold(true, true, true, holdRay);
+                input.HandleMouseHold(false, false, true, holdRay);
+                Check(!input.Body.Attached && !input.Flying, "focus loss cancels travelling shot");
                 input.Body.Reset(start); input.Body.Velocity = Vector3.forward * 70;
                 Vector3 stopped = input.Collision.Constrain(start, start + Vector3.forward * 40);
                 Check(stopped.z < 19.3f, "high speed wall sweep");

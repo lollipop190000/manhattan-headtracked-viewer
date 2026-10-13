@@ -6,6 +6,52 @@ namespace WebShooter.Swing.Tests
 {
     public class TraversalTests
     {
+        [TestCase(30)] [TestCase(60)] [TestCase(120)]
+        public void MouseHoldReleasesDuringFlightAndAfterAttachment(int fps)
+        {
+            var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                wall.layer = 30; wall.transform.position = new Vector3(0, 100, 20); wall.transform.localScale = new Vector3(100,100,1);
+                var flight = rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 100, Quaternion.identity);
+                var input = new WebSwingMotionInput(null, flight, null); Physics.SyncTransforms();
+                var ray = new Ray(flight.CityPosition, Vector3.forward);
+                Assert.That(input.HandleMouseHold(true, true, true, ray), Is.True);
+                input.HandleMouseHold(true, false, false, ray); input.Sample(1f/fps);
+                Assert.That(input.Flying || input.Body.Attached, Is.False, "release before arrival cancels shot");
+                input.HandleMouseHold(true, true, true, ray);
+                for (int i=0;i<fps/2;i++)
+                {
+                    input.HandleMouseHold(true, false, true, ray);
+                    var c=input.Sample(1f/fps); flight.transform.SetPositionAndRotation(c.cityPosition,c.cityRotation);
+                }
+                Assert.That(input.Body.Attached, Is.True);
+                var velocity=input.Body.Velocity;
+                input.HandleMouseHold(true, false, false, ray);
+                Assert.That(input.Body.Attached || input.Flying, Is.False);
+                Assert.That(input.Body.Velocity, Is.EqualTo(velocity));
+                input.HandleMouseHold(true, false, true, ray);
+                Assert.That(input.Body.Attached || input.Flying, Is.False, "holding without new press cannot refire");
+                input.HandleMouseHold(true,true,true,ray); input.HandleMouseHold(false,false,true,ray);
+                Assert.That(input.Body.Attached || input.Flying, Is.False, "focus/menu loss cancels shot");
+                input.Collision.Dispose();
+            }
+            finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
+        }
+        [Test] public void DefaultTraversalDoesNotRotateViewOrEnableAutomaticForces()
+        {
+            var rig = new GameObject();
+            try
+            {
+                var flight=rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up*100,Quaternion.identity);
+                var input=new WebSwingMotionInput(null,flight,null); input.Activate();
+                Assert.That(input.AutoFollow || input.AutomaticRopeAssist || input.AutomaticCruiseAssist,Is.False);
+                input.Body.Velocity=Vector3.right*20;
+                var c=input.Sample(.1f); Assert.That(Quaternion.Angle(c.cityRotation,Quaternion.identity),Is.LessThan(.001f));
+                input.Collision.Dispose();
+            }
+            finally { Object.DestroyImmediate(rig); }
+        }
         [Test] public void SwingWallDeflectsOnceAndPreservesGlancingMomentum()
         {
             var b = Body(); b.Attach(b.Position + Vector3.up * 30);
@@ -86,7 +132,7 @@ namespace WebShooter.Swing.Tests
             {
                 wall.layer = 30; wall.transform.position = new Vector3(0, 25, 50); wall.transform.localScale = new Vector3(100, 50, 1);
                 var flight = rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 1.85f, Quaternion.identity);
-                var input = new WebSwingMotionInput(null, flight, null);
+                var input = new WebSwingMotionInput(null, flight, null) { AutomaticRopeAssist = true, AutomaticCruiseAssist = true };
                 Physics.SyncTransforms(); Assert.That(input.TryFire(new Ray(flight.CityPosition, new Vector3(0, 30, 50))), Is.True);
                 float peak = 0, lateHeight = 0;
                 for (int i = 0; i < 360; i++)
@@ -108,7 +154,7 @@ namespace WebShooter.Swing.Tests
             {
                 wall.layer = 30; wall.transform.position = new Vector3(0, 100, 20); wall.transform.localScale = new Vector3(100, 100, 1);
                 var flight = rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 100, Quaternion.identity);
-                var input = new WebSwingMotionInput(null, flight, null);
+                var input = new WebSwingMotionInput(null, flight, null) { AutoFollow = true };
                 Physics.SyncTransforms(); input.TryFire(new Ray(flight.CityPosition, Vector3.forward)); input.Body.Velocity = Vector3.right * 15;
                 var command = input.Sample(.1f);
                 Assert.That(command.cityRotation.eulerAngles.y, Is.InRange(3.9f, 4.1f));
