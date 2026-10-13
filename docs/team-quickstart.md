@@ -12,9 +12,9 @@ git switch -c codex/my-feature
 git push -u origin HEAD
 ```
 
-GitHub에서 `codex/roof-flicker-20261013`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
+GitHub에서 `codex/city-sunlight-20261013`를 대상으로 Pull Request를 엽니다. 현재 테스트 브랜치는 개발 중인 버전이므로 `main` 반영은 검증·리뷰 후에 진행합니다. 버그와 재현 사진은 저장소의 Issues에 기록합니다. 원본 도시 ZIP·생성 타일·빌드·개인 보정·추적 환경은 커밋하지 않습니다.
 
-외벽 겹침과 먼 지붕 번쩍임 수정까지 확인할 실행 대상은 공개 저장소의 **`codex/roof-flicker-20261013`** 브랜치입니다. 기존 외벽 수정 브랜치 `codex/city-overlap-20261012`에서 분리한 후속 수정이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 개발 중인 테스트 버전이며 검증 범위는 [지붕 번쩍임 검증 기록](roof-flicker-validation.md), [외벽 겹침 검증 기록](aerial-overlap-validation.md), [투영 검증 기록](physical-viewport-validation.md)과 [스트리밍 검증 기록](current-streaming-validation.md)에 있습니다.
+조명 개선과 선택형 태양 이동까지 확인할 실행 대상은 **`codex/city-sunlight-20261013`** 브랜치입니다. `codex/roof-flicker-20261013`의 외벽·지붕 수정을 포함한 후속 작업이며 아직 `main`에 병합하지 않았습니다. 기존 `v0.1.0-preview`는 다른 커밋의 비공개 초안 배포본입니다. 현재 이 브랜치의 공개 실행 ZIP은 없으므로 아래 순서로 빌드합니다. 검증 범위는 [조명 기록](sunlight-validation.md), [지붕 기록](roof-flicker-validation.md), [외벽 기록](aerial-overlap-validation.md), [투영 기록](physical-viewport-validation.md)과 [스트리밍 기록](current-streaming-validation.md)에 있습니다.
 
 지붕 번쩍임 후속 수정은 [PR #7](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/pull/7)에서 검토할 수 있습니다.
 
@@ -34,7 +34,7 @@ PowerShell에서 아래 명령을 순서대로 실행합니다. 각 단계가 �
 ```powershell
 gh auth login
 git lfs install
-git clone --branch codex/roof-flicker-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch codex/city-sunlight-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs pull
 git branch --show-current
@@ -85,4 +85,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 | Esc / Settings | 포인터 해제·설정 열기 |
 | Alt+F4 | 종료 |
 
-Settings의 Tracking / Window / Surface를 하나씩 바꾸어 비교합니다. 가까운 창틀이나 건물 모서리를 보며 머리를 천천히 움직입니다. 개인 보정·설정·북마크는 GitHub에 올리지 않습니다. 문제가 있으면 사용한 브랜치·`git rev-parse HEAD` 결과, 실패 단계, 실행 파일 옆 로그에서 관련 오류를 전달합니다.
+Settings → **LIGHTING**에서 **Move sun slowly**를 누르면 태양과 그림자가 천천히 이동합니다. **Pause sun movement**로 멈추거나 슬라이더로 오후 위치를 고릅니다. **Reset afternoon light**는 원래 오후로 복원합니다. 끝에 도달하면 멈추며, 매 실행은 원래 오후에서 정지 상태로 시작합니다. 실제 날짜·시간에 맞춘 천문 계산이나 밤낮 순환은 아닙니다.
+
+Tracking / Window / Surface를 비교할 때는 먼저 태양을 멈춰 같은 빛에서 확인합니다. 세 스위치는 조명을 시작·정지·재설정하지 않습니다. 가까운 창틀이나 건물 모서리를 보며 머리를 천천히 움직입니다. 개인 보정·설정·북마크는 GitHub에 올리지 않습니다. 문제가 있으면 사용한 브랜치·`git rev-parse HEAD` 결과, 실패 단계, 실행 파일 옆 로그에서 관련 오류를 전달합니다.

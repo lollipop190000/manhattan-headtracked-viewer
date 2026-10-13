@@ -43,6 +43,8 @@ Settings → **WEBCAM**에서 장치 이름·연결 방식·번호를 확인하�
 
 오른쪽 `Settings`에서 `Screen width (cm)`, `Screen height (cm)`, `Viewing distance (cm)`를 수정한 뒤 `Save physical calibration`으로 저장합니다. 웹캠을 켠 상태에서 정면 기준 자세를 잡고 `Capture current face reference`를 누릅니다. IPD·웹캠 위치·카메라 보정과 필터는 같은 설정창의 상세 항목에 있습니다.
 
+**LIGHTING**의 **Move sun slowly / Pause sun movement**는 오후 태양 이동을 켜고 멈춥니다. 슬라이더는 이동을 멈추고 오후 위치를 선택합니다. **Reset afternoon light**로 원래 오후를 복원합니다. 이 미리보기는 개인 보정·북마크·설정 파일에 저장하지 않으며 매 실행은 고정 오후로 시작합니다. 비교 촬영은 태양을 먼저 멈춘 뒤 진행합니다. [조명 검증 기록](sunlight-validation.md)을 참고합니다.
+
 기본 개인 저장 위치는 `%USERPROFILE%\AppData\LocalLow\HeadTrackedDisplay\ManhattanViewer`입니다. 별도 개인 폴더를 사용하려면 첫 실행부터 같은 `-CalibrationDirectory`를 전달합니다. 이 옵션은 플레이어와 추적기에 함께 적용됩니다.
 
 ```powershell
