@@ -331,26 +331,26 @@ namespace Manhattan.Viewer
             var text = new StringBuilder();
             foreach (var transform in app.Streamer.GetComponentsInChildren<Transform>(true))
             {
-                text.Append(transform.GetInstanceID()).Append('|').Append(transform.gameObject.activeSelf).Append('|'); Pose(text, transform);
+                text.Append(transform.GetEntityId().ToString()).Append('|').Append(transform.gameObject.activeSelf).Append('|'); Pose(text, transform);
                 var renderer = transform.GetComponent<Renderer>();
-                if (renderer != null) { text.Append(renderer.enabled).Append('|'); foreach (var material in renderer.sharedMaterials) text.Append(material != null ? material.GetInstanceID() : 0).Append('|'); }
-                var filter = transform.GetComponent<MeshFilter>(); if (filter != null) text.Append(filter.sharedMesh != null ? filter.sharedMesh.GetInstanceID() : 0).Append('|');
+                if (renderer != null) { text.Append(renderer.enabled).Append('|'); foreach (var material in renderer.sharedMaterials) text.Append(material != null ? material.GetEntityId().ToString() : "0").Append('|'); }
+                var filter = transform.GetComponent<MeshFilter>(); if (filter != null) text.Append(filter.sharedMesh != null ? filter.sharedMesh.GetEntityId().ToString() : "0").Append('|');
             }
             return Hash(text.ToString());
         }
         private string Ui(bool includePose = true)
         {
             var text = new StringBuilder();
-            foreach (var canvas in canvases) { text.Append(canvas.GetInstanceID()).Append('|').Append(canvas.enabled).Append('|').Append(canvas.renderMode).Append('|').Append(canvas.sortingOrder).Append('|'); if (includePose) Pose(text, canvas.transform); }
-            foreach (var raycaster in raycasters) text.Append(raycaster.GetInstanceID()).Append('|').Append(raycaster.enabled).Append('|');
+            foreach (var canvas in canvases) { text.Append(canvas.GetEntityId().ToString()).Append('|').Append(canvas.enabled).Append('|').Append(canvas.renderMode).Append('|').Append(canvas.sortingOrder).Append('|'); if (includePose) Pose(text, canvas.transform); }
+            foreach (var raycaster in raycasters) text.Append(raycaster.GetEntityId().ToString()).Append('|').Append(raycaster.enabled).Append('|');
             return Hash(text.ToString());
         }
         private string Materials()
         {
-            Array.Sort(importedMaterials, (a, b) => a.GetInstanceID().CompareTo(b.GetInstanceID())); var text = new StringBuilder();
+            Array.Sort(importedMaterials, (a, b) => a.GetEntityId().CompareTo(b.GetEntityId())); var text = new StringBuilder();
             foreach (var material in importedMaterials)
             {
-                text.Append(material.GetInstanceID()).Append('|').Append(material.shader.name).Append('|').Append(material.renderQueue).Append('|');
+                text.Append(material.GetEntityId().ToString()).Append('|').Append(material.shader.name).Append('|').Append(material.renderQueue).Append('|');
                 var keywords = material.shaderKeywords; Array.Sort(keywords, StringComparer.Ordinal); text.AppendJoin(",", keywords).Append('|');
                 for (int i = 0; i < material.shader.GetPropertyCount(); i++)
                 {
@@ -359,7 +359,7 @@ namespace Manhattan.Viewer
                     {
                         case ShaderPropertyType.Color: Color(text, material.GetColor(property)); break;
                         case ShaderPropertyType.Vector: var v = material.GetVector(property); Vector(text, v); Number(text, v.w); break;
-                        case ShaderPropertyType.Texture: var texture = material.GetTexture(property); text.Append(texture != null ? texture.GetInstanceID() : 0).Append('|'); var scale = material.GetTextureScale(property); var offset = material.GetTextureOffset(property); Number(text, scale.x); Number(text, scale.y); Number(text, offset.x); Number(text, offset.y); break;
+                        case ShaderPropertyType.Texture: var texture = material.GetTexture(property); text.Append(texture != null ? texture.GetEntityId().ToString() : "0").Append('|'); var scale = material.GetTextureScale(property); var offset = material.GetTextureOffset(property); Number(text, scale.x); Number(text, scale.y); Number(text, offset.x); Number(text, offset.y); break;
                         case ShaderPropertyType.Int: text.Append(material.GetInteger(property)).Append('|'); break;
                         default: Number(text, material.GetFloat(property)); break;
                     }
@@ -370,14 +370,14 @@ namespace Manhattan.Viewer
         private static string Pipeline(Camera camera)
         {
             var text = new StringBuilder(); var asset = GraphicsSettings.currentRenderPipeline; var data = camera.GetUniversalAdditionalCameraData();
-            text.Append(asset != null ? asset.GetInstanceID() : 0).Append('|').Append(data.antialiasing).Append('|').Append(data.renderPostProcessing).Append('|');
+            text.Append(asset != null ? asset.GetEntityId().ToString() : "0").Append('|').Append(data.antialiasing).Append('|').Append(data.renderPostProcessing).Append('|');
             text.Append(camera.allowHDR).Append('|').Append(camera.allowMSAA).Append('|').Append(camera.allowDynamicResolution).Append('|'); Number(text, camera.nearClipPlane); Number(text, camera.farClipPlane);
             text.Append(data.taaSettings.quality).Append('|'); Number(text, data.taaSettings.baseBlendFactor); Number(text, data.taaSettings.jitterScale); Number(text, data.taaSettings.mipBias); Number(text, data.taaSettings.varianceClampScale); Number(text, data.taaSettings.contrastAdaptiveSharpening);
             if (asset is UniversalRenderPipelineAsset urp)
             {
                 text.Append(urp.msaaSampleCount).Append('|').Append(urp.shadowCascadeCount).Append('|').Append(urp.enableLODCrossFade).Append('|'); Number(text, urp.renderScale); Number(text, urp.shadowDistance);
                 foreach (var rendererData in urp.rendererDataList) if (rendererData != null) foreach (var feature in rendererData.rendererFeatures)
-                    if (feature != null) text.Append(feature.GetInstanceID()).Append('|').Append(feature.GetType().Name).Append('|').Append(feature.isActive).Append('|');
+                    if (feature != null) text.Append(feature.GetEntityId().ToString()).Append('|').Append(feature.GetType().Name).Append('|').Append(feature.isActive).Append('|');
             }
             return Hash(text.ToString());
         }
@@ -385,8 +385,8 @@ namespace Manhattan.Viewer
         {
             var text = new StringBuilder(); text.Append(RenderSettings.ambientMode).Append('|').Append(RenderSettings.fog).Append('|').Append(RenderSettings.fogMode).Append('|');
             Color(text, RenderSettings.ambientSkyColor); Color(text, RenderSettings.ambientEquatorColor); Color(text, RenderSettings.ambientGroundColor); Color(text, RenderSettings.fogColor); Number(text, RenderSettings.fogDensity);
-            foreach (var light in FindObjectsByType<Light>(FindObjectsSortMode.InstanceID)) { text.Append(light.GetInstanceID()).Append('|').Append(light.type).Append('|').Append(light.shadows).Append('|').Append(light.enabled).Append('|'); Pose(text, light.transform); Color(text, light.color); Number(text, light.intensity); }
-            foreach (var volume in FindObjectsByType<Volume>(FindObjectsSortMode.InstanceID)) { text.Append(volume.GetInstanceID()).Append('|').Append(volume.enabled).Append('|').Append(volume.isGlobal).Append('|'); Number(text, volume.weight); if (volume.sharedProfile != null) foreach (var component in volume.sharedProfile.components) text.Append(JsonUtility.ToJson(component)).Append('|'); }
+            foreach (var light in FindObjectsByType<Light>(FindObjectsSortMode.InstanceID)) { text.Append(light.GetEntityId().ToString()).Append('|').Append(light.type).Append('|').Append(light.shadows).Append('|').Append(light.enabled).Append('|'); Pose(text, light.transform); Color(text, light.color); Number(text, light.intensity); }
+            foreach (var volume in FindObjectsByType<Volume>(FindObjectsSortMode.InstanceID)) { text.Append(volume.GetEntityId().ToString()).Append('|').Append(volume.enabled).Append('|').Append(volume.isGlobal).Append('|'); Number(text, volume.weight); if (volume.sharedProfile != null) foreach (var component in volume.sharedProfile.components) text.Append(JsonUtility.ToJson(component)).Append('|'); }
             return Hash(text.ToString());
         }
         private static void Pose(StringBuilder text, Transform transform) { Vector(text, transform.position); Vector(text, transform.localPosition); var q = transform.rotation; Number(text, q.x); Number(text, q.y); Number(text, q.z); Number(text, q.w); Vector(text, transform.localScale); }

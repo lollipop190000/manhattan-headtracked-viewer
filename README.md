@@ -32,6 +32,8 @@ First launch asks for visible screen width, height and eye-to-screen distance in
 
 The default flight speed is 10m/s; Settings supports 1–100m/s. Saved bookmarks load only when requested. Keep personal calibration outside Git.
 
+A Windows-paired HID controller can also move through the city. On a gamepad, use the left stick or D-pad to move, and the left/right shoulder buttons to descend/rise. Generic HID joysticks use the stick or hat and buttons 1/2 for descend/rise; device mappings can vary. Keyboard and mouse remain available. Add `--no-controller` to disable controller input.
+
 ## Add webcam head tracking
 
 Install **Git** and **Python 3.13.5** first. Internet is required once to download the pinned tracker dependencies and face model. The webcam is processed locally; the tracker sends observations to Unity over localhost.
