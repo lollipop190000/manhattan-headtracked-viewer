@@ -197,7 +197,8 @@ namespace Manhattan.Viewer
             {
                 case CityLayer.Skyline: return float.PositiveInfinity;
                 case CityLayer.Near: return 180f;
-                case CityLayer.Vegetation: return 250f;
+                // Trees are part of the streetscape, not close-up surface dressing.
+                case CityLayer.Vegetation: return 800f;
                 case CityLayer.Collision: return 180f;
                 default: return 800f;
             }
@@ -208,7 +209,7 @@ namespace Manhattan.Viewer
             {
                 case CityLayer.Skyline: return float.PositiveInfinity;
                 case CityLayer.Near: return 240f;
-                case CityLayer.Vegetation: return 350f;
+                case CityLayer.Vegetation: return 1000f;
                 case CityLayer.Collision: return 250f;
                 default: return 1000f;
             }
@@ -224,7 +225,7 @@ namespace Manhattan.Viewer
             {
                 case CityLayer.Skyline: return float.PositiveInfinity;
                 case CityLayer.Near: return 320f;
-                case CityLayer.Vegetation: return 450f;
+                case CityLayer.Vegetation: return 1200f;
                 case CityLayer.Collision: return 350f;
                 default: return 1200f;
             }

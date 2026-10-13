@@ -3,7 +3,7 @@
 
 # Manhattan Head Tracked Viewer
 
-팀원이 외벽·지붕 겹침 수정과 조명 개선이 포함된 `codex/city-sunlight-20261013` 버전을 실행하려면 [브랜치 지정 실행 안내](docs/team-quickstart.md)를 따릅니다. 저장소와 도시 원본 Release는 공개되어 있습니다. 기존 Windows preview 초안은 다른 커밋이므로 이 브랜치의 실행 파일로 사용하지 않습니다.
+팀원이 외벽·지붕 겹침 수정, 조명 개선과 나무 표시 거리 수정이 포함된 `codex/tree-visibility-20261013` 버전을 실행하려면 [브랜치 지정 실행 안내](docs/team-quickstart.md)를 따릅니다. 저장소와 도시 원본 Release는 공개되어 있습니다. 기존 Windows preview 초안은 다른 커밋이므로 이 브랜치의 실행 파일로 사용하지 않습니다.
 
 맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
 
@@ -40,7 +40,7 @@ Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`)
 
 ```powershell
 gh auth login
-git clone --branch codex/city-sunlight-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+git clone --branch codex/tree-visibility-20261013 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
 git lfs install --local
 git lfs pull
@@ -66,6 +66,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
 ```
 
 `tools/run.ps1`는 고정 기술 저장소의 **단일 CMD 진입점** `Run-HeadTrackedDemo.cmd`를 호출하며 프로젝트·플레이어·추적기 경로만 전달합니다. 팀원이 사용하는 PC의 형제 폴더 경로를 참조하지 않습니다.
+
+나무는 건물과 같은 800m 범위에서 표시하고 1,000m부터 미리 읽습니다. 가까이 다가갈 때 나무가 늦게 나타나던 250m 제한을 완화했습니다. [나무 표시 검증](docs/vegetation-visibility-validation.md)을 참고합니다.
 
 ## 조작과 보정
 

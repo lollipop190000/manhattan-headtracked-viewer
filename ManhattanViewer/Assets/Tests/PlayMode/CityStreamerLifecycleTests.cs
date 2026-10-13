@@ -467,6 +467,39 @@ public sealed class CityStreamerLifecycleTests
         Assert.That(provider.Provides, Is.EqualTo(3)); Assert.That(provider.Releases, Is.Zero);
     }
 
+    [UnityTest]
+    public IEnumerator VegetationPreloadsBeyondStreetscapeAndSurvivesBoundaryRoundTrip()
+    {
+        CreateStreamer(1, CityLayer.Vegetation);
+        catalog.tiles[0].cityBounds = new Bounds(Vector3.zero, Vector3.zero);
+        MoveAndEvaluate(Vector3.right * 950); yield return WaitLoaded(1);
+        Transform tree = host.transform.Find(catalog.tiles[0].id);
+        Assert.That(tree.gameObject.activeSelf, Is.False, "Preloading must not expose the tile early.");
+        MoveAndEvaluate(Vector3.right * 750);
+        Assert.That(tree.gameObject.activeSelf, Is.True, "Trees should already be visible well beyond the old 250m cutoff.");
+        foreach (float distance in new[] { 801f, 799f, 810f, 820f })
+        {
+            MoveAndEvaluate(Vector3.right * distance);
+            Assert.That(tree.gameObject.activeSelf, Is.True, "Boundary jitter must not toggle the trees.");
+        }
+        MoveAndEvaluate(Vector3.right * 821);
+        Assert.That(tree.gameObject.activeSelf, Is.False);
+        MoveAndEvaluate(Vector3.right * 810);
+        Assert.That(tree.gameObject.activeSelf, Is.False);
+        MoveAndEvaluate(Vector3.right * 800);
+        Assert.That(tree.gameObject.activeSelf, Is.True);
+        MoveAndEvaluate(Vector3.up * 400);
+        Assert.That(tree.gameObject.activeSelf, Is.True, "Aerial observers must retain the nearby canopy.");
+        MoveAndEvaluate(Vector3.right * 1100); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.EqualTo(1));
+        Assert.That(provider.Provides, Is.EqualTo(1)); Assert.That(provider.Releases, Is.Zero);
+        MoveAndEvaluate(Vector3.right * 1201); Tick(); yield return null;
+        Assert.That(streamer.LoadedTiles, Is.Zero); Assert.That(provider.Releases, Is.EqualTo(1));
+        MoveAndEvaluate(Vector3.right * 750); yield return WaitLoaded(1);
+        Assert.That(host.transform.Find(catalog.tiles[0].id).gameObject.activeSelf, Is.True);
+        Assert.That(provider.Provides, Is.EqualTo(2));
+    }
+
     [Test]
     public void FeedbackExecutionOrderFollowsMotionAndFloatingOrigin()
     {
