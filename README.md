@@ -65,6 +65,10 @@ The same entry point supports camera selection, checks and stop:
 
 These switches preserve city geometry, lighting, camera travel and render quality. Settings contains measurement, camera calibration and diagnostics. **LIGHTING** offers sun play/pause, an afternoon position slider and reset; each launch starts paused. Pause the sun for repeatable comparisons.
 
+## Game team
+
+This repository is becoming a web-swinging game on top of the viewer. Start with the [game design](docs/game/GDD.md), [roadmap](docs/team/ROADMAP.md), [roles](docs/team/ROLES.md), [workflow](docs/team/WORKFLOW.md) and [decision log](docs/decisions/README.md).
+
 ## Repository
 
 | Path | Responsibility |

@@ -1,0 +1,19 @@
+# Review routing. GitHub asks these people to review PRs touching these paths.
+# Only ownership that is visible in git history is listed. Add the other areas
+# when a role is claimed in docs/team/ROLES.md. Requiring code-owner approval
+# is a separate repository setting and is off by default.
+
+/ManhattanViewer/Assets/Scripts/            @lollipop190000
+/ManhattanViewer/Assets/Editor/             @lollipop190000
+/ManhattanViewer/Assets/Shaders/            @lollipop190000
+/ManhattanViewer/Assets/Settings/           @lollipop190000
+/ManhattanViewer/Assets/Scenes/             @lollipop190000
+/ManhattanViewer/Packages/                  @lollipop190000
+/ManhattanViewer/ProjectSettings/           @lollipop190000
+/tools/                                     @lollipop190000
+/.github/                                   @lollipop190000
+
+/ManhattanViewer/Assets/WebShooter/Swing/   @1213anthony
+/ManhattanViewer/Assets/WebShooter/Input/   @1213anthony @mirnim
+/ManhattanViewer/Assets/Scripts/ControllerMotionInput.cs @mirnim @lollipop190000
+/hardware/                                  @mirnim @1213anthony

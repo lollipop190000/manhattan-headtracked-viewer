@@ -6,6 +6,10 @@ Bug reports, reproducible visual cases, documentation improvements and focused p
 
 Include the release/tag or commit, Windows/GPU, resolution, whether a webcam is running, comparison switch states and the steps that reproduce it. For rendering issues include a screenshot, whether the camera is stationary, and a saved position if available. Remove personal calibration, camera identifiers and private paths from logs before posting.
 
+## Team workflow
+
+This is a team game project. Read [docs/team/WORKFLOW.md](docs/team/WORKFLOW.md) (branches, PRs, Unity rules, AI agents) and [docs/team/ROLES.md](docs/team/ROLES.md) (who owns which area) before your first change. Branches are named `<area>/<short-name>`.
+
 ## Make a change
 
 1. Follow the source setup in [README](README.md), then branch from `main`.

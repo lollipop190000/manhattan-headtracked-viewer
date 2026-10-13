@@ -1,0 +1,29 @@
+name: Task
+description: A piece of work for one person in one area
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [core, swing, hardware, design, character, audio, world, docs]
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true when this is done?
+    validations:
+      required: true
+  - type: textarea
+    id: check
+    attributes:
+      label: How we will know
+      description: A test, a measured number, or a playtest result.
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Who is doing it
+      description: One GitHub handle. Leave empty if nobody has claimed it yet.

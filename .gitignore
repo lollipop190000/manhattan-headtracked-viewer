@@ -69,3 +69,12 @@ Thumbs.db
 **/Assets/Resources/CityOwnership.json.meta
 **/Assets/Resources/CityOwnershipHash.txt
 **/Assets/Resources/CityOwnershipHash.txt.meta
+
+# Personal agent/tool files stay local (see docs/team/WORKFLOW.md)
+/PLAN.md
+/NEXT.md
+/CLAUDE.local.md
+/.claude/
+/.cursor/
+/.codex/
+/.vault/
