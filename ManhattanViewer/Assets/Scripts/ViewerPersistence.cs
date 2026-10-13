@@ -13,6 +13,7 @@ namespace Manhattan.Viewer
         public float mouseSensitivity = .09f;
         public bool temporalAA = true;
         public bool diagnostics;
+        public bool fullPanelDimensions;
         public float filterCutoff = 2f;
         public float filterSpeedCoefficient = 15f;
     }

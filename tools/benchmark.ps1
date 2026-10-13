@@ -1,5 +1,5 @@
 param(
-    [ValidateSet(10, 50)][int]$Speed = 10,
+    [ValidateSet(10, 50, 100)][int]$Speed = 10,
     [ValidateSet('Midtown', 'Downtown', 'Park', 'Uptown', 'Air', 'Full')][string]$Region = 'Midtown',
     [ValidateRange(1, 7200)][int]$Duration = 1200,
     [ValidateRange(0, 20)][int]$Camera = 0,
@@ -67,7 +67,7 @@ foreach ($existingResult in @('benchmark.json', 'gpu.csv', 'process.csv', 'track
     if (Test-Path -LiteralPath (Join-Path $OutputDirectory $existingResult)) { throw 'Benchmark results already exist. Choose a new output directory.' }
 }
 $environment = Get-BenchmarkEnvironment
-$environment['benchmarkOptions'] = [ordered]@{ region = $Region; speedMetresPerSecond = $Speed; durationSeconds = $Duration;
+$environment['benchmarkOptions'] = [ordered]@{ region = $Region; requestedSpeedMetresPerSecond = $Speed; speedMetresPerSecond = $Speed; durationSeconds = $Duration;
     collisionProxies = [bool]$CollisionProxies; trackerRequested = (-not [bool]$NoTracker); gpuSamplingIntervalMs = $GpuIntervalMs; gpuLogRequested = (-not [bool]$SkipGpuLog); processSamplingIntervalMs = 1000; processLogRequested = $true; trackerProcessLogRequested = (-not [bool]$NoTracker); trackerProcessScope = 'exact virtualenv root plus verified descendants; current ancestry verified for every counted sample' }
 $environment['sourceVersion'] = (Get-Content -LiteralPath (Join-Path $ViewerRepository 'assets/source-manifest.json') -Raw | ConvertFrom-Json).sourceVersion
 $environment['technologyRevision'] = (Get-TechnologyVersion).revision

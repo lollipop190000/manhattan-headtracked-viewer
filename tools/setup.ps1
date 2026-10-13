@@ -90,4 +90,8 @@ if (-not $SkipUnity) {
     }
     finally { $env:MANHATTAN_TECHNOLOGY_REVISION = $previousRevision }
 }
-Write-Host 'Setup complete. Run tools/bake.ps1, then tools/build.ps1.'
+if ($SkipSource -and $SkipUnity) {
+    Write-Host 'Tracker setup complete. Run tools/run.ps1 -PlayerPath <absolute path to the extracted ManhattanViewer.exe>.'
+} else {
+    Write-Host 'Setup complete. Run tools/bake.ps1, then tools/build.ps1.'
+}

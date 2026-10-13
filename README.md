@@ -1,98 +1,114 @@
 # Manhattan Head Tracked Viewer
 
-맨해튼을 WASD·마우스로 탐색하면서 웹캠 기반 Head Tracking의 물리적 비대칭 투영을 확인하는 Windows Unity 프로젝트입니다. 재사용 추적·투영 코드는 [head-tracked-display](https://github.com/lollipop190000/head-tracked-display)에 있으며, 이 저장소는 도시 스트리밍·이동·게임 확장·팀 협업을 담당합니다.
+A Windows Unity viewer for exploring a streamed Manhattan city with keyboard, mouse and optional webcam head tracking. A measured physical screen and off-axis projection make the monitor behave like a window into the city. Head tracking is single-viewer and monoscopic.
 
-Unity **6000.3.22f1**, URP **17.3.0**, 기본 이동 속도 **10m/s**이며 Settings에서 **1~50m/s**를 선택합니다. 기준 목표는 RTX 4070 Laptop 8GB에서 1920×1200·60fps입니다. 실제 측정 결과와 미검증 항목은 [검증 기록](docs/validation.md)에 기록합니다.
+[Download for Windows](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/latest) · [한국어 실행 안내](docs/windows-release.md) · [Report a bug](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/issues) · [MIT code license](LICENSE)
 
-현재 고정된 기술 커밋은 [`960d5de55037a3fe2739ed055c8de091b8c54aed`](https://github.com/lollipop190000/head-tracked-display/commit/960d5de55037a3fe2739ed055c8de091b8c54aed)입니다. 패키지 데모와 URP 없는 최소 소비 프로젝트의 투영·보정·수명주기 검사, 런타임 전용 Windows smoke와 공용 런처 검사를 통과했습니다. 맨해튼 전체 도시 Windows 빌드와 실제 GPU의 비교·창문 디테일 검증도 실행했습니다. 첫 Midtown 50m/s 측정에서는 프레임 P95 16.683ms, P99 16.684ms, 50ms 이상 정지 0회를 기록했습니다. **전체 경로의 웹캠 성능 합격과 실제 머리 이동 확인은 아직 완료되지 않았습니다.** [검증 기록](docs/validation.md)은 실제 측정과 미확인 항목을 구분합니다.
+![Manhattan rendered in the Windows viewer](docs/images/manhattan.png)
 
-## Windows 배포본 실행
+The city stays fixed while the observer moves. Buildings, roads and trees stream around the viewer; distant skyline coverage remains available. Optional afternoon sunlight moves only when explicitly started in Settings.
 
-배포 ZIP 전체를 압축 해제하면 Unity 설치 없이 실행할 수 있습니다. 실행 파일 폴더에서 웹캠 없이 탐색하려면 다음을 사용합니다.
+## Run on Windows
+
+1. Download **ManhattanViewer-v0.1.0-Windows-x64.zip** from [Releases](https://github.com/sshs-ai-club/manhattan-headtracked-viewer/releases/tag/v0.1.0).
+2. Extract the **whole ZIP** into a writable folder, for example `C:\Games\ManhattanViewer`. Keep the executable, data folders and `Notices` together.
+3. Open PowerShell in that folder and run:
 
 ```powershell
 .\ManhattanViewer.exe --no-tracker
 ```
 
-웹캠을 사용하려면 이 저장소를 복제한 폴더에서 Git·Python **3.13.5**로 추적기를 준비하고 배포 실행 파일의 절대 경로를 전달합니다. 도시 원본 다운로드·Unity 준비·빌드는 필요하지 않습니다.
+This includes the city and Unity runtime. **No Unity Editor, Python, Git, source assets or account is needed to explore without a webcam.** After extraction, this mode works offline. Use Windows x64 with DirectX 11; the measured machine is an RTX 4070 Laptop at 1920×1200. Other GPUs need their own performance check.
+
+First launch asks for visible screen width, height and eye-to-screen distance in **centimetres**. Measure the display area, then select **Enter Manhattan**. Click the city to capture the mouse; `Esc` releases it and opens Settings. `Alt+F4` exits.
+
+| Input | Action |
+|---|---|
+| W / A / S / D | Move on the horizontal ground plane |
+| Q / E | Descend / rise |
+| Mouse | Look around |
+| Esc / Settings | Release the pointer and open settings |
+| Alt+F4 | Quit |
+
+The default flight speed is 10m/s; Settings supports 1–100m/s. Saved bookmarks load only when requested. Keep personal calibration outside Git.
+
+A Windows-paired HID controller can also move through the city. On a gamepad, use the left stick or D-pad to move, and the left/right shoulder buttons to descend/rise. Generic HID joysticks use the stick or hat and buttons 1/2 for descend/rise; device mappings can vary. Keyboard and mouse remain available. Add `--no-controller` to disable controller input.
+
+## Add webcam head tracking
+
+Install **Git** and **Python 3.13.5** first. Internet is required once to download the pinned tracker dependencies and face model. The webcam is processed locally; the tracker sends observations to Unity over localhost.
+
+Clone the matching release, prepare the tracker, then point the launcher at your extracted player:
 
 ```powershell
+git clone --branch v0.1.0 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
+cd manhattan-headtracked-viewer
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1 -SkipSource -SkipUnity
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Camera 0
 ```
 
-첫 실행에서 실제 화면 너비·높이·관찰 거리를 cm로 입력합니다. 보정을 별도 개인 폴더에 보관하려면 `run`에 `-CalibrationDirectory '<private calibration directory>'`를 전달합니다. [Windows 배포 실행 가이드](docs/windows-release.md)에 종료·상세 보정·배포 파일 목록과 라이선스 보존 절차가 있습니다. 빌드별 성능과 웹캠 수동 검증 상태는 [검증 기록](docs/validation.md)을 확인합니다.
+Change `-PlayerPath` to your actual absolute path. If `python` points to another version, add `-PythonExe 'C:\Path\To\Python313\python.exe'` to setup. Select another webcam with `-Camera 1` or the Settings **WEBCAM** section. After measuring the display, face forward and use **Capture current face reference**.
 
-## 복제 → 준비 → 빌드 → 실행
+The launcher manages both processes and stops its tracker when the player closes. To stop that session explicitly:
 
-Windows에 Git, Git LFS, GitHub CLI(`gh`), Python **3.13.5**, Unity CLI(`unity`), Unity **6000.3.22f1**와 Windows 빌드 모듈을 설치합니다. GitHub 계정은 이 비공개 저장소와 자산 Release에 접근할 수 있어야 합니다. Unity 라이선스도 활성화되어 있어야 합니다.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -PlayerPath 'C:\Games\ManhattanViewer\ManhattanViewer.exe' -Stop
+```
+
+See the [Windows guide](docs/windows-release.md) for camera permissions, saved calibration, camera switching, logs and troubleshooting. Webcam operation depends on the camera and physical calibration; this release's rendering checks use a synthetic observer.
+
+## Comparison controls
+
+| Switch | ON | OFF |
+|---|---|---|
+| Tracking | Apply the measured eye position | Hold the current head offset; observations and WASD continue |
+| Window | Show the physical window frame | Hide only the frame |
+| Surface | Show original material detail | Use reversible plain material variants on the same geometry |
+
+These switches preserve city geometry, lighting, camera travel and render quality. Settings contains measurement, camera calibration and diagnostics. **LIGHTING** offers sun play/pause, an afternoon position slider and reset; each launch starts paused. Pause the sun for repeatable comparisons.
+
+## Repository
+
+| Path | Responsibility |
+|---|---|
+| [ManhattanViewer](ManhattanViewer) | Unity viewer, navigation, city streaming, rendering and settings |
+| [tools](tools) | Setup, source verification, bake/build, tests and release packaging |
+| [assets](assets) | Source manifest and small validation fixtures; full city downloads stay outside Git |
+| [docs](docs) | Architecture, usage, provenance and scoped validation reports |
+
+Reusable projection, observations, calibration and tracking live in the separate [Head Tracked Display](https://github.com/lollipop190000/head-tracked-display) Unity package. This viewer pins the package, launcher and tracker to the same tested commit in [technology-version.json](tools/technology-version.json).
+
+## Build from source
+
+Building is optional; use the Windows ZIP to try the application. Development requires Git + Git LFS, GitHub CLI, Python 3.13.5, Unity CLI, and **Unity 6000.3.22f1** with Windows build support and an active Unity license. The renderer is URP 17.3.0. Full source extraction, generated assets and Unity caches need substantially more disk space than the release ZIP.
+
+Run these commands from a new checkout. Setup downloads the public city source release and verifies its manifest. The current download helper uses GitHub CLI authentication.
 
 ```powershell
 gh auth login
-git clone https://github.com/lollipop190000/manhattan-headtracked-viewer.git
+git lfs install
+git clone --branch v0.1.0 https://github.com/sshs-ai-club/manhattan-headtracked-viewer.git
 cd manhattan-headtracked-viewer
-git lfs install --local
 git lfs pull
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/bake.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Camera 0
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -NoTracker
 ```
 
-`python`이 다른 버전이면 setup에 `-PythonExe '<Python 3.13.5 executable>'`를 전달합니다. 원본 ZIP이 이미 있다면 `-SourceArchiveDirectory '<ZIP folder>'`를 전달해 다운로드를 생략합니다. `tools/setup.ps1`는 SHA-256 검증, 원본 압축 해제, 고정 커밋의 기술 저장소·추적기 준비, Unity 패키지 설치를 수행합니다. `tools/bake.ps1`는 원본에서 실행용 타일·카탈로그를 생성합니다. 전체 자산은 수 GB이고 첫 import/bake는 일반 실행보다 오래 걸립니다.
+Wait for each step to finish successfully. `build.ps1` builds city bundles, generates their matching Skyline ownership data, builds the player and copies attribution notices. Output: `Builds/ManhattanViewer/ManhattanViewer.exe`. Use `-EditorPath 'C:\Path\To\Editor\Unity.exe'` if automatic Editor discovery fails. Setup accepts `-PythonExe`; source files and generated tiles are not included in Git's source ZIP.
 
-Unity가 기본 Hub 설치 위치에 없으면 setup에 `-EditorPath '<Unity.exe>'`를 전달합니다. 패키지 설치는 비동기 Unity PackageManager 요청을 완료한 뒤 종료하기 위해 이 실행 파일을 직접 호출하며, 나머지 빌드·테스트·변환은 Unity CLI를 사용합니다.
-
-Unity에서 작업하려면 준비 후 `unity open ./ManhattanViewer --editor-version 6000.3.22f1`을 실행합니다. 원본과 생성 자산을 준비한 뒤 열어야 팀원의 작업 환경이 동일해집니다.
+## Validation and contributing
 
 ```powershell
-# 웹캠 없이 이동·도시 렌더링 확인
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -NoTracker
-# 다른 카메라 / 종료
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Camera 1
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/run.ps1 -Stop
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -DataOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -EditorPlayMode
 ```
 
-`tools/run.ps1`는 고정 기술 저장소의 **단일 CMD 진입점** `Run-HeadTrackedDemo.cmd`를 호출하며 프로젝트·플레이어·추적기 경로만 전달합니다. 팀원이 사용하는 PC의 형제 폴더 경로를 참조하지 않습니다.
+The second command needs Unity and a graphics-capable desktop for rendered tests. Exact release checks and remaining limits are in the [v0.1.0 validation report](docs/release-v0.1.0.md). Historical reports remain tied to their recorded revisions; targets are not measured results.
 
-## 조작과 보정
+Open an issue with the release version, GPU, resolution, camera/no-camera mode, screenshot and reproduction steps. For code changes, branch from `main`, preserve Unity `.meta` files, run the relevant tests and open a pull request. See [CONTRIBUTING](CONTRIBUTING.md) and the [architecture guide](docs/architecture.md). Experimental model-import tools are explicit developer workflows and do not change normal startup content.
 
-| 조작 | 동작 |
-|---|---|
-| 도시 화면 클릭 | 마우스 포인터 잠금·이동 시작 |
-| W / S | 바라보는 방향으로 전진·후진 |
-| A / D | 좌우 이동 |
-| Q / E | 아래·위 이동 |
-| 마우스 | yaw·pitch 회전 |
-| Esc / Settings | 포인터 해제·오른쪽 설정창 |
-| Alt+F4 | 플레이어 종료·추적기 정리 |
+## License and credits
 
-Windows Bluetooth 설정에서 페어링한 HID 게임패드(예: ESP32 BLE 게임패드)로도 이동할 수 있습니다. 스틱 또는 햇(D-pad)의 X/Y가 A·D와 W·S, 버튼 1이 Q(아래), 버튼 2가 E(위)입니다. 키보드·마우스는 그대로 동작하며 `--no-controller`로 끕니다.
-
-첫 실행에서 실제 화면 **너비·높이·관찰 거리**를 입력합니다. 머리 이동은 실측 단위 그대로 투영하며, 먼 스카이라인보다 가까운 창틀·창문·건물 모서리에서 효과를 확인하기 쉽습니다. 상세 카메라 보정·IPD·이동 속도·진단은 오른쪽 Settings에 있습니다.
-
-자동 벤치마크·비교 캡처는 시작 입력창을 생략하므로, 먼저 일반 실행에서 실측 보정을 저장합니다. 개인 파일을 별도 경로에서 관리하려면 일반 실행과 벤치마크에 같은 `-CalibrationDirectory '<private calibration directory>'`를 전달합니다. 해당 경로의 보정·설정·북마크는 Git이나 자산 Release에 올리지 않습니다.
-
-Head Tracking OFF는 현재 머리 오프셋을 유지하고 관측·필터링을 계속합니다. WASD 이동은 계속됩니다. 창틀 OFF는 프레임만 숨기고 Surface detail OFF는 같은 메시의 재질을 가역적으로 바꿉니다. 세 비교 스위치는 이동 위치·조명·품질을 변경하지 않습니다. 물리 보정, 비교·이동 설정, 명시적으로 저장한 위치 북마크는 별도 파일이며 시작할 때 북마크를 자동 복원하지 않습니다.
-
-## 팀 개발
-
-`main`은 빌드 가능한 기준으로 유지하고 `codex/<feature>` 또는 팀의 기능 브랜치에서 PR을 만듭니다. Unity 자산 변경 시 `.meta`도 함께 커밋합니다. 직접 수정할 큰 바이너리는 Git LFS를 사용합니다. 원본 ZIP은 [비공개 source Release](https://github.com/lollipop190000/manhattan-headtracked-viewer/releases/tag/city-source-v2)에 버전별로 게시합니다. 생성 도시 타일·빌드·로그·추적기 가상환경·얼굴 모델·개인 보정은 커밋하지 않습니다.
-
-- [자산 버전·재현 방법](docs/assets.md)
-- [입력·충돌·게임 요소 연결](docs/architecture.md)
-- [성능 측정·검증 기준](docs/validation.md)
-- [제3자 출처·이용 조건](THIRD_PARTY.md)
-
-GitHub Actions는 패키지·추적기 커밋 일치, 원본 manifest, 안전한 추출·무결성 테스트를 실행합니다. Unity 검증은 `tools/test.ps1`, 빌드는 `tools/build.ps1`로 재현합니다. 패키지 기능 변경은 기술 저장소에서 최소 소비 프로젝트 검증을 거친 뒤 이 저장소의 고정 커밋을 함께 갱신합니다.
-
-개발 중 커밋하지 않은 변경으로 로컬 빌드를 확인할 때는 `tools/build.ps1 -AllowDirty`를 사용합니다. 팀에 전달할 빌드는 변경을 커밋하고 고정된 소스 버전에서 다시 만듭니다.
-
-`tools/build.ps1`는 실행 파일 옆 `Notices/`에 검증된 도시 원본 이용 조건과 라이선스·출처를 함께 준비합니다. Windows 배포 ZIP에도 이 폴더를 포함합니다. 성능 측정은 `tools/benchmark.ps1`가 1920×1200 Exclusive Fullscreen을 요청하며 AC·데스크톱 Hz·드라이버·전력 제한 가용성과 GPU 로그를 기록합니다.
-
-반복 측정 전체 목록은 `tools/benchmark_suite.ps1 -DryRun`으로 확인하고, 실측 보정 준비 후 `tools/benchmark_suite.ps1 -CalibrationDirectory '<private calibration directory>'`로 순차 실행합니다. 기본 웹캠 사용·12가지 실행의 측정 시간은 약 2시간 5분이며 준비/로딩 시간이 추가됩니다. GUID 폴더에 원본 로그와 진행 JSON을 보존합니다. `-CaseFilter`로 일부만 선택하고, `-NoTracker`·`-DurationOverride`는 명시적인 기초 비교·탐색 용도로 사용합니다. 완료 상태가 성능 합격을 의미하지는 않습니다.
-
-세 스위치의 시각 비교는 `tools/run.ps1 -PlayerArguments`로 `--comparison-captures-out <directory> --quit-after-comparison-captures`를 명시적으로 실행합니다. 30초 준비 후 기준 화면·8가지 조합·왕복 복원 화면과 보고서를 만들며, 일반 시작이나 저장 설정을 바꾸지 않습니다. 명령 예제와 수동 이미지 확인 항목은 [비교 캡처 가이드](docs/validation.md#explicit-comparison-captures)에 있습니다. 실제 성능 분석은 5개 지역×두 속도의 10가지 경로, 별도 1200초 메모리 기록과 일치하는 충돌 프록시 OFF/ON 쌍을 확인합니다.
-
-코드는 [MIT](LICENSE) 라이선스입니다. NYC 지리 데이터와 외부 모델·라이브러리의 조건은 별도로 유지합니다.
+Team-authored code is [MIT licensed](LICENSE). The city uses NYC open datasets with procedural facade, roof and vegetation detail; it is not survey-accurate facade imagery. City data, Unity packages and adapted URP shaders retain their own terms. Keep the bundled `Notices/` directory when redistributing the Windows player. See [THIRD_PARTY](THIRD_PARTY.md) for sources, credits and licenses.

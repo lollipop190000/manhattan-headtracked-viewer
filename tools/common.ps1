@@ -27,6 +27,64 @@ function Invoke-ViewerUnityMethod {
         '--timeout', [string]$Timeout, '--', '-executeMethod', $Method, '-logFile', $logPath)
 }
 
+function Resolve-ViewerEditor {
+    param([string]$EditorPath)
+    if (-not $EditorPath) {
+        $inventoryText = & unity editors --installed --format json
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to locate the pinned Unity Editor. Pass -EditorPath.' }
+        $inventory = $inventoryText | ConvertFrom-Json
+        if (-not $inventory.success) { throw 'Unable to locate the pinned Unity Editor. Pass -EditorPath.' }
+        $editor = @($inventory.data | Where-Object { $_.version -eq $ViewerEditorVersion }) | Select-Object -First 1
+        if ($editor -and $editor.location) {
+            $EditorPath = if ($editor.location.EndsWith('Unity.exe', [StringComparison]::OrdinalIgnoreCase)) {
+                $editor.location
+            } else { Join-Path $editor.location 'Editor\Unity.exe' }
+        }
+    }
+    if (-not $EditorPath -or -not (Test-Path -LiteralPath $EditorPath -PathType Leaf)) {
+        throw "Unity $ViewerEditorVersion executable could not be found. Pass -EditorPath."
+    }
+    $EditorPath = (Resolve-Path -LiteralPath $EditorPath).Path
+    $productVersion = (Get-Item -LiteralPath $EditorPath).VersionInfo.ProductVersion
+    if (-not $productVersion -or ($productVersion.Split('_')[0] -ne $ViewerEditorVersion)) {
+        throw "The Editor executable must be Unity $ViewerEditorVersion."
+    }
+    return $EditorPath
+}
+
+function Invoke-ViewerOwnedEditorMethod {
+    param(
+        [Parameter(Mandatory)][string]$Method,
+        [string]$EditorPath,
+        [ValidateRange(1, 86400)][int]$Timeout = 7200,
+        [string]$BuildTarget
+    )
+    $EditorPath = Resolve-ViewerEditor -EditorPath $EditorPath
+    $logDirectory = Join-Path $ViewerRepository 'Logs'
+    New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+    $logPath = Join-Path $logDirectory ($Method.Replace('.', '-') + '-' + [Guid]::NewGuid().ToString('N') + '.log')
+    # Async entrypoints own EditorApplication.Exit after their awaited work.
+    # -quit would exit at the first incomplete await and truncate generation.
+    $arguments = @('-batchmode', '-projectPath', ('"' + $ViewerProject + '"'),
+        '-executeMethod', $Method, '-logFile', ('"' + $logPath + '"'))
+    if ($BuildTarget) { $arguments += @('-buildTarget', $BuildTarget) }
+    $process = $null
+    try {
+        $process = Start-Process -FilePath $EditorPath -ArgumentList $arguments -WorkingDirectory $ViewerProject -WindowStyle Hidden -PassThru
+        [void]$process.Handle
+        if (-not $process.WaitForExit($Timeout * 1000)) { throw "Owned Unity job timed out. See $logPath" }
+        $process.Refresh()
+        if ($process.ExitCode -ne 0) { throw "Unity job failed ($($process.ExitCode)). See $logPath" }
+    }
+    finally {
+        if ($process) {
+            if (-not $process.HasExited) { $process.Kill(); $process.WaitForExit(10000) | Out-Null }
+            $process.Dispose()
+        }
+    }
+    Write-Host "Unity job completed. Log: $logPath"
+}
+
 function Invoke-ViewerPackageInstall {
     param([string]$EditorPath)
     # PackageManager.Client requests continue on EditorApplication.update.

@@ -1,0 +1,213 @@
+{
+  "parentRevision": "633c6fc024f34ced9c1c102160bcbc90f111caa9",
+  "unfinished": true,
+  "sourceSha256": "cdadfb8646903798e90cc5d5eef60458383f1464f63bf4fd36cbb3b5b7d7c53c",
+  "assemblySha256": "71203dd87f96acc75c60eea7589c435b45f9232dfad324d8031626c3a68b5d73",
+  "capture": {
+    "frames": 481,
+    "width": 1920,
+    "height": 1200,
+    "firstToLastSeconds": 16.015657000000004,
+    "actualMeanCaptureFps": 29.970671824452776,
+    "requestedFps": 30,
+    "timestampMaxErrorSeconds": 0.0006691000000014213,
+    "orientationAnchorSameMAD": 0.0,
+    "orientationAnchorFlippedMAD": 35.853361979166664,
+    "encodingOrientationTransform": "none",
+    "variableFrameRate": true,
+    "noInterpolationTrimOrAcceleration": true,
+    "maxRequestIssueMs": 0.1898,
+    "maxDataCopyMs": 8.5458,
+    "maxBackgroundWriteMs": 14.7142,
+    "readbackErrors": 0,
+    "schedulingSkipped": 0,
+    "maxPending": 2,
+    "maxFailures": 0,
+    "firstPose": {
+      "x": 1225.0,
+      "y": 150.0,
+      "z": 3585.0
+    },
+    "lastPose": {
+      "x": 1225.0928955078125,
+      "y": 150.0,
+      "z": 3585.0
+    },
+    "runtimeSourceSha256": "cdadfb8646903798e90cc5d5eef60458383f1464f63bf4fd36cbb3b5b7d7c53c",
+    "movieSha256": "4ee00e3cb30cbce64c8ce4a7fdf29005d32c789c3c2fe543351c47b74399ddcd",
+    "movieBytes": 18284972,
+    "performanceAcceptance": false
+  },
+  "tests": {
+    "ownership-validation-play-cohort-cost-v1-20261010": {
+      "runtimeSourceSha256": "69505f067cf2c684f1fc729460acb86f03f124e499a1539b04af046766c5f597",
+      "total": "110",
+      "passed": "110",
+      "failed": "0",
+      "skipped": "0",
+      "inconclusive": "0",
+      "duration": "85.7007643",
+      "xmlSha256": "910ae6b6727dc694c91a287121b532c79ecac485bb5f4a748203176a773ad708"
+    },
+    "ownership-validation-play-cohort-cost-final-focused-v1-20261010": {
+      "runtimeSourceSha256": "cdadfb8646903798e90cc5d5eef60458383f1464f63bf4fd36cbb3b5b7d7c53c",
+      "total": "30",
+      "passed": "30",
+      "failed": "0",
+      "skipped": "0",
+      "inconclusive": "0",
+      "duration": "0.234233",
+      "xmlSha256": "b74cc61e2858736e2654018fa52e117e46cc2d54f6aa8f7677ecd7b11077c937"
+    }
+  },
+  "frame": {
+    "n": 5372,
+    "p50": 16.6665,
+    "p95": 16.6832,
+    "p99": 16.6848,
+    "maximum": 42.9503,
+    "framesGE50": 0
+  },
+  "streaming": {
+    "n": 5372,
+    "p50": 0.1837,
+    "p95": 2.3883,
+    "p99": 3.2657,
+    "maximum": 7.9414,
+    "framesGE50": 0
+  },
+  "numericGates": {
+    "frameP95": true,
+    "frameP99": true,
+    "noFramesGE50": true,
+    "streamingP95": false
+  },
+  "baselineProfile": {
+    "sourceRevision": "633c6fc024f34ced9c1c102160bcbc90f111caa9",
+    "privateInstrumentation": true,
+    "acceptanceMeasurement": false,
+    "warmupSeconds": 15,
+    "measuredSeconds": 30,
+    "frames": 1835,
+    "phaseCosts": {
+      "streaming_ms": {
+        "totalMs": 1343.1826,
+        "activeFrames": 1835,
+        "maximum": 5.3445,
+        "p95AllFrames": 2.3564
+      },
+      "evaluate_ms": {
+        "totalMs": 180.5501,
+        "activeFrames": 204,
+        "maximum": 3.5949,
+        "p95AllFrames": 0.8345
+      },
+      "release_ms": {
+        "totalMs": 23.9741,
+        "activeFrames": 482,
+        "maximum": 0.4585,
+        "p95AllFrames": 0.0582
+      },
+      "complete_load_ms": {
+        "totalMs": 150.002,
+        "activeFrames": 1835,
+        "maximum": 1.3197,
+        "p95AllFrames": 0.3322
+      },
+      "request_ms": {
+        "totalMs": 169.7995,
+        "activeFrames": 543,
+        "maximum": 1.5157,
+        "p95AllFrames": 0.5632
+      },
+      "near_ms": {
+        "totalMs": 127.4154,
+        "activeFrames": 1835,
+        "maximum": 0.5328,
+        "p95AllFrames": 0.1138
+      },
+      "ownership_plus_visibility_ms": {
+        "totalMs": 688.2167,
+        "activeFrames": 985,
+        "maximum": 4.6426,
+        "p95AllFrames": 1.9957
+      },
+      "instantiate_ms": {
+        "totalMs": 19.1238,
+        "activeFrames": 467,
+        "maximum": 0.1528,
+        "p95AllFrames": 0.0476
+      },
+      "placement_renderer_ms": {
+        "totalMs": 5.8231,
+        "activeFrames": 467,
+        "maximum": 0.0552,
+        "p95AllFrames": 0.0147
+      },
+      "register_ownership_ms": {
+        "totalMs": 0.502,
+        "activeFrames": 29,
+        "maximum": 0.0187,
+        "p95AllFrames": 0.0006
+      },
+      "register_surface_ms": {
+        "totalMs": 9.3748,
+        "activeFrames": 467,
+        "maximum": 0.1968,
+        "p95AllFrames": 0.0231
+      },
+      "load_visibility_ms": {
+        "totalMs": 87.7341,
+        "activeFrames": 467,
+        "maximum": 1.2432,
+        "p95AllFrames": 0.2217
+      },
+      "prepare_core_cover_ms": {
+        "totalMs": 106.397,
+        "activeFrames": 150,
+        "maximum": 3.2678,
+        "p95AllFrames": 0.6263
+      },
+      "prepare_complete_cohort_ms": {
+        "totalMs": 28.8921,
+        "activeFrames": 93,
+        "maximum": 0.7171,
+        "p95AllFrames": 0.2234
+      },
+      "publish_core_cover_ms": {
+        "totalMs": 57.9223,
+        "activeFrames": 93,
+        "maximum": 1.6996,
+        "p95AllFrames": 0.4338
+      },
+      "publish_complete_cohort_ms": {
+        "totalMs": 7.6167,
+        "activeFrames": 93,
+        "maximum": 0.2478,
+        "p95AllFrames": 0.0433
+      },
+      "publish_sky_revalidate_ms": {
+        "totalMs": 34.1538,
+        "activeFrames": 93,
+        "maximum": 1.149,
+        "p95AllFrames": 0.2432
+      },
+      "publish_mesh_activation_ms": {
+        "totalMs": 5.1437,
+        "activeFrames": 93,
+        "maximum": 0.1646,
+        "p95AllFrames": 0.0233
+      },
+      "cleanup_ms": {
+        "totalMs": 1.1535,
+        "activeFrames": 93,
+        "maximum": 0.0356,
+        "p95AllFrames": 0.0074
+      }
+    },
+    "nonAdditiveNestedPhases": true
+  },
+  "generatedAssetsIncluded": false,
+  "privateCalibrationOrFacesIncluded": false,
+  "universalFlickerAcceptance": false
+}

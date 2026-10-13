@@ -26,4 +26,6 @@ Head Tracking, window-frame visibility and Surface detail are three independent 
 
 ## Dependency updates
 
+`ViewerCameraSelection` owns only the Settings interaction with the companion Python tracker's camera-control files. The reusable Python `camera_control.py` owns named device enumeration, backend-specific identity, session validation and selection persistence. Status and requests use `tracker_camera_status.json` / `tracker_camera_request.json`; the tracker alone saves `tracker_camera_preference.json` after a selected device supplies a frame. Selection never writes physical calibration or changes city/navigation/render settings. Stale tracker sessions cannot receive new requests. These files stay in the private calibration directory and out of Git.
+
 `tools/technology-version.json` and Unity's `com.headtracked.display` Git URL must name the same full tested commit. The same commit supplies the launcher and Python tracker in ignored `.tools/head-tracked-display`. After validating a technology change, update the revision, run setup to resolve packages, and commit both `manifest.json` and `packages-lock.json` plus the version file. Never substitute an absolute `file:` dependency in the shared project.
