@@ -33,6 +33,8 @@ First launch asks for visible screen width, height and eye-to-screen distance in
 | Esc / Settings | Release the pointer and open settings |
 | Alt+F4 | Quit the viewer; its launcher stops the tracker |
 
+A Bluetooth or USB gamepad/joystick can also move the camera. See Settings → **CONTROLLER** for details.
+
 Click the city to capture the mouse. Flight defaults to 10m/s; Settings supports 1–100m/s. Saved bookmarks load only when requested. A paired HID controller can also move: left stick/D-pad plus shoulder buttons on a gamepad, or stick/hat plus buttons 1/2 on a generic joystick. Add `--no-controller` to the player arguments to disable controller input.
 
 For direct mode selection, open PowerShell **in the extracted release folder**:
