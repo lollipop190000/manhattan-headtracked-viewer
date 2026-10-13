@@ -1,6 +1,6 @@
 # Roles and ownership
 
-Status: **proposed**. Nothing here is final until each person confirms their row (see [Claiming a role](#claiming-a-role)). Owners listed from git history are facts; owners marked *proposed* are suggestions only.
+Status: **proposed**. Nothing here is final until each person confirms their row (see [Claiming a role](#claiming-a-role)). Owners for areas 1 to 3 come from git history. Owners for areas 4 to 7 were assigned by @SWTY7 and each person should confirm.
 
 The game is a head-tracked window into Manhattan where you swing through the city. That splits into seven areas. Each area has one **owner** (decides, reviews, answers questions) and any number of **contributors**. Owning an area does not mean doing all the work; it means being the one who says "yes, merge".
 
@@ -11,12 +11,12 @@ The game is a head-tracked window into Manhattan where you swing through the cit
 | 1 | **Core and tracking** | Unity project health, city streaming, off-axis projection, head-tracking pipeline, tracker package, Windows release | @lollipop190000 (confirmed: 73 commits, all rendering/tracking PRs) | `ManhattanViewer/Assets/Scripts/*`, `tools/*`, `head-tracked-display` package |
 | 2 | **Swing and movement** | Web physics, aiming, attach and release, speed and feel, collision with buildings | @1213anthony (author of PR #12; commits appear as `srchae99`, to be confirmed) | `Assets/WebShooter/Swing/*` |
 | 3 | **Hardware and input** | Wrist device, BLE controller, serial/UDP bridge, firmware, pairing UX | @mirnim (BLE controller) and @1213anthony (wrist device, PR #13) | `ControllerMotionInput.cs`, `Assets/WebShooter/Input/*`, `tools/fake_wrist.py` |
-| 4 | **Game design and producer** | Game design doc, missions, scoring, difficulty, decision log, playtests, task board | @SWTY7 (*proposed*) | nothing yet |
-| 5 | **Character, animation and VFX** | Hero model and hands/arms in view, web visuals, swing poses, impact and speed effects | open | web line is a temporary cylinder in `MouseWebShooter.cs` |
-| 6 | **Audio** | Music, ambience, web and swing sounds, mixing, audio licences | open | nothing (only the default `AudioManager.asset`) |
-| 7 | **World and level** | Routes, landmarks, collectables, mission spots, skyline set dressing, extra 3D models | open | NYC city data in `assets/`, streaming in `CityStreamer.cs` |
+| 4 | **Game design and producer** | Game design doc, missions, scoring, difficulty, decision log, playtests, task board | @ailfor2-look (assigned by @SWTY7, to confirm) | nothing yet |
+| 5 | **Character, animation and VFX** | Hero model and hands/arms in view, web visuals, swing poses, impact and speed effects | @Polaris-unreal (assigned by @SWTY7, to confirm) | web line is a temporary cylinder in `MouseWebShooter.cs` |
+| 6 | **Audio** | Music, ambience, web and swing sounds, mixing, audio licences | @edward0613 (assigned by @SWTY7, to confirm; not yet a repo collaborator) | nothing (only the default `AudioManager.asset`) |
+| 7 | **World and level** | Routes, landmarks, collectables, mission spots, skyline set dressing, extra 3D models | @SWTY7 (to confirm) | NYC city data in `assets/`, streaming in `CityStreamer.cs` |
 
-Open areas should be filled by @Polaris-unreal and @ailfor2-look based on what each wants to do. We did not guess skills from usernames.
+All seven areas now have a proposed owner. Anyone can still contribute to any area; the owner decides and reviews.
 
 AI agents read this file at session start to tell their user their role ([AGENT-ONBOARDING](AGENT-ONBOARDING.md)). Keep the Owner column to GitHub handles so it can be matched.
 
@@ -57,7 +57,7 @@ Interfaces between areas (change these only with a decision record):
 
 ## Claiming a role
 
-1. Edit the table above in a PR named `docs/roles-<yourname>`, change your row from *proposed/open* to your handle, and add one line on what you will do first.
+1. Edit the table above in a PR named `docs/roles-<yourname>`, remove "to confirm" from your row, and add one line on what you will do first.
 2. The Core owner approves. Disagreements go to a decision record, not a chat thread.
 3. If you go quiet for two weeks, the area reverts to open. Say so if you are busy; nobody will mind.
 
