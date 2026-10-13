@@ -9,7 +9,7 @@ import zipfile
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import package_portable_windows as portable
-from build_portable_tracker import PYTHON_PATHS, CMD_ENTRY, extract_checked
+from build_portable_tracker import PYTHON_PATHS, CMD_ENTRY, MODEL_LOADING_PATCH, extract_checked, portable_tracker_source
 
 
 class PortableReleaseTests(unittest.TestCase):
@@ -30,7 +30,10 @@ class PortableReleaseTests(unittest.TestCase):
         self.write('Run-HeadTrackedDemo.cmd',CMD_ENTRY)
         self.write('README-Windows.md',b'English Windows guide')
         self.write('.runtime/tracker/face_landmarker.task',self.model)
-        self.write('.runtime/tracker/portable-tracker.json',json.dumps({'technologyRevision':self.technology,'pythonVersion':'3.13.5'}).encode())
+        tracker_source = b'fixture tracker'
+        self.write('.runtime/tracker/tracker.py',tracker_source)
+        self.write('.runtime/tracker/portable-tracker.json',json.dumps({'technologyRevision':self.technology,'pythonVersion':'3.13.5',
+            'trackerCompatibilityPatch':MODEL_LOADING_PATCH,'portableTrackerSha256':hashlib.sha256(tracker_source).hexdigest()}).encode())
         self.write('.runtime/tracker/.venv/Scripts/python313._pth',PYTHON_PATHS.encode())
         self.write('.runtime/tracker/.venv/Scripts/python.exe',b'fixture interpreter')
         for name in ('LICENSE-Python.txt','LICENSE-MediaPipe.txt','README.md'): self.write('Notices/PortableTracker/'+name,b'original notice')
@@ -102,6 +105,21 @@ class PortableReleaseTests(unittest.TestCase):
                 for name in names: z.writestr(name,b'fixture')
             with self.assertRaises(ValueError): extract_checked(archive,self.root/'unpacked')
         self.assertFalse((self.root/'outside.txt').exists())
+
+    def test_unicode_model_loading_and_upstream_drift_guard(self):
+        model = self.root/'모델 & 경로!'/ 'face_landmarker.task'
+        model.parent.mkdir()
+        model.write_bytes(self.model)
+        source = b'options = mp.tasks.BaseOptions(model_asset_path=str(model))'
+        from types import SimpleNamespace
+        captured = []
+        def base_options(**kwargs):
+            captured.append(kwargs)
+        exec(portable_tracker_source(source), {'model':model,'mp':SimpleNamespace(tasks=SimpleNamespace(BaseOptions=base_options))})
+        self.assertEqual(captured, [{'model_asset_buffer':self.model}])
+        for changed in (b'changed upstream', source+source):
+            with self.assertRaisesRegex(ValueError,'expression differs'):
+                portable_tracker_source(changed)
 
 
 if __name__=='__main__': unittest.main()

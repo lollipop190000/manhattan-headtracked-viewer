@@ -27,7 +27,7 @@ def main():
     import numpy as np
     from mediapipe.tasks.python import BaseOptions, vision
     from pose_estimator import PoseEstimator
-    options = vision.FaceLandmarkerOptions(base_options=BaseOptions(model_asset_path=str(tracker/'face_landmarker.task')),
+    options = vision.FaceLandmarkerOptions(base_options=BaseOptions(model_asset_buffer=(tracker/'face_landmarker.task').read_bytes()),
                                            running_mode=vision.RunningMode.IMAGE, num_faces=1)
     with vision.FaceLandmarker.create_from_options(options) as detector:
         result = detector.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=np.zeros((480,640,3),dtype=np.uint8)))

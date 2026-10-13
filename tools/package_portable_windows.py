@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 import package_windows as base
-from build_portable_tracker import PYTHON_PATHS, CMD_ENTRY
+from build_portable_tracker import PYTHON_PATHS, CMD_ENTRY, MODEL_LOADING_PATCH
 
 ROOT = Path(__file__).resolve().parents[1]
 SHIPPING_TOOLS = {'Run-HeadTrackedDemo.cmd','tools/run_demo.ps1','tools/portable_check.py','tools/portable-runtime.json'}
@@ -79,6 +79,9 @@ def validate_runtime(files):
     manifest=json.loads(files['.runtime/tracker/portable-tracker.json'].read_text(encoding='utf-8'))
     if manifest['technologyRevision']!=technology['revision'] or manifest['pythonVersion']!=technology['pythonVersion']:
         raise ValueError('Portable runtime differs from the technology pin')
+    if (manifest.get('trackerCompatibilityPatch') != MODEL_LOADING_PATCH or
+            base.sha256_file(files['.runtime/tracker/tracker.py']) != manifest.get('portableTrackerSha256')):
+        raise ValueError('Portable tracker compatibility patch differs')
     if base.sha256_file(files['.runtime/tracker/face_landmarker.task'])!=technology['faceModelSha256']:
         raise ValueError('Portable model digest differs')
     if files['.runtime/tracker/.venv/Scripts/python313._pth'].read_text(encoding='utf-8')!=PYTHON_PATHS:

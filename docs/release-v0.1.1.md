@@ -12,12 +12,18 @@ scoped evidence for the city and its 180 PlayMode / 263 EditMode checks.
 
 The ZIP includes CPython 3.13.5's official Windows x64 embeddable distribution,
 the exact 20 wheel dependencies in `tools/tracker-requirements.lock.txt`, the
-unchanged tracker from `c5ddab14d12dcc8acc8b31048f5752686984f3ab`, canonical
+tracker based on `c5ddab14d12dcc8acc8b31048f5752686984f3ab`, canonical
 face geometry and the SHA-256-pinned Face Landmarker task model. The runtime is
 built afresh from the verified archives and wheels, not copied from an existing
 development virtual environment. Python's `_pth` contains only application-local
 relative paths and does not import site initialization; it ignores installed
 Python, the registry and Python environment variables.
+
+One guarded Windows compatibility change loads the same verified face-model
+bytes through MediaPipe's `model_asset_buffer` instead of native file-path
+loading, which fails for Unicode extraction paths. The original source digest,
+patched source digest and change are recorded in the portable tracker manifest.
+Tracking calculations and all inference options remain unchanged.
 
 The interpreter archive was checked against Python's upstream SHA-256 in its
 SBOM. Every wheel was checked against the filename/digest in the official PyPI
@@ -42,9 +48,10 @@ are checked before launching the installer.
   tracking on **100% of 1,198 measured frames** and zero city streaming failures.
   Closing the player released the webcam and left no owned tracker process or
   heartbeat file. Webcam frames were not saved.
-- Seven focused packaging tests check exact file receipts, personal-data
+- Nine focused packaging tests check exact file receipts, personal-data
   exclusion, unlisted files, model changes, nonportable paths, base ZIP/identity
-  changes, archive traversal and Windows case aliases. They passed.
+  changes, archive traversal, Windows case aliases, CMD exit propagation and
+  Unicode model loading with an upstream-drift guard. They passed.
 
 The exact published ZIP has its final file count, hashes and relocation checks
 in the accompanying `ManhattanViewer-v0.1.1-validation.json`. An unchanged player

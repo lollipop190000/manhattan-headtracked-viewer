@@ -19,7 +19,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -DataOnly
 The builder verifies Python/model/notice archives against `portable-runtime.json`,
 downloads the pinned Windows wheels, verifies their digests against official PyPI
 metadata, installs into a new staging directory and copies only pinned tracker
-and launcher source. It does not reuse a local `.venv`. Use a fresh staging path
+and launcher source. The tracker receives one guarded compatibility change:
+load the verified face model with Python `read_bytes()` and MediaPipe
+`model_asset_buffer`, so Windows folders containing non-ASCII characters work.
+Its manifest records the original tracker source digest and this change. All
+tracking math and options are unchanged. It does not reuse a local `.venv`. Use a fresh staging path
 for each run; the builder will not overwrite an existing environment.
 
 Commit any tooling/documentation changes before packaging. `package_portable_windows.py`

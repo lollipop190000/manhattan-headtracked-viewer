@@ -21,6 +21,17 @@ PYTHON_PATHS = 'python313.zip\n.\n..\\Lib\\site-packages\\\n..\\..\\\n'
 CMD_ENTRY = (b'@echo off\r\nsetlocal DisableDelayedExpansion\r\n'
              b'"%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\\run_demo.ps1" %*\r\n'
              b'set "launcher_exit=%errorlevel%"\r\nif not "%launcher_exit%"=="0" pause\r\nexit /b %launcher_exit%\r\n')
+MODEL_LOADING_PATCH = 'Windows Unicode model loading via Python bytes (MediaPipe BaseOptions.model_asset_buffer)'
+
+
+def portable_tracker_source(source):
+    # MediaPipe's native file opening fails on Windows Unicode paths. Python
+    # reads the same verified bytes correctly; tracking options remain unchanged.
+    original = b'mp.tasks.BaseOptions(model_asset_path=str(model))'
+    replacement = b'mp.tasks.BaseOptions(model_asset_buffer=model.read_bytes())'
+    if source.count(original) != 1:
+        raise ValueError('Pinned tracker model-loading expression differs')
+    return source.replace(original, replacement)
 
 
 def read_json(path): return json.loads(Path(path).read_text(encoding='utf-8'))
@@ -86,10 +97,15 @@ def build_tracker(output, downloads, technology_root):
         wheels.append({'name':name,'version':expected,'filename':wheel.name,'sha256':sha256_file(wheel),'url':remote['url']})
     subprocess.run([sys.executable,'-m','pip','install','--no-index','--no-deps','--no-compile','--find-links',str(wheelhouse),
                     '--target',str(site_packages),'-r',str(ROOT/'tools/tracker-requirements.lock.txt')],check=True)
+    tracker_source_sha = None
     for relative in RUNTIME_FILES:
         destination = tracker/relative
         destination.parent.mkdir(parents=True,exist_ok=True)
-        destination.write_bytes(subprocess.check_output(['git','-C',str(technology_root),'show',version['revision']+':python_tracker/'+relative]))
+        source = subprocess.check_output(['git','-C',str(technology_root),'show',version['revision']+':python_tracker/'+relative])
+        if relative == 'tracker.py':
+            tracker_source_sha = hashlib.sha256(source).hexdigest()
+            source = portable_tracker_source(source)
+        destination.write_bytes(source)
     shutil.copyfile(model,tracker/'face_landmarker.task')
     shutil.copyfile(ROOT/'tools/tracker-requirements.lock.txt',tracker/'tracker-requirements.lock.txt')
     technology = output/'.runtime/technology'
@@ -107,6 +123,8 @@ def build_tracker(output, downloads, technology_root):
     shutil.copyfile(ROOT/'tools/portable-runtime.json',output/'tools/portable-runtime.json')
     manifest = {'schemaVersion':1,'pythonVersion':version['pythonVersion'],'pythonArchiveSha256':pinned['python']['sha256'],
                 'technologyRevision':version['revision'],'modelSha256':version['faceModelSha256'],'wheels':wheels,
+                'trackerSourceSha256':tracker_source_sha,'trackerCompatibilityPatch':MODEL_LOADING_PATCH,
+                'portableTrackerSha256':sha256_file(tracker/'tracker.py'),
                 'layout':'Fresh CPython embeddable distribution and verified wheels; not a copied development venv'}
     (tracker/'portable-tracker.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     notices = output/'Notices/PortableTracker'
