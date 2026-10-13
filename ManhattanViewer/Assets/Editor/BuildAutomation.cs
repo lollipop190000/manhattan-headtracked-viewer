@@ -88,6 +88,8 @@ namespace Manhattan.Editor
             var windowFrame = AssetDatabase.LoadAssetAtPath<Material>("Assets/Resources/WindowFrameMaterial.mat");
             if(windowFrame==null){windowFrame=new Material(Shader.Find("Universal Render Pipeline/Lit"));AssetDatabase.CreateAsset(windowFrame,"Assets/Resources/WindowFrameMaterial.mat");}
             windowFrame.SetColor("_BaseColor",new Color(.13f,.16f,.19f));windowFrame.SetFloat("_Metallic",.4f);windowFrame.SetFloat("_Smoothness",.65f);EditorUtility.SetDirty(windowFrame);
+            // Keep the shader_feature_local variant in players, not only in the Editor.
+            windowFrame.SetFloat("_ReceiveShadows",0f);windowFrame.EnableKeyword("_RECEIVE_SHADOWS_OFF");
             const string scenePath = "Assets/Scenes/ManhattanViewer.unity";
             Scene scene = PrepareViewerScene(scenePath, windowFrame);
             RenderSettings.skybox = sky; RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;

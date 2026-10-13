@@ -95,13 +95,21 @@ public sealed class CitySunlightTests
         {
             for(int run=0;run<2;run++)
             {
+                var frameTemplate=Resources.Load<Material>("WindowFrameMaterial");
+                string templateKeywords=string.Join(";",frameTemplate.shaderKeywords.OrderBy(k=>k));
+                float templateReceive=frameTemplate.GetFloat("_ReceiveShadows");
+                var templateColor=frameTemplate.GetColor("_BaseColor");
                 var host=Own(new GameObject("sunlight UI"));host.SetActive(false);
                 var app=host.AddComponent<ManhattanBootstrap>();app.catalog=Own(ScriptableObject.CreateInstance<CityCatalog>());
                 host.SetActive(true); yield return null;
                 var sun=app.Rendering.Sunlight; Assert.That(sun.Moving,Is.False);Assert.That(sun.Position,Is.EqualTo(.6f));
                 Assert.That(app.Frame.FrameMaterial.GetFloat("_ReceiveShadows"),Is.Zero);
                 Assert.That(app.Frame.FrameMaterial.IsKeywordEnabled("_RECEIVE_SHADOWS_OFF"),Is.True);
-                Assert.That(Resources.Load<Material>("WindowFrameMaterial").IsKeywordEnabled("_RECEIVE_SHADOWS_OFF"),Is.False,"Imported template must remain unchanged.");
+                Assert.That(app.Frame.FrameMaterial,Is.Not.SameAs(frameTemplate));
+                Assert.That(frameTemplate.IsKeywordEnabled("_RECEIVE_SHADOWS_OFF"),Is.True,"The build template must retain the local shader variant.");
+                Assert.That(string.Join(";",frameTemplate.shaderKeywords.OrderBy(k=>k)),Is.EqualTo(templateKeywords),"Runtime must not mutate the authored template.");
+                Assert.That(frameTemplate.GetFloat("_ReceiveShadows"),Is.EqualTo(templateReceive));
+                Assert.That(frameTemplate.GetColor("_BaseColor"),Is.EqualTo(templateColor));
                 var city=app.Flight.CityPosition;var calibration=JsonUtility.ToJson(app.Display.Calibration);var preferences=JsonUtility.ToJson(app.Preferences);
                 var buttons=host.GetComponentsInChildren<UnityEngine.UI.Button>(true);
                 buttons.Single(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text=="Move sun slowly").onClick.Invoke();
