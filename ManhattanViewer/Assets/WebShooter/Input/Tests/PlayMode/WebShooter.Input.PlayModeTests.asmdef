@@ -1,0 +1,7 @@
+{
+  "name": "WebShooter.Input.PlayModeTests",
+  "rootNamespace": "WebShooter.Input.Tests",
+  "references": ["WebShooter.Input", "HeadTracked.Display"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}
