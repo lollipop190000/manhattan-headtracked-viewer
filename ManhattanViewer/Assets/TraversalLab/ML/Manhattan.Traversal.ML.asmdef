@@ -1,0 +1,7 @@
+{
+  "name": "Manhattan.Traversal.ML",
+  "references": ["Manhattan.Traversal.Lab", "WebShooter.Swing.Core", "WebShooter.Swing.Viewer", "Manhattan.Viewer.Runtime", "Unity.ML-Agents"],
+  "defineConstraints": ["TRAVERSAL_MLAGENTS"],
+  "versionDefines": [{"name":"com.unity.ml-agents","expression":"4.1.0","define":"TRAVERSAL_MLAGENTS"}],
+  "autoReferenced": true
+}

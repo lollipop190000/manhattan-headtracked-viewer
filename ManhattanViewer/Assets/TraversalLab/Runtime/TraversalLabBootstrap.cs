@@ -10,9 +10,9 @@ namespace Manhattan.TraversalLab
             Application.runInBackground=true;Time.fixedDeltaTime=1f/60;
             if(LabArguments.Has("--traversal-agent"))
             {
-                var type=Type.GetType("Manhattan.TraversalLab.TraversalAgent, Manhattan.Traversal.ML");
+                var type=Type.GetType("Manhattan.TraversalLab.TraversalAgentLauncher, Manhattan.Traversal.ML");
                 if(type==null){Debug.LogError("Install the pinned ML-Agents package before building the agent environment.");Application.Quit(2);return;}
-                gameObject.AddComponent(type);return;
+                type.GetMethod("Install").Invoke(null,new object[]{gameObject});return;
             }
             if(LabArguments.Has("--scripted-flow"))
             {
