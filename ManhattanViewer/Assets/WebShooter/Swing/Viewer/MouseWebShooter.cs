@@ -28,7 +28,9 @@ namespace WebShooter.Swing
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (!ManhattanBootstrap.HasArgument("-runTests") && !ManhattanBootstrap.HasArgument("--benchmark")) new GameObject("Web Traversal").AddComponent<MouseWebShooter>();
+            if (!ManhattanBootstrap.HasArgument("-runTests") && !ManhattanBootstrap.HasArgument("--benchmark") &&
+                !ManhattanBootstrap.HasArgument("--traversal-agent") && !ManhattanBootstrap.HasArgument("--scripted-flow") &&
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name!="TraversalLab") new GameObject("Web Traversal").AddComponent<MouseWebShooter>();
         }
         private void Update()
         {
