@@ -300,7 +300,8 @@ namespace WebShooter.Swing
                     attachmentTakeupRemaining = Mathf.Max(0f, attachmentTakeupRemaining - h);
                 }
                 if (Settings.ratchetRope && reel == 0f && dist < RopeLength) RopeLength = Mathf.Max(Settings.minRopeLength, dist);
-                if (dist > RopeLength && dist > 1e-6f)
+                bool taut=Settings.features.tensionOnlyRope?dist>=RopeLength:dist>RopeLength;
+                if (taut && dist > 1e-6f)
                 {
                     Vector3 n = d / dist;
                     p = Anchor + n * RopeLength;          // 줄이 늘어나지 않게 위치를 구 위로 되돌린다
