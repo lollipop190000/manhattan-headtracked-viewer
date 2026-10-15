@@ -8,6 +8,7 @@ namespace Manhattan.TraversalLab
         private void Awake()
         {
             Application.runInBackground=true;Time.fixedDeltaTime=1f/60;
+            if(LabArguments.Has("--measure-pacing")){gameObject.AddComponent<PacingMeasurement>();return;}
             if(LabArguments.Has("--traversal-agent"))
             {
                 var type=Type.GetType("Manhattan.TraversalLab.TraversalAgentLauncher, Manhattan.Traversal.ML");

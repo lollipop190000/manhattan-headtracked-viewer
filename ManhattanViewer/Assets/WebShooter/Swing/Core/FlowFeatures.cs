@@ -36,5 +36,7 @@ namespace WebShooter.Swing
         [Min(0)] public float airTargetSpeed = 10f;
         public void SetFlow(bool value)
         { preserveSteeringMomentum=preserveGlancingContact=preserveTransitionMomentum=resetLengthAtWrap=value; }
+        public void SetPacing(bool value)
+        { tensionOnlyRope=attachmentDrop=gentleReel=assistAnchor=releaseBoost=softSpeedLimit=fixedAttachmentDelay=value; }
     }
 }

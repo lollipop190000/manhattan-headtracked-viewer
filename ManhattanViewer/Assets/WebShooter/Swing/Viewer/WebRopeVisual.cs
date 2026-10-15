@@ -35,6 +35,8 @@ namespace WebShooter.Swing
         private float fade;
         private float attachmentAge;
         private bool wasAttached;
+        private bool pendingMark;
+        private Vector3 pendingMarkCity;
         public int RenderedPoints=>line!=null?line.positionCount:0;
         public IReadOnlyList<Vector3> VisibleKnots=>knots;
         public Transform Emitter { get=>emitter; set=>emitter=value; }
@@ -57,19 +59,26 @@ namespace WebShooter.Swing
         }
         private void AddMark(Vector3 city)
         {
+            pendingMark=true;pendingMarkCity=city;
+        }
+        private void CreatePendingMark()
+        {
+            pendingMark=false;Vector3 city=pendingMarkCity;
             marks.RemoveAll(m=>m==null);
             if(marks.Count>=16){Destroy(marks[0].gameObject);marks.RemoveAt(0);}
             var quad=GameObject.CreatePrimitive(PrimitiveType.Quad);quad.name="Web attachment mark";quad.layer=2;Destroy(quad.GetComponent<Collider>());
             quad.transform.SetParent(transform,true);var mark=quad.AddComponent<WebAnchorMark>();
             mark.Configure(city,input.ShotSurfaceNormal,origin,markMaterial,()=>input.Paused,attachmentMarkSize);marks.Add(mark);
         }
-        private void ReleaseMarks(){foreach(var mark in marks)if(mark!=null)mark.Release(attachmentMarkFade);}
+        private void ReleaseMarks(){pendingMark=false;foreach(var mark in marks)if(mark!=null)mark.Release(attachmentMarkFade);}
         private void LateUpdate()
         {
             if(input==null || Camera.main==null)return;
-            if(input.Body.Attached && !wasAttached)attachmentAge=0;
+            bool visualAttached=input.Body.Attached && !input.Flying;
+            if(visualAttached && !wasAttached)attachmentAge=0;
             else if(!input.Paused)attachmentAge+=Time.deltaTime;
-            wasAttached=input.Body.Attached;
+            wasAttached=visualAttached;
+            if(pendingMark && visualAttached)CreatePendingMark();
             Vector3 offset=origin!=null?origin.Offset:Vector3.zero;
             bool visible=input.Enabled && (input.Flying?input.ShotAge>=WebSwingMotionInput.GestureSeconds:input.Body.Attached);
             Vector3 start=emitter!=null?emitter.position:hands!=null?hands.WebOrigin:

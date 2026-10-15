@@ -21,7 +21,7 @@ namespace WebShooter.Swing
             markRenderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
             transform.rotation=SurfaceRotation(normal);transform.localScale=Vector3.one*diameter;Place();
         }
-        public void Release(float seconds){duration=Mathf.Max(.01f,seconds);remaining=duration;}
+        public void Release(float seconds){if(remaining>=0)return;duration=Mathf.Max(.01f,seconds);remaining=duration;}
         private void Place()=>transform.position=city-(origin!=null?origin.Offset:Vector3.zero)+normal*.015f;
         private void LateUpdate()
         {

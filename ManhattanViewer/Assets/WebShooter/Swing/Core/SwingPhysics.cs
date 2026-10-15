@@ -54,6 +54,7 @@ namespace WebShooter.Swing
         public string LastCollisionName { get; private set; } = "";
         public int ContactSequence { get; private set; }
         public float TensionAcceleration { get; private set; }
+        public float RopeCorrectionMetres { get; private set; }
         private bool wallRunning;
         private bool yanking, yankContact, yankExhausted;
         private Vector3 yankDirection;
@@ -271,6 +272,7 @@ namespace WebShooter.Swing
         private void Substep(float h, Vector3 steering, Vector3 gravity, float reel)
         {
             TensionAcceleration=0;
+            RopeCorrectionMetres=0;
             AdvanceYank(h);
             if (Settings.features.preserveSteeringMomentum && !Braking && !wallRunning && !Grounded && steering.sqrMagnitude > .0001f)
             {
@@ -318,6 +320,7 @@ namespace WebShooter.Swing
                 if (taut && dist > 1e-6f)
                 {
                     Vector3 n = d / dist;
+                    RopeCorrectionMetres=Mathf.Max(0,dist-RopeLength);
                     p = Anchor + n * RopeLength;          // 줄이 늘어나지 않게 위치를 구 위로 되돌린다
                     float outward = Vector3.Dot(v, n);
                     TensionAcceleration=Mathf.Max(0,outward)/h;
