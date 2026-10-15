@@ -162,6 +162,7 @@ namespace WebShooter.Swing
             if (distance < Settings.minRopeLength) return false;
             Anchor = anchor;
             RopeLength = distance;
+            if(Settings.features.attachmentDrop)RopeLength=Mathf.Clamp(distance*Settings.features.initialLengthRatio,Settings.minRopeLength,250f);
             Attached = true;
             attachmentTakeupRemaining = Mathf.Max(0f, Settings.attachmentTakeupSeconds);
             if (Settings.attachPull > 0f) Velocity += (anchor - Position) / distance * Settings.attachPull;
@@ -289,6 +290,9 @@ namespace WebShooter.Swing
 
             if (Attached)
             {
+                if(Settings.features.gentleReel && reel==0f && Velocity.y<0 && Position.y>FloorY+3 &&
+                    Vector3.Distance(Position,Anchor)>=RopeLength-.05f)
+                    RopeLength=Mathf.Max(Settings.minRopeLength,RopeLength-Settings.features.gentleReelSpeed*h);
                 if (reel != 0f) attachmentTakeupRemaining = 0f;
                 if (reel != 0f) RopeLength = Mathf.Clamp(RopeLength - reel * (reel > 0f ? Settings.reelSpeed : Settings.payoutSpeed) * h, Settings.minRopeLength, 250f);
                 Vector3 d = p - Anchor;

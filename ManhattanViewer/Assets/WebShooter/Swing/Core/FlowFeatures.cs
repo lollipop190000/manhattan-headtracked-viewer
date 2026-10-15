@@ -11,6 +11,10 @@ namespace WebShooter.Swing
         [SerializeField] public bool preserveTransitionMomentum;
         [SerializeField] public bool resetLengthAtWrap;
         [SerializeField] public bool tensionOnlyRope;
+        [SerializeField] public bool attachmentDrop;
+        [SerializeField] public bool gentleReel;
+        [Range(.8f,1.3f)] public float initialLengthRatio=1.08f;
+        [Range(0,2)] public float gentleReelSpeed=.6f;
         [Range(0,1)] public float yankExitSpeedRatio = .5f;
         [Min(0)] public float yankWallClearance = .65f;
         [Range(0,1)] public float yankStartBlend = .65f;
