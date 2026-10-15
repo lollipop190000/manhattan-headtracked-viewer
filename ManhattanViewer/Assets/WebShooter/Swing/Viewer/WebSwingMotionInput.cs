@@ -58,6 +58,7 @@ namespace WebShooter.Swing
 
         public event Action<Vector3> WebAttached;
         public event Action WebReleased;
+        public event Action<float> InputFireRequested;
         public event Action<TraversalSample> PhysicsStepped;
         public float SimulatedTime { get; private set; }
         private Vector3 lastStepVelocity;
@@ -144,6 +145,7 @@ namespace WebShooter.Swing
         private MotionCommand SampleCore(float deltaTime)
         {
             MotionCommand input = look != null ? look.Sample(deltaTime) : default;
+            if(look is ITraversalInputSource traversal)ApplyActions(traversal.ReadActions());
             if (!Enabled) return input;
             EnsureInitialized();
             if (CanSimulate != null) Paused = !CanSimulate();
@@ -251,6 +253,18 @@ namespace WebShooter.Swing
                 cityPosition = Body.Position,
                 cityRotation = Quaternion.Euler(pitch, yaw, 0f)
             };
+        }
+        private void ApplyActions(TraversalActions a)
+        {
+            Paused=!a.active;
+            if(!a.active){Release();ReelInput=0;JumpRequested=false;return;}
+            if(a.toggleFlight){Release();if(Enabled)Enabled=false;else Activate();}
+            if(!Enabled)return;
+            ReelInput=Mathf.Clamp(a.reel,-1,1);JumpRequested|=a.jump;
+            Body.AssistStrength=Mathf.Clamp01(Body.AssistStrength+a.assistDelta);
+            if(a.firePressed)InputFireRequested?.Invoke(a.viewportX);
+            HandleMouseHold(true,a.firePressed,a.fireHeld,a.aim);
+            if(a.release)Release();
         }
         private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }
