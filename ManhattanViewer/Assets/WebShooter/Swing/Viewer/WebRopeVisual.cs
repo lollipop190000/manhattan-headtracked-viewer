@@ -71,7 +71,7 @@ namespace WebShooter.Swing
             else if(!input.Paused)attachmentAge+=Time.deltaTime;
             wasAttached=input.Body.Attached;
             Vector3 offset=origin!=null?origin.Offset:Vector3.zero;
-            bool visible=input.Enabled && ((input.Flying && input.ShotAge>=WebSwingMotionInput.GestureSeconds)||input.Body.Attached);
+            bool visible=input.Enabled && (input.Flying?input.ShotAge>=WebSwingMotionInput.GestureSeconds:input.Body.Attached);
             Vector3 start=emitter!=null?emitter.position:hands!=null?hands.WebOrigin:
                 Camera.main.transform.position+Camera.main.transform.right*.25f-Camera.main.transform.up*.2f+Camera.main.transform.forward*.6f;
             Vector3 end=input.Flying?Vector3.Lerp(start,input.ShotTarget-offset,input.ShotProgress):input.ShotTarget-offset;

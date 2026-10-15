@@ -4,6 +4,21 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class TraversalPacingFeatureTests
     {
+        [TestCase(20)][TestCase(200)] public void FixedPhysicalAttachmentIsIndependentOfVisualDistance(float distance)
+        {
+            var rig=new GameObject();var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);WebSwingMotionInput input=null;
+            try
+            {
+                wall.layer=30;wall.transform.position=new Vector3(0,100,distance);wall.transform.localScale=new Vector3(30,30,1);
+                var flight=rig.AddComponent<Manhattan.Viewer.FreeFlightController>();flight.SetPose(Vector3.up*100,Quaternion.identity);
+                var s=WebSwingMotionInput.TraversalSettings();s.gravity=0;s.features.fixedAttachmentDelay=true;
+                input=new WebSwingMotionInput(null,flight,null,s);Physics.SyncTransforms();Assert.That(input.TryFire(new Ray(flight.CityPosition,Vector3.forward)),Is.True);
+                float age=0;while(!input.Body.Attached && age<.1f){var c=input.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);age+=1f/120;}
+                Assert.That(age,Is.LessThanOrEqualTo(.05f));Assert.That(input.Flying,Is.True);
+                TestContext.WriteLine($"PACING distance={distance} physicalAttachSeconds={age:F6}");
+            }
+            finally{input?.Collision.Dispose();Object.DestroyImmediate(rig);Object.DestroyImmediate(wall);}
+        }
         [Test] public void SoftLimitDoesNotChopAnOverspeedVelocityInOneStep()
         {
             var s=WebSwingMotionInput.TraversalSettings();s.gravity=0;s.airDrag=0;s.features.softSpeedLimit=true;

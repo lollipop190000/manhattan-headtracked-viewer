@@ -54,6 +54,7 @@ namespace WebShooter.Swing
         public Vector3 ShotSurfaceNormal { get; private set; } = Vector3.up;
         public float ShotProgress { get; private set; }
         private float shotDuration;
+        private bool shotAttached;
         private Collider shotCollider;
 
         public event Action<Vector3> WebAttached;
@@ -101,6 +102,7 @@ namespace WebShooter.Swing
             ShotProgress = 0f; ShotAge = 0f;
             shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
             Flying = true;
+            shotAttached=false;
             return true;
         }
 
@@ -120,6 +122,7 @@ namespace WebShooter.Swing
         {
             MouseOwnsRope = false;
             Flying = false;
+            shotAttached=false;
             Route.Clear();
             if (!Body.Attached) return;
             Body.Release(allowBoost);
@@ -184,11 +187,17 @@ namespace WebShooter.Swing
                 ShotAge += deltaTime;
                 ShotProgress = Mathf.Clamp01((ShotAge - GestureSeconds) / shotDuration);
                 if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy) Release();
-                else if (ShotProgress >= 1f)
+                else
                 {
-                    Flying = false;
-                    // Attachment is passive. Space, W and manual reeling are explicit movement inputs.
-                    if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
+                    bool ready=Body.Settings.features.fixedAttachmentDelay?
+                        ShotAge>=Body.Settings.features.attachmentDelaySeconds:ShotProgress>=1f;
+                    if(!shotAttached && ready)
+                    {
+                        shotAttached=true;
+                        if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
+                        else Release();
+                    }
+                    if(ShotProgress>=1f)Flying=false;
                 }
             }
             if (Body.Attached)
@@ -203,7 +212,7 @@ namespace WebShooter.Swing
                 bool attached = Body.Attached;
                 bool jumped = Body.Jump(); JumpRequested = false;
                 Debug.Log($"TRAVERSAL_JUMP accepted={jumped} position={Body.Position} velocity={Body.Velocity}");
-                if (attached && !Body.Attached) WebReleased?.Invoke();
+                if (attached && !Body.Attached) NotifyExternalRelease();
             }
             float remaining = Mathf.Min(deltaTime, .1f);
             while (remaining > .000001f)
@@ -214,7 +223,7 @@ namespace WebShooter.Swing
                 Body.WallRunRequested = input.localMovement.z > .1f;
                 bool wantsWall = Body.WallRunRequested && (!Body.Attached || Body.Settings.features.preserveGlancingContact) && !Body.Grounded;
                 Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false) : Vector3.zero, wantsWall, h);
-                if (attached && !Body.Attached) WebReleased?.Invoke();
+                if (attached && !Body.Attached) NotifyExternalRelease();
                 Vector3 before = Body.Position;
                 if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
                 if (AutomaticCruiseAssist && input.localMovement.z > .1f && !Body.Grounded)
@@ -225,7 +234,7 @@ namespace WebShooter.Swing
                 Body.Position = Collision.Constrain(before, requested, false);
                 // The analytic ground plane applies its friction inside Step; roofs need the same treatment.
                 if (Body.Position.y > Body.FloorY + .01f) Body.ApplySurfaceFriction(h);
-                if (ropeBeforeContact && !Body.Attached) { WebReleased?.Invoke(); CollisionReleaseCount++; }
+                if (ropeBeforeContact && !Body.Attached) { NotifyExternalRelease(); CollisionReleaseCount++; }
                 // A solid wall wins over rope length. Repeatedly projecting into
                 // the wall and back out produced violent oscillation at short ropes.
                 if (Body.Attached && Vector3.Distance(Body.Position, Body.Anchor) > Body.RopeLength + .12f)
@@ -267,6 +276,8 @@ namespace WebShooter.Swing
             HandleMouseHold(true,a.firePressed,a.fireHeld,a.aim);
             if(a.release)Release(true);
         }
+        private void NotifyExternalRelease()
+        {Flying=false;shotAttached=false;MouseOwnsRope=false;Route.Clear();WebReleased?.Invoke();}
         private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }
 }
