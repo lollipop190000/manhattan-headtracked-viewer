@@ -61,6 +61,7 @@ namespace WebShooter.Swing
             hands = gameObject.AddComponent<TraversalHands>(); hands.Configure(swing, app.Display);
             swing.InputFireRequested+=x=>{hands.Select(x);lastFireFrame=Time.frameCount;};
             gameObject.AddComponent<WebRopeVisual>().Configure(swing, app.Origin, hands);
+            gameObject.AddComponent<TraversalSpeedEffects>().Configure(swing,Camera.main);
         }
         private void Fire(Ray ray)
         {
