@@ -13,6 +13,7 @@ namespace WebShooter.Swing
         [SerializeField,Min(0)] private float tremorStrength=1f;
         [SerializeField,Range(0,.02f)] private float maximumTremor=.004f;
         [SerializeField,Min(.0001f)] private float thickness=.0012f;
+        [SerializeField,Range(0,2)] private float minimumPixelWidth=1f;
         [SerializeField,Range(2,12)] private int strandCount=5;
         [SerializeField,Min(.1f)] private float textureRepeatsPerMetre=2f;
         [SerializeField] private Transform emitter;
@@ -22,6 +23,7 @@ namespace WebShooter.Swing
         private FloatingOrigin origin;
         private TraversalHands hands;
         private LineRenderer line;
+        private AnimationCurve renderedWidth;
         private Material material;
         private Texture2D strandTexture;
         private Texture2D markTexture;
@@ -49,7 +51,7 @@ namespace WebShooter.Swing
             material.SetColor("_Color",new Color(.83f,.85f,.84f,.88f));strandTexture=WebTextureFactory.Strand(strandCount);
             material.SetTexture("_MainTex",strandTexture);line.sharedMaterial=material;line.enabled=false;
             line.textureMode=LineTextureMode.Tile;line.textureScale=new Vector2(textureRepeatsPerMetre,1);
-            line.widthCurve=new AnimationCurve(new Keyframe(0,.65f),new Keyframe(1,1.15f));
+            renderedWidth=new AnimationCurve(new Keyframe(0,.65f),new Keyframe(1,1.15f));line.widthCurve=renderedWidth;
             markTexture=WebTextureFactory.RadialMark();markMaterial=new Material(material);markMaterial.SetTexture("_MainTex",markTexture);
             input.WebAttached+=AddMark;input.WebReleased+=ReleaseMarks;
             var tip=GameObject.CreatePrimitive(PrimitiveType.Sphere);tip.name="Travelling web knot";tip.layer=2;
@@ -89,7 +91,7 @@ namespace WebShooter.Swing
             {
                 knots.Add(start);
                 if(!input.Flying && input.Body.Attached && input.Route.Points.Count>0)
-                    foreach(var p in input.Route.Points)knots.Add(p-offset);
+                    for(int i=0;i<input.Route.Points.Count;i++)knots.Add(input.Route.Points[i]-offset);
                 else knots.Add(end);
                 lastCount=knots.Count;
                 for(int i=0;i<lastCount;i++)lastCityKnots[i]=knots[i]+offset;
@@ -115,6 +117,15 @@ namespace WebShooter.Swing
             line.positionCount=count;
             for(int i=0;i<count;i++)line.SetPosition(i,points[i]);
             line.widthMultiplier=thickness*(visible?1:fade/.3f);
+            if(knots.Count>1)
+            {
+                var camera=Camera.main;
+                float WorldPixel(Vector3 p)=>2f*Mathf.Max(.05f,Vector3.Dot(p-camera.transform.position,camera.transform.forward))/
+                    (Mathf.Max(.01f,Mathf.Abs(camera.projectionMatrix.m11))*Mathf.Max(1,camera.pixelHeight));
+                float first=Mathf.Max(.65f,minimumPixelWidth*WorldPixel(knots[0])/thickness);
+                float last=Mathf.Max(1.15f,minimumPixelWidth*WorldPixel(knots[knots.Count-1])/thickness);
+                renderedWidth.MoveKey(0,new Keyframe(0,first));renderedWidth.MoveKey(1,new Keyframe(1,last));line.widthCurve=renderedWidth;
+            }
         }
         private void OnDestroy()
         {

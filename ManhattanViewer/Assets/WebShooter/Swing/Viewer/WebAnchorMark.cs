@@ -9,7 +9,7 @@ namespace WebShooter.Swing
         private Vector3 city,normal;
         private FloatingOrigin origin;
         private Renderer markRenderer;
-        private readonly MaterialPropertyBlock properties=new MaterialPropertyBlock();
+        private MaterialPropertyBlock properties;
         private Func<bool> paused;
         private float remaining=-1,duration;
         public static Quaternion SurfaceRotation(Vector3 normal)=>Quaternion.LookRotation(normal.sqrMagnitude>.1f?normal:Vector3.up,
@@ -17,6 +17,7 @@ namespace WebShooter.Swing
         public void Configure(Vector3 position,Vector3 surfaceNormal,FloatingOrigin floatingOrigin,Material material,Func<bool> isPaused,float diameter)
         {
             city=position;normal=surfaceNormal.normalized;origin=floatingOrigin;paused=isPaused;
+            properties=new MaterialPropertyBlock();
             markRenderer=GetComponent<Renderer>();markRenderer.sharedMaterial=material;
             markRenderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
             transform.rotation=SurfaceRotation(normal);transform.localScale=Vector3.one*diameter;Place();

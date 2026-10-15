@@ -15,7 +15,8 @@ namespace Manhattan.TraversalLab.Editor
         [MenuItem("Tools/Traversal/Create test scene")]
         public static void CreateScene()
         {
-            var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
+            var scene=File.Exists(ScenePath)?EditorSceneManager.OpenScene(ScenePath,OpenSceneMode.Single):EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
+            foreach(var root in scene.GetRootGameObjects())if(root.GetComponentInChildren<TraversalLabBootstrap>(true)!=null)return;
             new GameObject("Traversal Lab").AddComponent<TraversalLabBootstrap>();EditorSceneManager.SaveScene(scene,ScenePath);
         }
         public static void BuildAgent()=>Build(true);

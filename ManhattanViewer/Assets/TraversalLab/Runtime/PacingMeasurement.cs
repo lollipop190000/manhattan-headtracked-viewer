@@ -13,6 +13,7 @@ namespace Manhattan.TraversalLab
         {
             public string name,outcome;
             public Vector3 anchor;
+            public Vector3 initialVelocity;
             public float ratio,attachSeconds=-1,initialDrop,bottomSpeed=-1,earlyConstraintCorrection,releaseSpeedBefore,releaseSpeedAfter,riseAfterRelease;
         }
         [Serializable] private sealed class Report {public List<Case> cases=new List<Case>();}
@@ -28,8 +29,13 @@ namespace Manhattan.TraversalLab
                 // Hold the actual anchor fixed for the speed/height/latency comparison.
                 // Cone selection is a separate aiming experiment, not a confound here.
                 settings.features.anchorAssistStrength=0;
-                var motion=new WebSwingMotionInput(null,flight,null,settings);motion.Activate();motion.Body.Velocity=Vector3.right*20;
-                var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);wall.layer=30;wall.transform.position=new Vector3(0,100,50);wall.transform.localScale=new Vector3(4,200,1);
+                var motion=new WebSwingMotionInput(null,flight,null,settings);motion.Activate();
+                result.initialVelocity=new Vector3(0,-1,1).normalized*30;motion.Body.Velocity=result.initialVelocity;
+                // An elevated anchor block leaves the measured pendulum plane free.
+                // A full-height wall blocks the far half-arc; sideways velocity instead
+                // creates an orbit whose apex need not reach the release phase.
+                var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);wall.name="Controlled elevated anchor";wall.layer=30;
+                wall.transform.position=new Vector3(0,150,50);wall.transform.localScale=new Vector3(4,2,1);
                 Physics.SyncTransforms();motion.WebAttached+=_=>result.attachSeconds=motion.ShotAge;
                 if(!motion.TryFire(new Ray(flight.CityPosition,new Vector3(0,50,50)))){result.outcome="ray_missed";report.cases.Add(result);Destroy(rig);Destroy(wall);yield return null;continue;}
                 result.anchor=motion.ShotTarget;
