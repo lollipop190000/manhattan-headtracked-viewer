@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 namespace WebShooter.Swing
 {
-    // One skinned draw per hand. Geometry lives at the physical screen, behind its depth-tested frame.
+    // One skinned draw per hand, with connected wrist and finger surfaces across articulated joints.
     [DefaultExecutionOrder(900)]
     public sealed class TraversalHands : MonoBehaviour
     {
@@ -21,6 +21,7 @@ namespace WebShooter.Swing
         private Material glove;
         private Texture2D fabric;
         private float extension, grip;
+        private readonly Quaternion[] smoothedPose = { Quaternion.identity, Quaternion.identity };
         public bool LeftSelected { get; private set; }
         public Vector3 WebOrigin { get; private set; }
         public static float WristDepth(float eyeZ, float scale, float reach) =>
@@ -36,17 +37,18 @@ namespace WebShooter.Swing
             var template=Resources.Load<Material>("WindowFrameMaterial");
             glove=new Material(template); glove.name="Crimson articulated glove";
             glove.SetShaderPassEnabled("MotionVectors",true);
-            glove.SetColor("_BaseColor",new Color(.48f,.018f,.03f));
-            fabric=new Texture2D(128,128,TextureFormat.RGBA32,false); fabric.name="Glove web stitching";
-            var pixels=new Color[128*128];
-            for(int y=0;y<128;y++) for(int x=0;x<128;x++)
+            glove.SetColor("_BaseColor",new Color(.62f,.025f,.04f));
+            fabric=new Texture2D(256,256,TextureFormat.RGBA32,true); fabric.name="Fine glove web stitching";
+            var pixels=new Color[256*256];
+            for(int y=0;y<256;y++) for(int x=0;x<256;x++)
             {
-                float ring=Mathf.Repeat(y+6f*Mathf.Sin(x*Mathf.PI/16),32);
-                bool seam=x%32<2 || ring<1.8f;
-                pixels[y*128+x]=seam?new Color(.18f,.18f,.18f):Color.white;
+                float ring=Mathf.Repeat(y+9f*Mathf.Sin(x*Mathf.PI/32),64);
+                bool seam=x%64<2 || ring<2f;
+                float weave=.92f+.08f*((x+y)%2);
+                pixels[y*256+x]=seam?new Color(.14f,.14f,.14f):new Color(weave,weave,weave);
             }
             fabric.SetPixels(pixels);fabric.Apply();glove.SetTexture("_BaseMap",fabric);
-            glove.SetFloat("_Smoothness",.26f); glove.enableInstancing=true;
+            glove.SetFloat("_Smoothness",.18f); glove.enableInstancing=true;
             for(int i=0;i<2;i++) hands[i]=Build(i==0?"Left glove":"Right glove");
         }
         private Hand Build(string name)
@@ -61,17 +63,30 @@ namespace WebShooter.Swing
                 for(int r=0;r<=rings;r++)
                 {
                     float t=r/(float)rings;
-                    // Extend rounded caps beyond the bone endpoints so joints overlap continuously.
-                    float radius=t<.15f?Mathf.Sin(t/.15f*Mathf.PI*.5f):t>.85f?Mathf.Sin((1f-t)/.15f*Mathf.PI*.5f):1f;
-                    radius=Mathf.Max(.015f,radius);
-                    if(bone==2) radius*=Mathf.Lerp(.68f,.95f,Mathf.Clamp01(t*2));
-                    float axial=bone<2?t*1.08f-.04f:t*1.3f-.15f;
+                    // Tapered anatomy instead of individually capped capsules. Only fingertips have caps.
+                    bool fingertip=bone>=3 && (bone-3)%3==2;
+                    float radius=bone==0?Mathf.Lerp(1f,.78f,t):bone==1?Mathf.Lerp(1.2f,.69f,t):
+                        bone==2?Mathf.Lerp(.64f,1f,Mathf.Sin(t*Mathf.PI*.5f)):
+                        Mathf.Lerp(1f,.88f,t)*(1f+.055f*Mathf.Sin(t*Mathf.PI));
+                    if(fingertip && t>.7f) radius*=Mathf.Sqrt(Mathf.Max(.0001f,1f-Mathf.Pow((t-.7f)/.3f,2)));
+                    float axial=t;
                     for(int s=0;s<=sides;s++)
                     {
                         float a=s*2*Mathf.PI/sides;var n=new Vector3(Mathf.Cos(a),Mathf.Sin(a),0);
-                        vertices.Add(new Vector3(n.x*radius,n.y*radius,axial));normals.Add(n);uv.Add(new Vector2(s/(float)sides,t));
+                        // Flatten palm/back slightly; keep rounded sides and fuller thumb-side palm.
+                        float palmDepth=bone==2 ? 1f+.18f*Mathf.Sin(t*Mathf.PI) : 1f;
+                        vertices.Add(new Vector3(n.x*radius,n.y*radius*palmDepth,axial));normals.Add(n);uv.Add(new Vector2(s/(float)sides,bone>=3?((bone-3)%3+t)/3f:t));
                         weights.Add(new BoneWeight{boneIndex0=bone,weight0=1});
                         if(r<rings && s<sides){int v=start+r*(sides+1)+s;triangles.Add(v);triangles.Add(v+1);triangles.Add(v+sides+1);triangles.Add(v+1);triangles.Add(v+sides+2);triangles.Add(v+sides+1);}
+                    }
+                }
+                if(bone==1 || bone==2 || (bone>=3 && (bone-3)%3!=0))
+                {
+                    int previous=start-(sides+1);
+                    for(int s=0;s<sides;s++)
+                    {
+                        triangles.Add(previous+s);triangles.Add(previous+s+1);triangles.Add(start+s);
+                        triangles.Add(previous+s+1);triangles.Add(start+s+1);triangles.Add(start+s);
                     }
                 }
             }
@@ -109,30 +124,35 @@ namespace WebShooter.Swing
                 Vector3 target=input.Body.Attached?input.Body.Anchor:input.ShotTarget;
                 var worldOrigin=display.ScreenPlane.TransformPoint(wrist);
                 // Fingers point up/out during the web gesture; the palm turns towards tension when gripping.
-                Quaternion pose=Quaternion.Euler(-65f+grip*22f,side*(12f-18f*grip),side*(-12f+grip*18f));
+                Quaternion pose=Quaternion.Euler(-48f+grip*13f,side*(10f-16f*grip),side*(-18f+grip*30f));
                 if(selected && active)
                 {
                     var camera=Camera.main;
                     if(camera!=null){var toward=display.ScreenPlane.InverseTransformDirection(target-input.Body.Position);if(toward.sqrMagnitude>.1f) pose=Quaternion.Slerp(pose,Quaternion.LookRotation(toward.normalized,Vector3.up),grip*.35f);}
                 }
-                Segment(h.bones[0],shoulder,elbow,.047f*scale,.04f*scale);
-                Segment(h.bones[1],elbow,wrist,.032f*scale,.027f*scale);
-                Vector3 palmEnd=wrist+pose*Vector3.forward*.09f*scale;
-                Segment(h.bones[2],wrist,palmEnd,.035f*scale,.017f*scale);
+                if(extension<.05f) smoothedPose[i]=pose;
+                smoothedPose[i]=Quaternion.Slerp(smoothedPose[i],pose,1f-Mathf.Exp(-16f*dt));pose=smoothedPose[i];
+                Segment(h.bones[0],shoulder,elbow,.039f*scale,.033f*scale);
+                Segment(h.bones[1],elbow,wrist,.029f*scale,.024f*scale);
+                Vector3 palmEnd=wrist+pose*Vector3.forward*.078f*scale;
+                Segment(h.bones[2],wrist,palmEnd,.032f*scale,.013f*scale);
                 int bone=3;
                 for(int finger=0;finger<5;finger++)
                 {
                     bool thumb=finger==4;
-                    float x=thumb?-.043f:((finger-1.5f)*.021f);
-                    Vector3 joint=wrist+pose*new Vector3(x*side,0,thumb?.032f:.078f)*scale;
-                    float curl=selected?Mathf.Lerp((finger==1 || finger==2)?1.5f:.12f,1.35f,grip):.65f;
-                    float length=thumb?.028f:(finger==3?.024f: finger==1?.035f:.031f);
-                    Quaternion digit=pose*Quaternion.Euler(0,thumb?-side*55f:side*(finger-1.5f)*4f,0);
+                    float x=thumb?-.025f:((finger-1.5f)*.017f);
+                    Vector3 joint=wrist+pose*new Vector3(x*side,thumb?-.006f:0,thumb?.027f:.075f-(finger==3?.006f:0))*scale;
+                    float length=thumb?.025f:(finger==3?.023f: finger==1?.033f:.030f);
+                    Quaternion digit=pose*Quaternion.Euler(thumb?-18f:0,thumb?-side*Mathf.Lerp(46f,28f,grip):side*(finger-1.5f)*3f,thumb?side*Mathf.Lerp(28f,65f,grip):0);
                     for(int part=0;part<3;part++)
                     {
-                        digit*=Quaternion.Euler(curl*(part==0?38:65),0,0);
+                        float folded=part==0?64f:part==1?88f:42f;
+                        float gesture=(finger==1 || finger==2)?folded:part==0?8f:4f;
+                        float bend=thumb?Mathf.Lerp(part==0?12f:8f,part==0?36f:40f,grip):Mathf.Lerp(gesture,folded+(finger==3?4f:0),grip);
+                        digit*=Quaternion.Euler(bend,0,0);
                         Vector3 end=joint+digit*Vector3.forward*length*scale*(part==0?1:part==1?.76f:.62f);
-                        Segment(h.bones[bone++],joint,end,(thumb?.010f:.0087f)*scale,(thumb?.009f:.008f)*scale);joint=end;
+                        float taper=part==0?1f:part==1?.88f:.76f;
+                        Segment(h.bones[bone++],joint,end,(thumb?.0105f:finger==3?.0068f:.0078f)*taper*scale,(thumb?.009f:.007f)*taper*scale);joint=end;
                     }
                 }
                 if(selected) WebOrigin=display.ScreenPlane.TransformPoint(wrist+pose*new Vector3(0,Mathf.Lerp(-.023f,-.012f,grip),Mathf.Lerp(.025f,.075f,grip))*scale);

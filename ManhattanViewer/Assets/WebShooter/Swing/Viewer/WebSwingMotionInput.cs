@@ -60,7 +60,7 @@ namespace WebShooter.Swing
 
         public static SwingSettings TraversalSettings() => new SwingSettings
         {
-            ratchetRope = true, gravity = 24f, airDrag = .01f, maxSpeed = 95f,
+            ratchetRope = false, gravity = 24f, airDrag = .01f, maxSpeed = 95f, groundFriction = 14f,
             airControl = 18f, jumpSpeed = 20f, launchForwardSpeed = 24f,
             cruiseSpeed = 52f, cruiseAcceleration = 20f
         };
@@ -176,13 +176,7 @@ namespace WebShooter.Swing
                 else if (ShotProgress >= 1f)
                 {
                     Flying = false;
-                    // Launch only after arrival. A cancelled tap must never impart an impulse.
-                    if (Body.AssistStrength > 0f && Body.Grounded && ShotTarget.y > Body.Position.y + 3f)
-                    {
-                        Body.Jump();
-                        var direction = Vector3.ProjectOnPlane(ShotTarget - Body.Position, Vector3.up).normalized;
-                        Body.Velocity += direction * (Body.Settings.launchForwardSpeed * Body.AssistStrength);
-                    }
+                    // Attachment is passive. Space, W and manual reeling are explicit movement inputs.
                     if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
                 }
             }
@@ -210,11 +204,14 @@ namespace WebShooter.Swing
                 if (attached && !Body.Attached) WebReleased?.Invoke();
                 Vector3 before = Body.Position;
                 if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
-                if (AutomaticCruiseAssist) Body.AssistCruise(h, input.localMovement.z < 0f);
+                if (AutomaticCruiseAssist && input.localMovement.z > .1f && !Body.Grounded)
+                    Body.AssistCruise(h, false);
                 Body.Step(h, steer, Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
                 Vector3 requested = Body.Position;
                 bool ropeBeforeContact = Body.Attached;
                 Body.Position = Collision.Constrain(before, requested, false);
+                // The analytic ground plane applies its friction inside Step; roofs need the same treatment.
+                if (Body.Position.y > Body.FloorY + .01f) Body.ApplySurfaceFriction(h);
                 if (ropeBeforeContact && !Body.Attached) { WebReleased?.Invoke(); CollisionReleaseCount++; }
                 // A solid wall wins over rope length. Repeatedly projecting into
                 // the wall and back out produced violent oscillation at short ropes.

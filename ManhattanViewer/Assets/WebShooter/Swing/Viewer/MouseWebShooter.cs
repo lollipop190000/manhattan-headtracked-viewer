@@ -107,7 +107,7 @@ namespace WebShooter.Swing
                 return;
             }
             GUI.Label(new Rect(Screen.width * .5f - 8, Screen.height * .5f - 12, 20, 24), "+");
-            GUI.Label(new Rect(12, Screen.height - 52, 1100, 24), "HOLD LMB: swing | Let go: release | RMB: cancel | W: boost | E/Q: reel in/out | R: flight");
+            GUI.Label(new Rect(12, Screen.height - 52, 1200, 24), "Space: jump | HOLD LMB: attach | Let go: release | W: boost | E/Q: reel in/out | R: flight");
             GUI.Label(new Rect(12, Screen.height - 28, 800, 24), swing.Enabled ? $"{swing.Body.State} | {swing.Body.Velocity.magnitude:0.0} m/s | Assist {swing.Body.AssistStrength:0.00} ([ / ])" : "Free flight (wall collision ON)");
         }
         private void OnDestroy()

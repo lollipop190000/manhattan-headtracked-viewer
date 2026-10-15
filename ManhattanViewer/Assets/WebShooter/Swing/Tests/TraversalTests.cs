@@ -123,7 +123,7 @@ namespace WebShooter.Swing.Tests
             b.AssistStrength = 1; b.AssistCruise(.1f, false); Assert.That(b.Velocity.z, Is.EqualTo(21.2f).Within(.001f));
             b.Release(); var v = b.Velocity; b.AssistCruise(.1f, false); Assert.That(b.Velocity, Is.EqualTo(v));
         }
-        [Test] public void HighShotAutomaticallyLaunchesButMissDoesNot()
+        [Test] public void HighShotIsPassiveAndSpaceLaunchesWithRopeStillAttached()
         {
             var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             try
@@ -138,7 +138,10 @@ namespace WebShooter.Swing.Tests
                 Assert.That(input.Body.Attached, Is.False, "gesture completes before launch");
                 input.Sample(.1f);
                 Assert.That(input.Body.Attached, Is.True);
-                Assert.That(input.Body.Velocity.y, Is.GreaterThan(12)); Assert.That(input.Body.Velocity.z, Is.GreaterThan(10));
+                Assert.That(input.Body.Velocity, Is.EqualTo(Vector3.zero), "holding a web alone cannot launch");
+                Assert.That(input.Body.Jump(),Is.True);
+                Assert.That(input.Body.Velocity.y,Is.EqualTo(20));
+                Assert.That(input.Body.Attached,Is.True,"ground jump keeps the web for the first arc");
                 input.Activate(); input.Body.AssistStrength = 0;
                 input.TryFire(new Ray(flight.CityPosition, new Vector3(0, 10, 20)));
                 Assert.That(input.Body.Velocity, Is.EqualTo(Vector3.zero));
@@ -160,14 +163,14 @@ namespace WebShooter.Swing.Tests
             b.AssistRope(.1f); Assert.That(b.RopeLength, Is.EqualTo(99f).Within(.001f));
             b.AssistStrength = 0; b.AssistRope(.1f); Assert.That(b.RopeLength, Is.EqualTo(99f).Within(.001f));
         }
-        [Test] public void HighShotWithNoMovementInputFormsAnAirborneArc()
+        [Test] public void HoldingHighShotWithoutMovementStaysOnGround()
         {
             var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             try
             {
                 wall.layer = 30; wall.transform.position = new Vector3(0, 25, 50); wall.transform.localScale = new Vector3(100, 50, 1);
                 var flight = rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 1.85f, Quaternion.identity);
-                var input = new WebSwingMotionInput(null, flight, null) { AutomaticRopeAssist = true, AutomaticCruiseAssist = true };
+                var input = new WebSwingMotionInput(null, flight, null);
                 Physics.SyncTransforms(); Assert.That(input.TryFire(new Ray(flight.CityPosition, new Vector3(0, 30, 50))), Is.True);
                 float peak = 0, lateHeight = 0;
                 for (int i = 0; i < 360; i++)
@@ -178,7 +181,9 @@ namespace WebShooter.Swing.Tests
                     Assert.That(float.IsFinite(c.cityPosition.x + c.cityPosition.y + c.cityPosition.z), Is.True);
                     Assert.That(c.cityPosition.z, Is.LessThan(49.3f));
                 }
-                Assert.That(peak, Is.GreaterThan(8f)); Assert.That(lateHeight, Is.GreaterThan(3f));
+                Assert.That(peak, Is.EqualTo(1.85f).Within(.001f)); Assert.That(lateHeight, Is.EqualTo(1.85f).Within(.001f));
+                Assert.That(input.Body.Velocity.sqrMagnitude,Is.LessThan(.0001f));
+                input.Collision.Dispose();
             }
             finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
         }

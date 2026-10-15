@@ -134,6 +134,29 @@ namespace WebShooter.Swing
                 input.Body.Reset(start); input.Body.Velocity = Vector3.right * 12;
                 for (int i = 0; i < 400; i++) input.Body.UpdateWall(Vector3.back, true, .01f);
                 Check(input.Body.State == TraversalState.Airborne, "wall run timeout");
+                input.Collision.CitySolids = null;
+                wall.transform.position = new Vector3(0, 2000, 0); wall.transform.localScale = new Vector3(100, 2, 100);
+                flight.SetPose(new Vector3(0, 2003, 0), Quaternion.identity); input.Activate();
+                input.Body.Velocity = new Vector3(40, -10, 0);
+                for (int i = 0; i < 120; i++) { var c = input.Sample(1f / 120); flight.SetPose(c.cityPosition, c.cityRotation); }
+                Check(input.Body.Grounded && input.Body.Velocity.magnitude < .1f && input.Body.Position.x < 4f,
+                    "rooftop friction stops 40mps landing within four metres");
+                input.JumpRequested = true; input.Sample(1f / 120);
+                Check(input.Body.Velocity.y > 19f, "rooftop can jump after stopping");
+                wall.transform.position = new Vector3(30, 2040, 0); wall.transform.localScale = Vector3.one;
+                flight.SetPose(start, Quaternion.identity); input.Activate(); Physics.SyncTransforms();
+                Check(input.TryFire(new Ray(start, wall.transform.position - start)), "passive pendulum target hit");
+                for (int i = 0; i < 60; i++) { var c = input.Sample(1f / 120); flight.SetPose(c.cityPosition, c.cityRotation); }
+                float passiveLength = input.Body.RopeLength;
+                float passiveEnergy = .5f * input.Body.Velocity.sqrMagnitude + input.Body.Settings.gravity * input.Body.Position.y;
+                bool conserved = input.Body.Attached;
+                for (int i = 0; i < 1200; i++)
+                {
+                    var c = input.Sample(1f / 120); flight.SetPose(c.cityPosition, c.cityRotation);
+                    conserved &= input.Body.Attached && Mathf.Abs(input.Body.RopeLength - passiveLength) < .01f &&
+                        .5f * input.Body.Velocity.sqrMagnitude + input.Body.Settings.gravity * input.Body.Position.y <= passiveEnergy + 3f;
+                }
+                Check(conserved, "holding web for ten seconds adds no energy or automatic reeling");
                 input.Body.Position = start; input.Paused = true; input.Sample(.1f);
                 Check(input.Body.Position == start, "paused physics");
                 input.Collision.Dispose();

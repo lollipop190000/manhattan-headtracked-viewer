@@ -1,9 +1,44 @@
 using NUnit.Framework;
 using UnityEngine;
+using Manhattan.Viewer;
 namespace WebShooter.Swing.Tests
 {
     public class TraversalPacingTests
     {
+        [TestCase(30)][TestCase(60)][TestCase(120)]
+        public void PassivePendulumDoesNotGainEnergyOrShortenItsRope(int fps)
+        {
+            var b=new SwingPhysics(WebSwingMotionInput.TraversalSettings());
+            b.Reset(new Vector3(0,200,0));b.Attach(new Vector3(0,240,30));
+            float length=b.RopeLength, energy=b.Settings.gravity*b.Position.y;
+            for(int i=0;i<fps*20;i++)
+            {
+                b.Step(1f/fps);
+                Assert.That(b.Position.y,Is.LessThan(201),"no self-powered climb");
+                Assert.That(b.RopeLength,Is.EqualTo(length).Within(.001f));
+                Assert.That(.5f*b.Velocity.sqrMagnitude+b.Settings.gravity*b.Position.y,Is.LessThanOrEqualTo(energy+2));
+            }
+        }
+        [TestCase(30)][TestCase(60)][TestCase(120)]
+        public void RooftopLandingStopsQuicklyAndCanJumpAgain(int fps)
+        {
+            var rig=new GameObject();var roof=GameObject.CreatePrimitive(PrimitiveType.Cube);
+            WebSwingMotionInput motion=null;
+            try
+            {
+                roof.layer=30;roof.transform.position=new Vector3(0,100,0);roof.transform.localScale=new Vector3(100,2,100);
+                var flight=rig.AddComponent<FreeFlightController>();flight.SetPose(new Vector3(0,103,0),Quaternion.identity);
+                motion=new WebSwingMotionInput(null,flight,null);motion.Activate();motion.Body.Velocity=new Vector3(40,-10,0);
+                for(int i=0;i<fps;i++){var c=motion.Sample(1f/fps);flight.SetPose(c.cityPosition,c.cityRotation);}
+                Assert.That(motion.Body.Grounded,Is.True);
+                Assert.That(motion.Body.Position.y,Is.EqualTo(102.87f).Within(.04f));
+                Assert.That(motion.Body.Position.x,Is.LessThan(4));
+                Assert.That(motion.Body.Velocity.magnitude,Is.LessThan(.1f));
+                motion.JumpRequested=true;motion.Sample(1f/fps);
+                Assert.That(motion.Body.Velocity.y,Is.GreaterThan(18));
+            }
+            finally{motion?.Collision.Dispose();Object.DestroyImmediate(rig);Object.DestroyImmediate(roof);}
+        }
         [TestCase(30)][TestCase(60)][TestCase(120)]
         public void ReleaseRetainsSpeedAndFallIsFaster(int fps)
         {

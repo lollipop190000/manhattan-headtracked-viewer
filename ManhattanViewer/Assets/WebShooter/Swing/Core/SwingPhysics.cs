@@ -99,11 +99,21 @@ namespace WebShooter.Swing
         public bool Jump()
         {
             if (wallRunning) { Velocity += ContactNormal * 9f + Vector3.up * 7f; wallRunning = false; wallCooldown = .3f; }
-            else if (Attached) { Release(); Velocity += Vector3.up * (4f * AssistStrength); }
             else if (Grounded || Position.y <= FloorY + .03f) { Velocity = new Vector3(Velocity.x, Settings.jumpSpeed, Velocity.z); }
+            else if (Attached) { Release(); Velocity += Vector3.up * (4f * AssistStrength); }
             else return false;
             Grounded = false;
             return true;
+        }
+
+        public void ApplySurfaceFriction(float dt)
+        {
+            if (!Grounded || dt <= 0f) return;
+            Vector3 normal = ContactNormal.y > .65f ? ContactNormal.normalized : Vector3.up;
+            Vector3 tangent = Vector3.ProjectOnPlane(Velocity, normal);
+            Vector3 damped = tangent * Mathf.Exp(-Settings.groundFriction * dt);
+            if (damped.sqrMagnitude < .0025f) damped = Vector3.zero;
+            Velocity += damped - tangent;
         }
 
         public void Reset(Vector3 position)
@@ -191,6 +201,9 @@ namespace WebShooter.Swing
             Vector3 v = Velocity + (gravity + steering) * h;
             v *= Mathf.Exp(-Settings.airDrag * h);
             Vector3 p = Position + v * h;
+            // Resolve the supporting plane before rope tension so gravity cannot pull a resting
+            // body below the floor and turn that penetration into horizontal web propulsion.
+            if (p.y <= FloorY) { p.y = FloorY; if (v.y < 0f) v.y = 0f; }
 
             if (Attached)
             {
