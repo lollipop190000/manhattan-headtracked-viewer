@@ -9,6 +9,7 @@ namespace WebShooter.Swing
         [SerializeField,Range(20,30)] private int flightSegments=26;
         [SerializeField,Min(0)] private float firingAmplitude=.22f;
         [SerializeField,Range(1,8)] private float waveTurns=3f;
+        [SerializeField,Range(.1f,.15f)] private float settleSeconds=.12f;
         [SerializeField,Min(.0001f)] private float thickness=.0012f;
         [SerializeField] private Transform emitter;
         private WebSwingMotionInput input;
@@ -22,6 +23,8 @@ namespace WebShooter.Swing
         private bool previouslyVisible;
         private int lastCount;
         private float fade;
+        private float attachmentAge;
+        private bool wasAttached;
         public int RenderedPoints=>line!=null?line.positionCount:0;
         public Transform Emitter { get=>emitter; set=>emitter=value; }
         public void Configure(WebSwingMotionInput motion,FloatingOrigin floatingOrigin,TraversalHands traversalHands=null)
@@ -40,6 +43,9 @@ namespace WebShooter.Swing
         private void LateUpdate()
         {
             if(input==null || Camera.main==null)return;
+            if(input.Body.Attached && !wasAttached)attachmentAge=0;
+            else if(!input.Paused)attachmentAge+=Time.deltaTime;
+            wasAttached=input.Body.Attached;
             Vector3 offset=origin!=null?origin.Offset:Vector3.zero;
             bool visible=input.Enabled && ((input.Flying && input.ShotAge>=WebSwingMotionInput.GestureSeconds)||input.Body.Attached);
             Vector3 start=emitter!=null?emitter.position:hands!=null?hands.WebOrigin:
@@ -66,7 +72,8 @@ namespace WebShooter.Swing
             blob.gameObject.SetActive(visible && input.Flying);
             if(blob.gameObject.activeSelf){blob.position=end;blob.localScale=Vector3.one*Mathf.Lerp(.032f,.018f,input.ShotProgress);}
             if(!line.enabled)return;
-            float amplitude=input.Flying?WebVisualMath.FiringAmplitude(firingAmplitude,input.ShotProgress):0;
+            float amplitude=input.Flying?WebVisualMath.FiringAmplitude(firingAmplitude,input.ShotProgress):
+                input.Body.Attached?WebVisualMath.AttachmentAmplitude(firingAmplitude,attachmentAge,settleSeconds):0;
             int count=WebVisualMath.Resample(knots,points,flightSegments,amplitude,Time.time*24f,waveTurns);
             line.positionCount=count;
             for(int i=0;i<count;i++)line.SetPosition(i,points[i]);

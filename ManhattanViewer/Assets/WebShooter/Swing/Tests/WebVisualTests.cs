@@ -4,6 +4,12 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class WebVisualTests
     {
+        [Test] public void AttachmentHasSmallOvershootAndSettlesBy120Milliseconds()
+        {
+            Assert.That(WebVisualMath.AttachmentAmplitude(.22f,.03f,.12f),Is.GreaterThan(0));
+            Assert.That(WebVisualMath.AttachmentAmplitude(.22f,.09f,.12f),Is.LessThan(0));
+            Assert.That(WebVisualMath.AttachmentAmplitude(.22f,.12f,.12f),Is.Zero);
+        }
         [Test] public void FlightWaveHas27PointsFixedEndpointsAndDecayingAmplitude()
         {
             var p=new Vector3[512];var knots=new[]{Vector3.zero,Vector3.forward*20};
