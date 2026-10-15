@@ -15,6 +15,8 @@ namespace WebShooter.Swing
             yield return new WaitForSecondsRealtime(12);
             var app=FindFirstObjectByType<ManhattanBootstrap>();var shooter=FindFirstObjectByType<MouseWebShooter>();
             if(app==null || shooter==null || shooter.Motion==null){Application.Quit(2);yield break;}
+            float readyDeadline=Time.realtimeSinceStartup+60f;
+            while(app.Streamer.LoadedTiles==0 && Time.realtimeSinceStartup<readyDeadline) yield return null;
             var motion=shooter.Motion;var hands=shooter.GetComponent<TraversalHands>();shooter.enabled=false;app.Flight.enabled=false;
             motion.CanSimulate=()=>true;motion.Paused=false;
             string folder=Application.persistentDataPath;var args=Environment.GetCommandLineArgs();
@@ -27,8 +29,14 @@ namespace WebShooter.Swing
             {
                 motion.Release();app.Flight.SetPose(initialPosition,initialRotation);motion.Activate();hands.Select(side==0?.2f:.8f);
                 bool hit=false;
-                for(int y=8;y>=5&&!hit;y--)for(int x=1;x<10&&!hit;x++)
-                    hit=motion.HandleMouseHold(true,true,true,Camera.main.ViewportPointToRay(new Vector3(x*.1f,y*.1f,0)));
+                float deadline=Time.realtimeSinceStartup+30f;
+                while(!hit && Time.realtimeSinceStartup<deadline)
+                {
+                    Physics.SyncTransforms();
+                    for(int y=8;y>=3&&!hit;y--)for(int x=1;x<10&&!hit;x++)
+                        hit=motion.HandleMouseHold(true,true,true,Camera.main.ViewportPointToRay(new Vector3(x*.1f,y*.1f,0)));
+                    if(!hit) yield return new WaitForSecondsRealtime(.25f);
+                }
                 if(!hit){Debug.LogError("VISUAL_QA no city target");Application.Quit(3);yield break;}
                 for(int frame=0;frame<90;frame++)
                 {

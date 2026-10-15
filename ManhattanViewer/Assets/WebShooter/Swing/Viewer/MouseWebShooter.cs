@@ -103,7 +103,7 @@ namespace WebShooter.Swing
             if (swing == null) return;
             if (!app.KeyboardInput.Captured)
             {
-                GUI.Box(new Rect(12, Screen.height - 60, 620, 48), "Click to capture. Aim HIGH, then HOLD left mouse to swing. Release to detach.\nStable view by default. E: reel in | Q: reel out | R: flight");
+                GUI.Box(new Rect(12, Screen.height - 60, 740, 48), "Click to capture. Space: jump. Aim HIGH and HOLD left mouse to attach.\nW: boost | Let go: release | E: reel in | Q: reel out | R: flight");
                 return;
             }
             GUI.Label(new Rect(Screen.width * .5f - 8, Screen.height * .5f - 12, 20, 24), "+");

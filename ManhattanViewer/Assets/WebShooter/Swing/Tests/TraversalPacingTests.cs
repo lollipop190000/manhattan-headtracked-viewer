@@ -5,6 +5,27 @@ namespace WebShooter.Swing.Tests
 {
     public class TraversalPacingTests
     {
+        [Test] public void ShippingAdapterDoesNotPumpAnIdlePendulum()
+        {
+            var rig=new GameObject();var anchor=GameObject.CreatePrimitive(PrimitiveType.Cube);WebSwingMotionInput motion=null;
+            try
+            {
+                anchor.layer=30;anchor.transform.position=new Vector3(30,2040,0);
+                var flight=rig.AddComponent<FreeFlightController>();flight.SetPose(new Vector3(0,2000,0),Quaternion.identity);
+                motion=new WebSwingMotionInput(null,flight,null);motion.Activate();Physics.SyncTransforms();
+                Assert.That(motion.TryFire(new Ray(flight.CityPosition,anchor.transform.position-flight.CityPosition)),Is.True);
+                for(int i=0;i<60;i++){var c=motion.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                float length=motion.Body.RopeLength,energy=.5f*motion.Body.Velocity.sqrMagnitude+24f*motion.Body.Position.y;
+                for(int i=0;i<1200;i++)
+                {
+                    var c=motion.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);
+                    Assert.That(motion.Body.Attached,Is.True,$"frame {i}, position {motion.Body.Position}");
+                    Assert.That(motion.Body.RopeLength,Is.EqualTo(length).Within(.01f),$"frame {i}, corners {motion.Route.Points.Count}");
+                    Assert.That(.5f*motion.Body.Velocity.sqrMagnitude+24f*motion.Body.Position.y,Is.LessThanOrEqualTo(energy+3f),$"frame {i}");
+                }
+            }
+            finally {motion?.Collision.Dispose();Object.DestroyImmediate(rig);Object.DestroyImmediate(anchor);}
+        }
         [TestCase(30)][TestCase(60)][TestCase(120)]
         public void PassivePendulumDoesNotGainEnergyOrShortenItsRope(int fps)
         {

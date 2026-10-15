@@ -145,6 +145,9 @@ namespace WebShooter.Swing
         // Change the effective anchor at a wrap corner without moving the body or adding energy.
         public void RouteThrough(Vector3 anchor, float fixedLengthChange)
         {
+            // Do not repeatedly expand an unchanged rope to absorb projection rounding in city coordinates.
+            // Only a real corner insertion/removal needs a new effective length.
+            if (anchor == Anchor && Mathf.Abs(fixedLengthChange) < .00001f) return;
             Anchor = anchor;
             RopeLength = Mathf.Max(Mathf.Max(Settings.minRopeLength, Vector3.Distance(Position, anchor)), RopeLength - fixedLengthChange);
         }
