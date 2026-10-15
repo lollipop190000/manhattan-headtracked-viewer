@@ -49,6 +49,10 @@ The final detector follow-up removes a blind spot that excluded every non-collid
 | Pacing 6 | `34cc785` | 0.04 s physical delay separate from visible flight. Sampled attach latency not measured. |
 | Pacing 7 | `815521f` | Independently toggled projection expansion, shake, wind and edge lines; all default OFF. Performance/comfort not measured. |
 | Native fixtures | `caf43c2` | Matched fixed-input replay and three pacing cases. Prepared, not executed. |
+| Visual/trace hardening | `1859cb9` | Primitive-compatible shader, bounded delay, visible-marker limit. Static C# validation only. |
+| Evaluation hardening | `7437116` | Deterministic ONNX/Torch agreement for batches 1 and 3; seven Python aggregation checks. No learned-policy evaluation. |
+| Detector follow-up | `086211d` | Do not hide persistent stationary webs behind apex exclusion. Revised native detector suite not run. |
+| Attachment clock | `10a4d8e` | Advance flight/attachment on physical substeps and reset pending episode shots. Six distance/FPS combinations authored and compiled, not executed. |
 
 Configured values in this table are implementation parameters, not measurements. All seven pacing flags remain OFF by default. A rope ratio below one initially tightens toward the anchor; it does not provide drop clearance. Compare the 1.08 and 0.90 cases before selecting a gameplay default.
 
