@@ -25,5 +25,11 @@ namespace Manhattan.TraversalLab
             var light=new GameObject("Map sun").AddComponent<Light>();light.type=LightType.Directional;light.transform.rotation=Quaternion.Euler(50,-30,0);
         }
         private void OnDestroy()=>preview?.Dispose();
+        private void Start()
+        {
+            bool isolated=FindFirstObjectByType<Manhattan.Viewer.ManhattanBootstrap>()==null;
+            Debug.Log("TRAVERSAL_LAB_ISOLATED "+isolated);
+            if(!isolated){Debug.LogError("Traversal lab must not start the Manhattan viewer.");Application.Quit(4);}
+        }
     }
 }

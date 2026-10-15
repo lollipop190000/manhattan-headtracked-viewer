@@ -28,7 +28,7 @@ namespace Manhattan.Viewer
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void StartEmptyScene()
         {
-            if (HasArgument("-runTests")) return;
+            if (HasArgument("-runTests") || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "TraversalLab") return;
             if (FindFirstObjectByType<ManhattanBootstrap>() != null) return;
             var catalog = Resources.Load<CityCatalog>("CityCatalog");
             if (catalog == null) return;
