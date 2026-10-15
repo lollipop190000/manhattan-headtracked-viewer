@@ -21,7 +21,7 @@ namespace WebShooter.Swing
             line = gameObject.AddComponent<LineRenderer>();
             line.positionCount = 2;
             line.useWorldSpace = true;
-            line.widthMultiplier = .018f;
+            line.widthMultiplier = .0012f;
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var template = Resources.Load<Material>("WindowFrameMaterial");
             material = template != null ? new Material(template) : new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -58,7 +58,7 @@ namespace WebShooter.Swing
             }
             line.positionCount = count;
             for (int i = 0; i < count; i++) line.SetPosition(i, points[i]);
-            line.widthMultiplier = .018f * (visible ? 1f : fade / .3f);
+            line.widthMultiplier = .0012f * (visible ? 1f : fade / .3f);
 
         }
         private void OnDestroy() { if (material != null) Destroy(material); }

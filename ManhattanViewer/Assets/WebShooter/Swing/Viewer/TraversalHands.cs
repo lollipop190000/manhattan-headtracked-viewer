@@ -50,18 +50,19 @@ namespace WebShooter.Swing
             for(int bone=0;bone<h.bones.Length;bone++)
             {
                 h.bones[bone]=new GameObject("Joint "+bone).transform;h.bones[bone].SetParent(h.root,false);bind[bone]=Matrix4x4.identity;
-                int start=vertices.Count; const int rings=9,sides=12;
+                int start=vertices.Count; const int rings=14,sides=20;
                 for(int r=0;r<=rings;r++)
                 {
                     float t=r/(float)rings;
-                    float radius=Mathf.Sin(Mathf.PI*Mathf.Clamp(t*1.8f,.01f,1f));
-                    // Rounded ends with a broad shaft; palm uses the same smooth surface at different proportions.
-                    radius=t<.18f?Mathf.Sin(t/.18f*Mathf.PI*.5f):t>.82f?Mathf.Sin((1f-t)/.18f*Mathf.PI*.5f):1f;
+                    // Extend rounded caps beyond the bone endpoints so joints overlap continuously.
+                    float radius=t<.15f?Mathf.Sin(t/.15f*Mathf.PI*.5f):t>.85f?Mathf.Sin((1f-t)/.15f*Mathf.PI*.5f):1f;
                     radius=Mathf.Max(.015f,radius);
+                    if(bone==2) radius*=Mathf.Lerp(.68f,.95f,Mathf.Clamp01(t*2));
+                    float axial=t*1.3f-.15f;
                     for(int s=0;s<=sides;s++)
                     {
                         float a=s*2*Mathf.PI/sides;var n=new Vector3(Mathf.Cos(a),Mathf.Sin(a),0);
-                        vertices.Add(new Vector3(n.x*radius,n.y*radius,t));normals.Add(n);uv.Add(new Vector2(s/(float)sides,t));
+                        vertices.Add(new Vector3(n.x*radius,n.y*radius,axial));normals.Add(n);uv.Add(new Vector2(s/(float)sides,t));
                         weights.Add(new BoneWeight{boneIndex0=bone,weight0=1});
                         if(r<rings && s<sides){int v=start+r*(sides+1)+s;triangles.Add(v);triangles.Add(v+1);triangles.Add(v+sides+1);triangles.Add(v+1);triangles.Add(v+sides+2);triangles.Add(v+sides+1);}
                     }
@@ -84,7 +85,7 @@ namespace WebShooter.Swing
             extension=Mathf.MoveTowards(extension,active?1:0,dt*9);
             grip=Mathf.MoveTowards(grip,input.Body.Attached?1:0,dt*7);
             Rect aperture=display.ProjectionScreenRectMeters;
-            float scale=Mathf.Clamp(aperture.width/.55f,.55f,1.8f);
+            float scale=Mathf.Clamp(aperture.width/.55f,.55f,1.8f)*.78f;
             for(int i=0;i<2;i++)
             {
                 var h=hands[i];if(h==null)continue;
@@ -92,7 +93,7 @@ namespace WebShooter.Swing
                 h.renderer.enabled=input.Enabled;
                 float side=i==0?-1:1;bool selected=(i==0)==LeftSelected;
                 float reach=selected?Mathf.SmoothStep(0,1,extension):0;
-                Vector3 wrist=new Vector3(aperture.center.x+side*aperture.width*(.34f-.12f*reach),aperture.yMin+aperture.height*(.04f+.29f*reach),(.08f-.12f*reach)*scale);
+                Vector3 wrist=new Vector3(aperture.center.x+side*aperture.width*(.36f-.13f*reach),aperture.yMin+aperture.height*(-.05f+.34f*reach),(.08f-.12f*reach)*scale);
                 Vector3 elbow=new Vector3(aperture.center.x+side*aperture.width*.52f,aperture.yMin-.13f*scale,.16f*scale);
                 Vector3 shoulder=new Vector3(aperture.center.x+side*aperture.width*.65f,aperture.yMin-.32f*scale,.28f*scale);
                 Vector3 target=input.Body.Attached?input.Body.Anchor:input.ShotTarget;
@@ -107,7 +108,7 @@ namespace WebShooter.Swing
                 Segment(h.bones[0],shoulder,elbow,.047f*scale,.04f*scale);
                 Segment(h.bones[1],elbow,wrist,.032f*scale,.027f*scale);
                 Vector3 palmEnd=wrist+pose*Vector3.forward*.09f*scale;
-                Segment(h.bones[2],wrist,palmEnd,.043f*scale,.021f*scale);
+                Segment(h.bones[2],wrist,palmEnd,.035f*scale,.017f*scale);
                 int bone=3;
                 for(int finger=0;finger<5;finger++)
                 {

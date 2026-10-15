@@ -45,6 +45,7 @@ namespace WebShooter.Swing
             bounds.Expand(.24f); nodes[0]=a; nodes[9]=b;
             for(int i=0;i<8;i++) nodes[i+1]=bounds.center+offset+Vector3.Scale(bounds.extents,new Vector3((i&1)==0?-1:1,(i&2)==0?-1:1,(i&4)==0?-1:1));
             for(int i=0;i<10;i++){costs[i]=float.PositiveInfinity;previous[i]=-1;visited[i]=false;}
+            for(int i=1;i<=8;i++) visited[i]=Physics.CheckSphere(nodes[i]-offset,.025f,mask,QueryTriggerInteraction.Ignore);
             costs[0]=0; count=0;
             for(int step=0;step<10;step++)
             {

@@ -20,9 +20,10 @@ namespace WebShooter.Swing
             string folder=Application.persistentDataPath;var args=Environment.GetCommandLineArgs();
             for(int i=0;i+1<args.Length;i++)if(args[i]=="--visual-output")folder=args[i+1];
             Directory.CreateDirectory(folder);
+            var initialPosition=app.Flight.CityPosition;var initialRotation=app.Flight.transform.rotation;
             for(int side=0;side<2;side++)
             {
-                motion.Release();hands.Select(side==0?.2f:.8f);
+                motion.Release();app.Flight.SetPose(initialPosition,initialRotation);motion.Activate();hands.Select(side==0?.2f:.8f);
                 bool hit=false;
                 for(int y=8;y>=5&&!hit;y--)for(int x=1;x<10&&!hit;x++)
                     hit=motion.HandleMouseHold(true,true,true,Camera.main.ViewportPointToRay(new Vector3(x*.1f,y*.1f,0)));
