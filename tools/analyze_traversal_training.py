@@ -13,9 +13,9 @@ def analyze(rows):
     converged=len(rows)>=500 and len(rates)==5 and min(rates)>=.85 and max(rates)-min(rates)<=.05
     result.update(status='converged' if converged else 'not_converged',converged=converged,last_window_success_rates=rates)
     reasons=[]
+    if sum(int(r['attachments']) for r in rows)==0:reasons.append('No successful web attachment: navigation results do not certify swing coverage. Inspect aim observations and fire action edges before changing rewards.')
     if not converged:
         if len(rows)<500:reasons.append('Fewer than 500 completed episodes: insufficient evidence of convergence.')
-        if sum(int(r['attachments']) for r in rows)==0:reasons.append('No successful web attachment: inspect aim observations and fire action edges before changing rewards.')
         if result['swing_fraction']<.05:reasons.append('Low swing coverage: navigation success alone does not validate web traversal.')
         if result['success_rate']<.85:reasons.append('Check timeout/bounds episodes, ray coverage, target altitude and exploration. Reward configuration was not changed.')
     result['analysis']=reasons;return result

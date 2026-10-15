@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Player,[Parameter(Mandatory)][string]$PythonExe,[int]$Steps=300000,[int]$NumEnvs=4,[string]$RunPrefix)
+param([Parameter(Mandatory)][string]$Player,[Parameter(Mandatory)][string]$PythonExe,[int]$Steps=600000,[int]$NumEnvs=4,[string]$RunPrefix)
 $ErrorActionPreference='Stop'
 $labRepo=Split-Path -Parent $PSScriptRoot
 $labWorkspace=Split-Path -Parent $labRepo
@@ -6,7 +6,7 @@ $labOutput=Join-Path $labWorkspace 'outputs/TraversalTraining';New-Item -ItemTyp
 if(-not$RunPrefix){$RunPrefix='flow-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')}
 $labLearner=Join-Path (Split-Path -Parent $PythonExe) 'mlagents-learn.exe'
 $labConfig=Join-Path $labOutput ($RunPrefix+'.yaml')
-(Get-Content (Join-Path $labRepo 'training/traversal-ppo.yaml') -Raw).Replace('max_steps: 300000',"max_steps: $Steps")|Set-Content $labConfig
+(Get-Content (Join-Path $labRepo 'training/traversal-ppo.yaml') -Raw).Replace('max_steps: 600000',"max_steps: $Steps")|Set-Content $labConfig
 $labRuns=@()
 foreach($mode in @('mixed','off','on')) {
  $runId=$RunPrefix+'-'+$mode

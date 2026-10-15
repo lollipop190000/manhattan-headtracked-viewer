@@ -2,9 +2,11 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+import csv
+import tempfile
 tools=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(tools))
-from evaluate_traversal import summarize,validate_schedule
+from evaluate_traversal import read_rows,summarize,validate_schedule
 from analyze_traversal_training import analyze
 
 
@@ -25,6 +27,16 @@ class TraversalEvaluationTests(unittest.TestCase):
         self.assertFalse(analyze([self.row() for _ in range(10)])['converged'])
     def test_stable_five_hundred_episode_success_is_convergence(self):
         self.assertTrue(analyze([self.row() for _ in range(500)])['converged'])
+    def test_navigation_success_does_not_hide_absent_swing_coverage(self):
+        result=analyze([self.row(attachments='0') for _ in range(500)])
+        self.assertTrue(any('do not certify swing coverage' in s for s in result['analysis']))
+    def test_parallel_worker_files_are_ordered_by_completion_not_random_filename(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for name,stamp,episode in [('a','2026-01-01T00:00:02Z','1'),('z','2026-01-01T00:00:01Z','0')]:
+                row=self.row(completed_utc=stamp,episode=episode)
+                with (Path(folder)/('episodes-'+name+'.csv')).open('w',newline='') as stream:
+                    writer=csv.DictWriter(stream,fieldnames=list(row));writer.writeheader();writer.writerow(row)
+            self.assertEqual([r['episode'] for r in read_rows(folder)],['0','1'])
 
 
 if __name__=='__main__':unittest.main()

@@ -11,6 +11,7 @@ def read_rows(directory):
     rows=[]
     for path in sorted(Path(directory).glob('episodes-*.csv')):
         with path.open(encoding='utf-8-sig',newline='') as stream:rows.extend(csv.DictReader(stream))
+    if rows and all(r.get('completed_utc') for r in rows):rows.sort(key=lambda r:r['completed_utc'])
     return rows
 
 
@@ -39,22 +40,28 @@ def validate_schedule(rows,base_seed,maps,episodes):
 
 class ExportedPolicy:
     def __init__(self,path):
-        import onnxruntime as ort
-        self.session=ort.InferenceSession(str(path),providers=['CPUExecutionProvider'])
-        names={x.name for x in self.session.get_outputs()}
+        import onnx
+        from onnx.reference import ReferenceEvaluator
+        model_bytes=Path(path).read_bytes();self.sha256=hashlib.sha256(model_bytes).hexdigest()
+        model=onnx.load_model_from_string(model_bytes)
+        names={x.name for x in model.graph.output}
         self.outputs=['deterministic_continuous_actions','deterministic_discrete_actions']
         if not set(self.outputs)<=names:raise ValueError('Export must contain deterministic continuous and discrete action outputs.')
+        # Keep only ancestors of deterministic outputs. Stochastic Multinomial
+        # export branches are unrelated to evaluation and unavailable in ONNX 1.15's reference engine.
+        model=onnx.utils.Extractor(model).extract_model([x.name for x in model.graph.input],self.outputs)
+        self.session=ReferenceEvaluator(model);self.inputs=model.graph.input
 
     def actions(self,steps,spec):
         import numpy as np
         from mlagents_envs.base_env import ActionTuple
         feed={}
-        for node in self.session.get_inputs():
+        for node in self.inputs:
             if node.name.startswith('obs_'):feed[node.name]=steps.obs[int(node.name[4:])].astype(np.float32)
             elif node.name=='action_masks':
                 feed[node.name]=1-np.concatenate(steps.action_mask,axis=1).astype(np.float32) if steps.action_mask is not None else np.ones((len(steps),sum(spec.action_spec.discrete_branches)),dtype=np.float32)
             elif node.name=='recurrent_in':
-                shape=[len(steps)]+[x if isinstance(x,int) else 1 for x in node.shape[1:]]
+                shape=[len(steps)]+[x.dim_value if x.HasField('dim_value') else 1 for x in node.type.tensor_type.shape.dim[1:]]
                 if shape[-1]!=0:raise ValueError('This evaluator expects the non-recurrent supplied PPO configuration.')
                 feed[node.name]=np.zeros(shape,dtype=np.float32)
             else:raise ValueError('Unknown model input '+node.name)
@@ -83,7 +90,7 @@ def evaluate_one(args,label,model,condition,index):
             if decisions>limit:raise RuntimeError('Evaluation did not complete; no partial result is presented as complete.')
     finally:env.close()
     rows=read_rows(folder);validate_schedule(rows,args.seed,args.maps,args.episodes)
-    summary=summarize(rows);summary.update(label=label,condition=condition,policy_sha256=hashlib.sha256(Path(model).read_bytes()).hexdigest())
+    summary=summarize(rows);summary.update(label=label,condition=condition,policy_sha256=policy.sha256)
     with (folder/'events.csv').open('w',encoding='utf-8',newline='') as target:
         writer=None
         for path in sorted(folder.glob('snags-*.csv')):

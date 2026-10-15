@@ -24,12 +24,12 @@ namespace Manhattan.TraversalLab
             if(s.state==TraversalState.Swinging || s.state==TraversalState.Yanking)SwingTime+=s.dt;
             if(s.state!=s.previousState){Transitions++;TransitionLoss+=Math.Max(0,s.previousVelocity.magnitude-s.velocity.magnitude);}
         }
-        public const string Header="seed,episode,condition,success,duration,snags,stucks,mean_speed,air_fraction,transition_loss,goal_time,swing_fraction,shots,attachments,max_wrap_points,transitions,transition_loss_total";
+        public const string Header="seed,episode,condition,success,duration,snags,stucks,mean_speed,air_fraction,transition_loss,goal_time,swing_fraction,shots,attachments,max_wrap_points,transitions,transition_loss_total,completed_utc";
         public string Row(int seed,int episode,string condition,bool success,int snags,int stucks)
         {
             var c=CultureInfo.InvariantCulture;string F(float x)=>x.ToString("F6",c);
             return string.Join(",",seed,episode,TraversalCsv.Quote(condition),success?1:0,F(Duration),snags,stucks,F(MeanSpeed),
-                F(Duration>0?AirTime/Duration:0),F(MeanTransitionLoss),success?F(Duration):"",F(Duration>0?SwingTime/Duration:0),Shots,Attachments,MaxWrapPoints,Transitions,F(TransitionLoss));
+                F(Duration>0?AirTime/Duration:0),F(MeanTransitionLoss),success?F(Duration):"",F(Duration>0?SwingTime/Duration:0),Shots,Attachments,MaxWrapPoints,Transitions,F(TransitionLoss),DateTime.UtcNow.ToString("O",c));
         }
     }
 }
