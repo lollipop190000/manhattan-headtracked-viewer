@@ -17,5 +17,7 @@ namespace WebShooter.Swing
         [Range(0,1)] public float wallApproachRatio = .55f;
         [Min(0)] public float steeringTurnDegrees = 65f;
         [Min(0)] public float airTargetSpeed = 10f;
+        public void SetFlow(bool value)
+        { preserveSteeringMomentum=preserveGlancingContact=preserveTransitionMomentum=resetLengthAtWrap=value; }
     }
 }

@@ -81,7 +81,9 @@ namespace WebShooter.Swing
             if (app == null || app.Flight == null || app.Origin == null || app.Streamer == null || app.KeyboardInput == null) return;
             previousInput = app.Flight.InputSource;
             previousConstraint = app.Flight.TranslationConstraint;
-            swing = new WebSwingMotionInput(previousInput, app.Flight, app.Origin) { Paused = true };
+            var tuning=gameObject.AddComponent<TraversalTuning>();
+            swing = new WebSwingMotionInput(previousInput, app.Flight, app.Origin,tuning.Settings) { Paused = true, AutomaticCruiseAssist = true };
+            app.Flight.gameObject.AddComponent<SnagLogger>().Attach(swing);
             if (app.catalog != null) swing.Collision.CitySolids = new CitySolidRecovery(app.catalog.buildings, swing.Body);
             swing.CanSimulate = () => app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured && Application.isFocused;
             app.Flight.InputSource = swing;

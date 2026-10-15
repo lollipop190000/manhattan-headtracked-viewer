@@ -57,6 +57,10 @@ namespace WebShooter.Swing
 
         public event Action<Vector3> WebAttached;
         public event Action WebReleased;
+        public event Action<TraversalSample> PhysicsStepped;
+        public float SimulatedTime { get; private set; }
+        private Vector3 lastStepVelocity;
+        private TraversalState lastStepState;
 
         public static SwingSettings TraversalSettings() => new SwingSettings
         {
@@ -122,6 +126,7 @@ namespace WebShooter.Swing
         {
             if (initialized) return;
             Body.Reset(flight.CityPosition);
+            lastStepVelocity = Body.Velocity; lastStepState = Body.State;
             Vector3 euler = flight.transform.rotation.eulerAngles;
             yaw = euler.y;
             pitch = Mathf.DeltaAngle(0f, euler.x);
@@ -199,6 +204,7 @@ namespace WebShooter.Swing
             while (remaining > .000001f)
             {
                 float h = Mathf.Min(remaining, Body.Settings.maxStep);
+                int contactsBefore = Body.ContactSequence;
                 bool attached = Body.Attached;
                 Body.WallRunRequested = input.localMovement.z > .1f;
                 bool wantsWall = Body.WallRunRequested && (!Body.Attached || Body.Settings.features.preserveGlancingContact) && !Body.Grounded;
@@ -225,6 +231,13 @@ namespace WebShooter.Swing
                 {
                     Release(); Body.Reset(Finite(before) ? before : actual);
                 }
+                SimulatedTime += h;
+                var observedState=Body.Grounded?TraversalState.Grounded:Body.State;
+                PhysicsStepped?.Invoke(new TraversalSample { time=SimulatedTime,dt=h,position=Body.Position,velocity=Body.Velocity,
+                    previousVelocity=lastStepVelocity,state=observedState,previousState=lastStepState,
+                    movementInput=new Vector2(input.localMovement.x,input.localMovement.z).sqrMagnitude>.01f,
+                    collided=Body.ContactSequence!=contactsBefore,contactNormal=Body.ContactNormal,collider=Body.LastCollisionName });
+                lastStepVelocity=Body.Velocity;lastStepState=observedState;
                 remaining -= h;
             }
 

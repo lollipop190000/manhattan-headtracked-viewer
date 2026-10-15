@@ -52,6 +52,7 @@ namespace WebShooter.Swing
         public bool Braking { get; set; }
         public bool WallRunRequested { get; set; }
         public string LastCollisionName { get; private set; } = "";
+        public int ContactSequence { get; private set; }
         private bool wallRunning;
         private bool yanking, yankContact, yankExhausted;
         private Vector3 yankDirection;
@@ -73,6 +74,7 @@ namespace WebShooter.Swing
 
         public void Contact(Vector3 normal, string colliderName = null)
         {
+            ContactSequence++;
             if(yanking) yankContact = true;
             if (colliderName != null) LastCollisionName = colliderName;
             ContactNormal = normal;
@@ -313,6 +315,7 @@ namespace WebShooter.Swing
                 float friction = Mathf.Exp(-Settings.groundFriction * h);
                 v.x *= friction; v.z *= friction;
                 Grounded = true;
+                ContactNormal = Vector3.up; LastCollisionName = "ground plane"; ContactSequence++;
             }
 
             float speed = v.magnitude;
