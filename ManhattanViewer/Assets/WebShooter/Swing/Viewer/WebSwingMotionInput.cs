@@ -200,7 +200,8 @@ namespace WebShooter.Swing
             {
                 float h = Mathf.Min(remaining, Body.Settings.maxStep);
                 bool attached = Body.Attached;
-                bool wantsWall = input.localMovement.z > .1f && !Body.Attached && !Body.Grounded;
+                Body.WallRunRequested = input.localMovement.z > .1f;
+                bool wantsWall = Body.WallRunRequested && (!Body.Attached || Body.Settings.features.preserveGlancingContact) && !Body.Grounded;
                 Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false) : Vector3.zero, wantsWall, h);
                 if (attached && !Body.Attached) WebReleased?.Invoke();
                 Vector3 before = Body.Position;

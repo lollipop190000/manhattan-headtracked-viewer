@@ -34,7 +34,7 @@ namespace WebShooter.Swing
                 float travel = Mathf.Max(0f, hit.distance - Skin);
                 p += remaining.normalized * Mathf.Min(travel, remaining.magnitude);
                 remaining = Vector3.ProjectOnPlane(remaining - remaining.normalized * Mathf.Min(travel, remaining.magnitude), hit.normal);
-                body.Contact(hit.normal);
+                body.Contact(hit.normal, hit.collider.name);
             }
             return ResolveOverlap(p) + Offset;
         }
@@ -65,7 +65,7 @@ namespace WebShooter.Swing
                         other.transform.rotation, out var normal, out float depth) && depth > 0f)
                     {
                         p += normal * (depth + Skin);
-                        body.Contact(normal);
+                        body.Contact(normal, other.name);
                         moved = true;
                     }
                 }

@@ -50,6 +50,8 @@ namespace WebShooter.Swing
         public Vector3 ContactNormal { get; private set; }
         public float AssistStrength { get; set; } = 1f;
         public bool Braking { get; set; }
+        public bool WallRunRequested { get; set; }
+        public string LastCollisionName { get; private set; } = "";
         private bool wallRunning;
         private float wallTime, wallCooldown;
         private bool wallExhausted;
@@ -64,10 +66,26 @@ namespace WebShooter.Swing
                 Velocity += tangent.normalized * (Settings.cruiseAcceleration * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
         }
 
-        public void Contact(Vector3 normal)
+        public bool FrontalApproach(Vector3 normal) => -Vector3.Dot(Velocity, normal) >= Settings.features.wallApproachSpeed &&
+            -Vector3.Dot(Velocity.normalized, normal) >= Settings.features.wallApproachRatio;
+
+        public void Contact(Vector3 normal, string colliderName = null)
         {
+            if (colliderName != null) LastCollisionName = colliderName;
             ContactNormal = normal;
             float into = Vector3.Dot(Velocity, normal);
+            if (Settings.features.preserveGlancingContact && !Grounded && Mathf.Abs(normal.y) < .2f && into < 0f)
+            {
+                bool frontal = FrontalApproach(normal);
+                float incoming = Velocity.magnitude;
+                Velocity = Vector3.ProjectOnPlane(Velocity, normal);
+                if (frontal && WallRunRequested)
+                {
+                    wallRunning = true; wallTime = 0f; Release();
+                    if (Velocity.magnitude < 3f) Velocity += Vector3.up * Mathf.Min(12f, incoming * .5f);
+                }
+                return;
+            }
             if (into < 0f)
             {
                 // Preserve tangential momentum and detach so tension cannot pull back into the wall.
@@ -86,6 +104,7 @@ namespace WebShooter.Swing
         {
             wallCooldown = Mathf.Max(0f, wallCooldown - dt);
             bool valid = forward && !Grounded && Mathf.Abs(normal.y) < .2f && normal.sqrMagnitude > .5f && Velocity.magnitude >= 3f;
+            if (Settings.features.preserveGlancingContact && !wallRunning) valid &= FrontalApproach(normal);
             if (normal.sqrMagnitude < .5f || Grounded || !forward) wallExhausted = false;
             if (wallRunning && (!valid || wallTime >= 2f)) { wallExhausted = wallTime >= 2f; wallRunning = false; wallCooldown = .3f; }
             if (!wallRunning && valid && !wallExhausted && wallCooldown <= 0f) { wallRunning = true; wallTime = 0f; Release(); }
