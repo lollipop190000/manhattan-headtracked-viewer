@@ -61,6 +61,7 @@ namespace Manhattan.Viewer
             taa.mipBias = 0f; taa.varianceClampScale = 1.2f; taa.contrastAdaptiveSharpening = 0f;
             ResetHistory();
         }
+        public string AntialiasingName => cameraData != null ? cameraData.antialiasing.ToString() : "Unavailable";
         public void ResetHistory() { if (cameraData != null) cameraData.resetHistory = true; }
         private void OnDestroy()
         {

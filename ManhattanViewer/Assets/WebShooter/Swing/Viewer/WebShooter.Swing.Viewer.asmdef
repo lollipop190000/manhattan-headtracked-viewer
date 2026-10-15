@@ -3,8 +3,10 @@
   "rootNamespace": "WebShooter.Swing",
   "references": [
     "WebShooter.Swing.Core",
+    "WebShooter.Input",
     "Manhattan.Viewer.Runtime",
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "HeadTracked.Display"
   ],
   "autoReferenced": true
 }

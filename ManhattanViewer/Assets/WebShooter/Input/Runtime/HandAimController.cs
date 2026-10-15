@@ -134,7 +134,7 @@ namespace WebShooter.Input
 
             while (source.TryDequeueFire(out int fire))
             {
-                if (!Calibrated) continue;                  // 보정 전에는 발사/재보정 무시
+                if (!Calibrated || !Connected) continue;   // stale queued events must never fire
                 if (fire == 1) Fired?.Invoke(AimRay);
                 else if (fire == 2) Recenter();
             }

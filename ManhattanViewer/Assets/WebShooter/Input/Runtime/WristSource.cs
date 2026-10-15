@@ -35,7 +35,7 @@ namespace WebShooter.Input
     public abstract class WristSource : MonoBehaviour
     {
         private readonly object gate = new object();
-        private readonly ConcurrentQueue<int> fires = new ConcurrentQueue<int>();
+        private readonly ConcurrentQueue<(int fire, long ticks)> fires = new ConcurrentQueue<(int, long)>();
         private WristSample latest;
         private bool hasSample;
         private long sequence;
@@ -51,7 +51,13 @@ namespace WebShooter.Input
             lock (gate) { sample = latest; return hasSample; }
         }
 
-        public bool TryDequeueFire(out int fire) => fires.TryDequeue(out fire);
+        public bool TryDequeueFire(out int fire)
+        {
+            while (fires.TryDequeue(out var queued))
+                if ((Stopwatch.GetTimestamp() - queued.ticks) / (double)Stopwatch.Frequency < 1.0)
+                { fire = queued.fire; return true; }
+            fire = 0; return false;
+        }
 
         public static float AgeSeconds(WristSample sample) =>
             (float)((Stopwatch.GetTimestamp() - sample.receivedTicks) / (double)Stopwatch.Frequency);
@@ -66,7 +72,7 @@ namespace WebShooter.Input
                 latest = new WristSample { yaw = yaw, pitch = pitch, receivedTicks = Stopwatch.GetTimestamp(), sequence = sequence };
                 hasSample = true;
             }
-            if (fire != 0) fires.Enqueue(fire);
+            if (fire != 0) fires.Enqueue((fire, Stopwatch.GetTimestamp()));
         }
 
         protected void ResetSource()

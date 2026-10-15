@@ -1,4 +1,5 @@
-param([string]$OutputPath, [switch]$Bake, [switch]$AllowDirty, [string]$PythonExe = 'python', [string]$EditorPath)
+param([string]$OutputPath, [switch]$Bake, [switch]$AllowDirty, [string]$PythonExe = 'python', [string]$EditorPath,
+    [ValidateSet('Full', 'Development')][string]$CityProfile = 'Full', [string]$RegionConfig)
 . (Join-Path $PSScriptRoot 'common.ps1')
 function Assert-CleanBuildSource {
     param([Parameter(Mandatory)][string]$RepositoryRoot, [switch]$AllowDirty)
@@ -24,11 +25,15 @@ $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $ViewerRepository 'Logs') -Force | Out-Null
 $previousBuild = $env:MANHATTAN_BUILD_PATH
+$previousProfile = $env:MANHATTAN_CITY_PROFILE
+$previousRegion = $env:MANHATTAN_CITY_REGION
 try {
     $env:MANHATTAN_BUILD_PATH = $OutputPath
+    $env:MANHATTAN_CITY_PROFILE = $CityProfile
+    $env:MANHATTAN_CITY_REGION = if ($RegionConfig) { [System.IO.Path]::GetFullPath($RegionConfig) } else { '' }
     Invoke-ViewerOwnedEditorMethod -Method 'Manhattan.Editor.BuildAutomation.BuildWindows' -EditorPath $EditorPath -Timeout 7200 -BuildTarget 'StandaloneWindows64'
 }
-finally { $env:MANHATTAN_BUILD_PATH = $previousBuild }
+finally { $env:MANHATTAN_BUILD_PATH = $previousBuild; $env:MANHATTAN_CITY_PROFILE = $previousProfile; $env:MANHATTAN_CITY_REGION = $previousRegion }
 if (-not (Test-Path -LiteralPath $OutputPath)) { throw "Build reported success without producing $OutputPath" }
 Invoke-Checked $PythonExe @((Join-Path $PSScriptRoot 'package_notices.py'), '--build-directory', (Split-Path -Parent $OutputPath))
 Write-Host "Windows player: $OutputPath"

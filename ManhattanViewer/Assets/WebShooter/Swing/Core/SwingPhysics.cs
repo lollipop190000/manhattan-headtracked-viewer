@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace WebShooter.Swing
 {
+    public enum TraversalState { Airborne, Grounded, Swinging, WallRunning }
     /// <summary>튜닝 가능한 물리 값. 모든 길이는 미터, 시간은 초. 도시 좌표(y가 위)에서 쓴다.</summary>
     [Serializable]
     public sealed class SwingSettings
@@ -13,8 +14,13 @@ namespace WebShooter.Swing
         [Tooltip("지면의 도시 좌표 y")] public float groundHeight = 0f;
         [Tooltip("지면 위 눈높이 (m). 이동 기준점은 눈 위치다")] public float eyeHeight = 1.85f;
         [Tooltip("지면에 닿아 있을 때 수평 속도가 줄어드는 정도 (1/s)")] public float groundFriction = 5f;
-        [Tooltip("공중 조향 가속도 (m/s^2). 공중에서 WASD로 살짝 방향을 튼다")] public float airControl = 6f;
-        [Tooltip("줄을 감거나 푸는 속도 (m/s)")] public float reelSpeed = 8f;
+        [Tooltip("공중 조향 가속도 (m/s^2)")] public float airControl = 12f;
+        [Tooltip("줄을 감는 속도 (m/s)")] public float reelSpeed = 24f;
+        public float payoutSpeed = 32f;
+        public float jumpSpeed = 14f, launchForwardSpeed = 12f;
+        public float cruiseSpeed = 34f, cruiseAcceleration = 12f;
+        [Tooltip("Initial slack-only takeup window; zero keeps unassisted rope physics.")]
+        public float attachmentTakeupSeconds = 0f;
         [Tooltip("이보다 가까운 곳에는 거미줄을 붙일 수 없다 (m)")] public float minRopeLength = 2f;
         [Tooltip("물리 하위 스텝의 최대 시간 (s). 프레임이 길어도 이 값 이하로 나눠 적분한다")] public float maxStep = 1f / 120f;
         [Tooltip("거미줄이 붙는 순간 앵커 쪽으로 더해 주는 속도 (m/s). 0이면 끔. 줄은 안쪽으로 당기지 않으므로 지상에서 시작하려면 필요하다")] public float attachPull = 0f;
@@ -39,11 +45,85 @@ namespace WebShooter.Swing
         public SwingPhysics(SwingSettings settings = null) => Settings = settings ?? new SwingSettings();
 
         public float FloorY => Settings.groundHeight + Settings.eyeHeight;
+        public TraversalState State => wallRunning ? TraversalState.WallRunning : Attached ? TraversalState.Swinging : Grounded ? TraversalState.Grounded : TraversalState.Airborne;
+        public Vector3 ContactNormal { get; private set; }
+        public float AssistStrength { get; set; } = 1f;
+        private bool wallRunning;
+        private float wallTime, wallCooldown;
+        private bool wallExhausted;
+        private float wallEscapeTime, attachmentTakeupRemaining;
+        private Vector3 escapeNormal;
+        public int WallDeflections { get; private set; }
+        public void AssistCruise(float dt, bool braking)
+        {
+            if (!Attached || AssistStrength <= 0f || braking || Velocity.magnitude >= Settings.cruiseSpeed) return;
+            Vector3 tangent = Vector3.ProjectOnPlane(Velocity, (Position - Anchor).normalized);
+            if (tangent.sqrMagnitude > 1f)
+                Velocity += tangent.normalized * (Settings.cruiseAcceleration * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
+        }
+
+        public void Contact(Vector3 normal)
+        {
+            ContactNormal = normal;
+            float into = Vector3.Dot(Velocity, normal);
+            if (into < 0f)
+            {
+                // Preserve tangential momentum and detach so tension cannot pull back into the wall.
+                if (Attached && !wallRunning && Mathf.Abs(normal.y) < .2f && -into > 2f && Velocity.magnitude > 5f)
+                {
+                    Velocity = Vector3.ProjectOnPlane(Velocity, normal) * .98f + normal * Mathf.Min(18f, -into * .65f);
+                    Release(); wallEscapeTime = .4f; escapeNormal = normal;
+                    wallCooldown = .45f; WallDeflections++;
+                }
+                else Velocity -= normal * into;
+            }
+            if (normal.y > .65f) Grounded = true;
+        }
+
+        public void UpdateWall(Vector3 normal, bool forward, float dt)
+        {
+            wallCooldown = Mathf.Max(0f, wallCooldown - dt);
+            bool valid = forward && !Grounded && Mathf.Abs(normal.y) < .2f && normal.sqrMagnitude > .5f && Velocity.magnitude >= 3f;
+            if (normal.sqrMagnitude < .5f || Grounded || !forward) wallExhausted = false;
+            if (wallRunning && (!valid || wallTime >= 2f)) { wallExhausted = wallTime >= 2f; wallRunning = false; wallCooldown = .3f; }
+            if (!wallRunning && valid && !wallExhausted && wallCooldown <= 0f) { wallRunning = true; wallTime = 0f; Release(); }
+            if (wallRunning)
+            {
+                ContactNormal = normal; wallTime += dt;
+                float approachSpeed = Velocity.magnitude;
+                Velocity = Vector3.ProjectOnPlane(Velocity, normal);
+                if (Velocity.magnitude < 3f) Velocity = Vector3.up * Mathf.Clamp(approachSpeed * .5f, 6f, 12f);
+            }
+        }
+
+        public bool Jump()
+        {
+            if (wallRunning) { Velocity += ContactNormal * 9f + Vector3.up * 7f; wallRunning = false; wallCooldown = .3f; }
+            else if (Grounded || Position.y <= FloorY + .03f) { Velocity = new Vector3(Velocity.x, Settings.jumpSpeed, Velocity.z); }
+            else if (Attached) { Release(); Velocity += Vector3.up * (4f * AssistStrength); }
+            else return false;
+            Grounded = false;
+            return true;
+        }
+
+        public void ApplySurfaceFriction(float dt)
+        {
+            if (!Grounded || dt <= 0f) return;
+            Vector3 normal = ContactNormal.y > .65f ? ContactNormal.normalized : Vector3.up;
+            Vector3 tangent = Vector3.ProjectOnPlane(Velocity, normal);
+            Vector3 damped = tangent * Mathf.Exp(-Settings.groundFriction * dt);
+            if (damped.sqrMagnitude < .0025f) damped = Vector3.zero;
+            Velocity += damped - tangent;
+        }
 
         public void Reset(Vector3 position)
         {
             Position = position;
             Velocity = Vector3.zero;
+            Grounded = position.y <= FloorY + .03f;
+            wallRunning = false;
+            wallExhausted = false;
+            wallTime = wallCooldown = wallEscapeTime = 0f; WallDeflections = 0;
             Release();
         }
 
@@ -55,11 +135,34 @@ namespace WebShooter.Swing
             Anchor = anchor;
             RopeLength = distance;
             Attached = true;
+            attachmentTakeupRemaining = Mathf.Max(0f, Settings.attachmentTakeupSeconds);
             if (Settings.attachPull > 0f) Velocity += (anchor - Position) / distance * Settings.attachPull;
             return true;
         }
 
-        public void Release() => Attached = false;
+        public void Release() { Attached = false; attachmentTakeupRemaining = 0f; }
+
+        // Change the effective anchor at a wrap corner without moving the body or adding energy.
+        public void RouteThrough(Vector3 anchor, float fixedLengthChange)
+        {
+            // Do not repeatedly expand an unchanged rope to absorb projection rounding in city coordinates.
+            // Only a real corner insertion/removal needs a new effective length.
+            if (anchor == Anchor && Mathf.Abs(fixedLengthChange) < .00001f) return;
+            Anchor = anchor;
+            RopeLength = Mathf.Max(Mathf.Max(Settings.minRopeLength, Vector3.Distance(Position, anchor)), RopeLength - fixedLengthChange);
+        }
+
+        public void AssistRope(float dt)
+        {
+            if (!Attached || AssistStrength <= 0f) return;
+            float distance = Vector3.Distance(Position, Anchor);
+            // Remove slack without snapping position. Near the ground a modest
+            // powered winch establishes a usable arc; manual reel input overrides it.
+            float target = Mathf.Max(Settings.minRopeLength, distance + .2f);
+            if (Position.y < FloorY + 7f && Anchor.y > Position.y + 8f)
+                target = Mathf.Max(Settings.minRopeLength, distance - 1f);
+            RopeLength = Mathf.MoveTowards(RopeLength, Mathf.Min(RopeLength, target), 10f * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
+        }
 
         /// <summary>이동이 장애물에 막혔을 때 호출한다. 장애물 쪽으로 향하는 속도 성분만 지운다.</summary>
         public void OnBlocked(Vector3 towardsObstacle)
@@ -79,8 +182,20 @@ namespace WebShooter.Swing
             dt = Mathf.Min(dt, 0.1f);   // 멈췄다 재개할 때 폭주하지 않도록
             int steps = Mathf.Max(1, Mathf.CeilToInt(dt / Settings.maxStep));
             float h = dt / steps;
-            Vector3 steering = Vector3.ClampMagnitude(steer, 1f) * Settings.airControl;
-            Vector3 gravity = Vector3.down * Settings.gravity;
+            Vector3 steering = Vector3.ClampMagnitude(steer, 1f) * Settings.airControl * AssistStrength * (Attached || Grounded || wallRunning ? 3f : 1f);
+            if (Attached) steering = Vector3.ProjectOnPlane(steering, (Position - Anchor).normalized);
+            if (wallRunning)
+            {
+                float intoWall = Mathf.Max(0f, -Vector3.Dot(steering, ContactNormal));
+                steering = Vector3.ProjectOnPlane(steering, ContactNormal) + Vector3.up * intoWall;
+            }
+            if (wallEscapeTime > 0f)
+            {
+                float inward = Vector3.Dot(steering, escapeNormal);
+                if (inward < 0f) steering -= escapeNormal * inward;
+                wallEscapeTime = Mathf.Max(0f, wallEscapeTime - dt);
+            }
+            Vector3 gravity = Vector3.down * Settings.gravity * (wallRunning ? .2f : 1f);
             for (int i = 0; i < steps; i++) Substep(h, steering, gravity, reel);
         }
 
@@ -89,13 +204,23 @@ namespace WebShooter.Swing
             Vector3 v = Velocity + (gravity + steering) * h;
             v *= Mathf.Exp(-Settings.airDrag * h);
             Vector3 p = Position + v * h;
+            // Resolve the supporting plane before rope tension so gravity cannot pull a resting
+            // body below the floor and turn that penetration into horizontal web propulsion.
+            if (p.y <= FloorY) { p.y = FloorY; if (v.y < 0f) v.y = 0f; }
 
             if (Attached)
             {
-                if (reel != 0f) RopeLength = Mathf.Max(Settings.minRopeLength, RopeLength - reel * Settings.reelSpeed * h);
+                if (reel != 0f) attachmentTakeupRemaining = 0f;
+                if (reel != 0f) RopeLength = Mathf.Clamp(RopeLength - reel * (reel > 0f ? Settings.reelSpeed : Settings.payoutSpeed) * h, Settings.minRopeLength, 250f);
                 Vector3 d = p - Anchor;
                 float dist = d.magnitude;
-                if (Settings.ratchetRope && dist < RopeLength) RopeLength = Mathf.Max(Settings.minRopeLength, dist);
+                // Reel in only length already made slack by inward movement. No teleport or impulse.
+                if (attachmentTakeupRemaining > 0f)
+                {
+                    RopeLength = Mathf.Min(RopeLength, Mathf.Max(Settings.minRopeLength, dist));
+                    attachmentTakeupRemaining = Mathf.Max(0f, attachmentTakeupRemaining - h);
+                }
+                if (Settings.ratchetRope && reel == 0f && dist < RopeLength) RopeLength = Mathf.Max(Settings.minRopeLength, dist);
                 if (dist > RopeLength && dist > 1e-6f)
                 {
                     Vector3 n = d / dist;
