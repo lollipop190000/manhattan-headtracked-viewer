@@ -10,7 +10,7 @@ namespace WebShooter.Swing.Tests
             var first=input.ReadActions();var second=input.ReadActions();
             Assert.That(first.firePressed && first.jump,Is.True);Assert.That(second.firePressed || second.jump,Is.False);
             Assert.That(second.fireHeld,Is.True);Assert.That(second.reel,Is.EqualTo(1));
-            Assert.That(input.Sample(1f/60).lookDegrees.x,Is.EqualTo(1.5f));
+            Assert.That(input.Sample(1f/60).lookDegrees.x,Is.EqualTo(1.5f).Within(.00001f));
         }
     }
 }

@@ -33,7 +33,21 @@ namespace WebShooter.Swing.Tests
                 Assert.That(t.width,Is.EqualTo(256));Assert.That(t.height,Is.EqualTo(64));
                 Assert.That(t.GetPixel(0,0).a,Is.Zero);Assert.That(t.GetPixel(0,63).a,Is.Zero);
                 Assert.That(t.GetPixel(0,32).a,Is.GreaterThan(.5f));
-                Assert.That(t.GetPixel(0,32),Is.Not.EqualTo(t.GetPixel(8,32)));
+                float darkest=1,lightest=0;
+                foreach(var pixel in t.GetPixels(0,32,256,1)){darkest=Mathf.Min(darkest,pixel.r);lightest=Mathf.Max(lightest,pixel.r);}
+                Assert.That(lightest-darkest,Is.GreaterThan(.2f));
+                TestContext.WriteLine($"WEB_TEXTURE centreAlpha={t.GetPixel(0,32).a:F6} filamentContrast={lightest-darkest:F6}");
+            }
+            finally{Object.DestroyImmediate(t);}
+        }
+        [Test] public void RadialMarkHasVisibleStrandsAndTransparentBoundary()
+        {
+            var t=WebTextureFactory.RadialMark();
+            try
+            {
+                float maximum=0;foreach(var pixel in t.GetPixels())maximum=Mathf.Max(maximum,pixel.a);
+                Assert.That(maximum,Is.GreaterThan(.8f));Assert.That(t.GetPixel(0,64).a,Is.Zero);
+                TestContext.WriteLine($"WEB_MARK maximumAlpha={maximum:F6}");
             }
             finally{Object.DestroyImmediate(t);}
         }

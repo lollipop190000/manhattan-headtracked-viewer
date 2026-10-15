@@ -12,7 +12,7 @@ namespace WebShooter.Swing
                 var p=new Vector2((x-63.5f)/63.5f,(y-63.5f)/63.5f);float r=p.magnitude,a=Mathf.Atan2(p.y,p.x);
                 float ray=Mathf.Pow(.5f+.5f*Mathf.Cos(a*13f+Mathf.Sin(r*8f)*.25f),28);
                 float rings=Mathf.Pow(.5f+.5f*Mathf.Sin(r*55f+Mathf.Sin(a*6)*.8f),24)*.6f;
-                float alpha=(1f-Mathf.SmoothStep(.65f,1,r))*Mathf.Max(ray,rings);
+                float alpha=(1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.65f,1,r)))*Mathf.Max(ray,rings);
                 pixels[y*128+x]=new Color(.9f,.91f,.9f,alpha);
             }
             texture.SetPixels(pixels);texture.Apply();return texture;
@@ -26,7 +26,7 @@ namespace WebShooter.Swing
             {
                 float u=x/256f,v=y/63f;
                 float filament=Mathf.Pow(.5f+.5f*Mathf.Cos((u*4f+v*strands)*Mathf.PI*2),5f);
-                float edge=Mathf.SmoothStep(0,.18f,v)*(1f-Mathf.SmoothStep(.82f,1f,v));
+                float edge=Mathf.SmoothStep(0,1,Mathf.InverseLerp(0,.18f,v))*(1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.82f,1f,v)));
                 float grey=.69f+.28f*filament;
                 pixels[y*256+x]=new Color(grey,grey,grey,edge*(.55f+.45f*filament));
             }
