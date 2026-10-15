@@ -16,12 +16,17 @@ namespace WebShooter.Swing
         [SerializeField,Range(2,12)] private int strandCount=5;
         [SerializeField,Min(.1f)] private float textureRepeatsPerMetre=2f;
         [SerializeField] private Transform emitter;
+        [SerializeField,Min(.05f)] private float attachmentMarkSize=.5f;
+        [SerializeField,Min(.1f)] private float attachmentMarkFade=1.5f;
         private WebSwingMotionInput input;
         private FloatingOrigin origin;
         private TraversalHands hands;
         private LineRenderer line;
         private Material material;
         private Texture2D strandTexture;
+        private Texture2D markTexture;
+        private Material markMaterial;
+        private readonly List<WebAnchorMark> marks=new List<WebAnchorMark>(16);
         private Transform blob;
         private readonly Vector3[] points=new Vector3[512],lastCityKnots=new Vector3[16];
         private readonly List<Vector3> knots=new List<Vector3>(16);
@@ -42,11 +47,22 @@ namespace WebShooter.Swing
             material.SetTexture("_MainTex",strandTexture);line.sharedMaterial=material;line.enabled=false;
             line.textureMode=LineTextureMode.Tile;line.textureScale=new Vector2(textureRepeatsPerMetre,1);
             line.widthCurve=new AnimationCurve(new Keyframe(0,.65f),new Keyframe(1,1.15f));
+            markTexture=WebTextureFactory.RadialMark();markMaterial=new Material(material);markMaterial.SetTexture("_MainTex",markTexture);
+            input.WebAttached+=AddMark;input.WebReleased+=ReleaseMarks;
             var tip=GameObject.CreatePrimitive(PrimitiveType.Sphere);tip.name="Travelling web knot";tip.layer=2;
             Destroy(tip.GetComponent<Collider>());tip.transform.SetParent(transform,false);tip.transform.localScale=Vector3.one*.025f;
             var renderer=tip.GetComponent<MeshRenderer>();renderer.sharedMaterial=material;renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
             blob=tip.transform;tip.SetActive(false);
         }
+        private void AddMark(Vector3 city)
+        {
+            marks.RemoveAll(m=>m==null);
+            if(marks.Count>=16){Destroy(marks[0].gameObject);marks.RemoveAt(0);}
+            var quad=GameObject.CreatePrimitive(PrimitiveType.Quad);quad.name="Web attachment mark";quad.layer=2;Destroy(quad.GetComponent<Collider>());
+            quad.transform.SetParent(transform,true);var mark=quad.AddComponent<WebAnchorMark>();
+            mark.Configure(city,input.ShotSurfaceNormal,origin,markMaterial,()=>input.Paused,attachmentMarkSize);marks.Add(mark);
+        }
+        private void ReleaseMarks(){foreach(var mark in marks)if(mark!=null)mark.Release(attachmentMarkFade);}
         private void LateUpdate()
         {
             if(input==null || Camera.main==null)return;
@@ -88,6 +104,11 @@ namespace WebShooter.Swing
             for(int i=0;i<count;i++)line.SetPosition(i,points[i]);
             line.widthMultiplier=thickness*(visible?1:fade/.3f);
         }
-        private void OnDestroy(){if(material!=null)Destroy(material);if(strandTexture!=null)Destroy(strandTexture);}
+        private void OnDestroy()
+        {
+            if(input!=null){input.WebAttached-=AddMark;input.WebReleased-=ReleaseMarks;}
+            if(material!=null)Destroy(material);if(strandTexture!=null)Destroy(strandTexture);
+            if(markTexture!=null)Destroy(markTexture);if(markMaterial!=null)Destroy(markMaterial);
+        }
     }
 }

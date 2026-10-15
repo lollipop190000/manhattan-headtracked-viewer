@@ -3,6 +3,20 @@ namespace WebShooter.Swing
 {
     public static class WebTextureFactory
     {
+        public static Texture2D RadialMark()
+        {
+            var texture=new Texture2D(128,128,TextureFormat.RGBA32,true){name="Procedural attachment splat",wrapMode=TextureWrapMode.Clamp};
+            var pixels=new Color[128*128];
+            for(int y=0;y<128;y++)for(int x=0;x<128;x++)
+            {
+                var p=new Vector2((x-63.5f)/63.5f,(y-63.5f)/63.5f);float r=p.magnitude,a=Mathf.Atan2(p.y,p.x);
+                float ray=Mathf.Pow(.5f+.5f*Mathf.Cos(a*13f+Mathf.Sin(r*8f)*.25f),28);
+                float rings=Mathf.Pow(.5f+.5f*Mathf.Sin(r*55f+Mathf.Sin(a*6)*.8f),24)*.6f;
+                float alpha=(1f-Mathf.SmoothStep(.65f,1,r))*Mathf.Max(ray,rings);
+                pixels[y*128+x]=new Color(.9f,.91f,.9f,alpha);
+            }
+            texture.SetPixels(pixels);texture.Apply();return texture;
+        }
         public static Texture2D Strand(int strands)
         {
             strands=Mathf.Clamp(strands,2,12);

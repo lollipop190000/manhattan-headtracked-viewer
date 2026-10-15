@@ -4,6 +4,11 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class WebVisualTests
     {
+        [Test] public void AttachmentQuadMatchesWallAndRoofNormals()
+        {
+            foreach(var n in new[]{Vector3.up,Vector3.right,Vector3.back})
+                Assert.That(Vector3.Distance(WebAnchorMark.SurfaceRotation(n)*Vector3.forward,n),Is.LessThan(.001f));
+        }
         [Test] public void BraidedTextureHasTransparentEdgesAndInternalFilaments()
         {
             var t=WebTextureFactory.Strand(5);

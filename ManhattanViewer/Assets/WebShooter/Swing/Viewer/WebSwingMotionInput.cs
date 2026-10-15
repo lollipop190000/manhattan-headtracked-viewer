@@ -51,6 +51,7 @@ namespace WebShooter.Swing
         public float ShotAge { get; private set; }
         public const float GestureSeconds = .12f;
         public Vector3 ShotTarget { get; private set; }
+        public Vector3 ShotSurfaceNormal { get; private set; } = Vector3.up;
         public float ShotProgress { get; private set; }
         private float shotDuration;
         private Collider shotCollider;
@@ -93,6 +94,7 @@ namespace WebShooter.Swing
             Vector3 anchorCity = hit.point + (origin != null ? origin.Offset : Vector3.zero);
             if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
             ShotTarget = anchorCity;
+            ShotSurfaceNormal = hit.normal;
             shotCollider = hit.collider;
             ShotProgress = 0f; ShotAge = 0f;
             shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
