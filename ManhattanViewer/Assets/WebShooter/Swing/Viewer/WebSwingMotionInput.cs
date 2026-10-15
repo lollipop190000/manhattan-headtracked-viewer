@@ -190,7 +190,7 @@ namespace WebShooter.Swing
                 else
                 {
                     bool ready=Body.Settings.features.fixedAttachmentDelay?
-                        ShotAge>=Body.Settings.features.attachmentDelaySeconds:ShotProgress>=1f;
+                        ShotAge>=Mathf.Clamp(Body.Settings.features.attachmentDelaySeconds,.01f,.05f):ShotProgress>=1f;
                     if(!shotAttached && ready)
                     {
                         shotAttached=true;

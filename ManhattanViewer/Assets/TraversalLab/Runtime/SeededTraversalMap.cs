@@ -45,6 +45,11 @@ namespace Manhattan.TraversalLab
                 box.name="Building "+seed+"-"+i;box.layer=30;box.transform.SetParent(Root.transform,false);
                 box.transform.position=b.center;box.transform.localScale=b.size;
                 if(!render)box.AddComponent<BoxCollider>();
+                else
+                {
+                    var material=Resources.Load<Material>("WindowFrameMaterial");
+                    if(material!=null)box.GetComponent<Renderer>().sharedMaterial=material;
+                }
             }
             var floor=new GameObject("Ground");floor.transform.SetParent(Root.transform,false);floor.transform.position=Vector3.down*.5f;
             floor.AddComponent<BoxCollider>().size=new Vector3(70,1,70);Physics.SyncTransforms();
