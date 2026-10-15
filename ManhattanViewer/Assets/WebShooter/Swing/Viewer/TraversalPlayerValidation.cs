@@ -58,7 +58,7 @@ namespace WebShooter.Swing
                 for (int i = 0; i < 30; i++) { var command = input.Sample(1f / 120); flight.transform.position = command.cityPosition; }
                 Check(input.Body.Attached, "continuous swing arrival");
                 input.Release();
-                input.Body.Reset(start); flight.SetPose(start, Quaternion.identity);
+                flight.SetPose(start, Quaternion.identity); input.Activate();
                 var holdRay = new Ray(start, Vector3.forward);
                 Check(input.HandleMouseHold(true, true, true, holdRay), "mouse hold press starts shot");
                 for (int i = 0; i < 40; i++)

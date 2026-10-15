@@ -138,6 +138,6 @@ namespace WebShooter.Swing
                 if(selected) WebOrigin=display.ScreenPlane.TransformPoint(wrist+pose*new Vector3(0,Mathf.Lerp(-.023f,-.012f,grip),Mathf.Lerp(.025f,.075f,grip))*scale);
             }
         }
-        private void OnDestroy(){foreach(var h in hands)if(h!=null){Destroy(h.mesh);Destroy(h.root.gameObject);}if(glove!=null)Destroy(glove);if(fabric!=null)Destroy(fabric);}
+        private void OnDestroy(){foreach(var h in hands)if(h!=null){if(h.mesh!=null)Destroy(h.mesh);if(h.root!=null)Destroy(h.root.gameObject);}if(glove!=null)Destroy(glove);if(fabric!=null)Destroy(fabric);}
     }
 }
