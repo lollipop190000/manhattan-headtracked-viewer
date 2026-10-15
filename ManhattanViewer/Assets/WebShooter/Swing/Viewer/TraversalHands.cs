@@ -75,10 +75,23 @@ namespace WebShooter.Swing
                         float a=s*2*Mathf.PI/sides;var n=new Vector3(Mathf.Cos(a),Mathf.Sin(a),0);
                         // Flatten palm/back slightly; keep rounded sides and fuller thumb-side palm.
                         float palmDepth=bone==2 ? 1f+.18f*Mathf.Sin(t*Mathf.PI) : 1f;
-                        vertices.Add(new Vector3(n.x*radius,n.y*radius*palmDepth,axial));normals.Add(n);uv.Add(new Vector2(s/(float)sides,bone>=3?((bone-3)%3+t)/3f:t));
+                        vertices.Add(new Vector3(n.x*radius,n.y*radius*palmDepth,axial));
+                        // Bind-space bones overlap; recalculating normals from the joint bridge triangles
+                        // produces inverted dark cuffs. Use the local tube's outward surface normals.
+                        float endNormal=fingertip && t>.7f ? (t-.7f)/Mathf.Max(.015f,1f-t) : 0f;
+                        normals.Add(new Vector3(n.x,n.y/palmDepth,endNormal).normalized);
+                        uv.Add(new Vector2(s/(float)sides,bone>=3?((bone-3)%3+t)/3f:t));
                         weights.Add(new BoneWeight{boneIndex0=bone,weight0=1});
                         if(r<rings && s<sides){int v=start+r*(sides+1)+s;triangles.Add(v);triangles.Add(v+1);triangles.Add(v+sides+1);triangles.Add(v+1);triangles.Add(v+sides+2);triangles.Add(v+sides+1);}
                     }
+                }
+                if(bone==2)
+                {
+                    // Close the knuckle end of the palm; proximal fingers emerge from this surface.
+                    int center=vertices.Count;vertices.Add(Vector3.forward);normals.Add(Vector3.forward);uv.Add(new Vector2(.5f,1));
+                    weights.Add(new BoneWeight{boneIndex0=bone,weight0=1});
+                    int rim=start+rings*(sides+1);
+                    for(int s=0;s<sides;s++){triangles.Add(center);triangles.Add(rim+s);triangles.Add(rim+s+1);}
                 }
                 if(bone==1 || bone==2 || (bone>=3 && (bone-3)%3!=0))
                 {
@@ -90,7 +103,7 @@ namespace WebShooter.Swing
                     }
                 }
             }
-            h.mesh=new Mesh{name=name+" mesh"};h.mesh.SetVertices(vertices);h.mesh.SetUVs(0,uv);h.mesh.SetTriangles(triangles,0);h.mesh.boneWeights=weights.ToArray();h.mesh.bindposes=bind;h.mesh.RecalculateNormals();
+            h.mesh=new Mesh{name=name+" mesh"};h.mesh.SetVertices(vertices);h.mesh.SetUVs(0,uv);h.mesh.SetNormals(normals);h.mesh.SetTriangles(triangles,0);h.mesh.boneWeights=weights.ToArray();h.mesh.bindposes=bind;
             h.renderer=h.root.gameObject.AddComponent<SkinnedMeshRenderer>();h.renderer.sharedMesh=h.mesh;h.renderer.bones=h.bones;h.renderer.rootBone=h.root;h.renderer.sharedMaterial=glove;
             h.renderer.localBounds=new Bounds(Vector3.zero,Vector3.one*3);h.renderer.shadowCastingMode=ShadowCastingMode.Off;h.renderer.receiveShadows=false;h.renderer.updateWhenOffscreen=false;
             return h;
