@@ -4,6 +4,22 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class WebVisualTests
     {
+        [Test] public void WrappedLineIncludesEveryCornerWithoutSmoothingThroughASolid()
+        {
+            var knots=new[]{Vector3.zero,Vector3.right*5,new Vector3(5,0,10),new Vector3(9,0,10)};var points=new Vector3[512];
+            int count=WebVisualMath.Resample(knots,points,26,.1f,.7f,3);
+            Assert.That(count,Is.EqualTo(79));
+            for(int i=0;i<knots.Length;i++)Assert.That(Vector3.Distance(points[i*26],knots[i]),Is.LessThan(.0001f));
+            Assert.That(WebVisualMath.RequiredPoints(13,30),Is.EqualTo(361));
+        }
+        [Test] public void WrappedSamplingIsInvariantUnderFloatingOriginTranslation()
+        {
+            var a=new Vector3[512];var b=new Vector3[512];var delta=new Vector3(1200,100,3500);
+            var knots=new[]{Vector3.zero,Vector3.right*5,Vector3.forward*10};
+            var shifted=new[]{knots[0]+delta,knots[1]+delta,knots[2]+delta};
+            int n=WebVisualMath.Resample(knots,a,26,0,0,3);WebVisualMath.Resample(shifted,b,26,0,0,3);
+            for(int i=0;i<n;i++)Assert.That(Vector3.Distance(a[i],b[i]-delta),Is.LessThan(.001f));
+        }
         [Test] public void AttachmentQuadMatchesWallAndRoofNormals()
         {
             foreach(var n in new[]{Vector3.up,Vector3.right,Vector3.back})

@@ -4,6 +4,7 @@ namespace WebShooter.Swing
 {
     public static class WebVisualMath
     {
+        public static int RequiredPoints(int knotCount,int segments)=>Mathf.Max(0,knotCount-1)*Mathf.Clamp(segments,2,30)+1;
         public static float FiringAmplitude(float amplitude,float progress)=>amplitude*Mathf.Pow(1f-Mathf.Clamp01(progress),.8f);
         public static float AttachmentAmplitude(float amplitude,float age,float duration)
         { float t=Mathf.Clamp01(age/Mathf.Max(.001f,duration));return amplitude*.3f*(1f-t)*Mathf.Sin(t*Mathf.PI*2f); }

@@ -36,6 +36,7 @@ namespace WebShooter.Swing
         private float attachmentAge;
         private bool wasAttached;
         public int RenderedPoints=>line!=null?line.positionCount:0;
+        public IReadOnlyList<Vector3> VisibleKnots=>knots;
         public Transform Emitter { get=>emitter; set=>emitter=value; }
         public void Configure(WebSwingMotionInput motion,FloatingOrigin floatingOrigin,TraversalHands traversalHands=null)
         {
@@ -95,6 +96,8 @@ namespace WebShooter.Swing
             blob.gameObject.SetActive(visible && input.Flying);
             if(blob.gameObject.activeSelf){blob.position=end;blob.localScale=Vector3.one*Mathf.Lerp(.032f,.018f,input.ShotProgress);}
             if(!line.enabled)return;
+            if(WebVisualMath.RequiredPoints(knots.Count,flightSegments)>points.Length)
+            {line.enabled=false;return;}
             float amplitude=input.Flying?WebVisualMath.FiringAmplitude(firingAmplitude,input.ShotProgress):
                 input.Body.Attached?WebVisualMath.AttachmentAmplitude(firingAmplitude,attachmentAge,settleSeconds):0;
             if(input.Body.Attached && !input.Flying && attachmentAge>=settleSeconds)
