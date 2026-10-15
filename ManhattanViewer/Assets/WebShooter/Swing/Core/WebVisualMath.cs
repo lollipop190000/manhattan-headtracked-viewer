@@ -7,6 +7,8 @@ namespace WebShooter.Swing
         public static float FiringAmplitude(float amplitude,float progress)=>amplitude*Mathf.Pow(1f-Mathf.Clamp01(progress),.8f);
         public static float AttachmentAmplitude(float amplitude,float age,float duration)
         { float t=Mathf.Clamp01(age/Mathf.Max(.001f,duration));return amplitude*.3f*(1f-t)*Mathf.Sin(t*Mathf.PI*2f); }
+        public static float TremorAmplitude(float speed,float tension,float strength,float maximum)=>
+            Mathf.Min(maximum,Mathf.Max(0,strength)*(Mathf.Max(0,speed)*.00004f+Mathf.Sqrt(Mathf.Max(0,tension))*.0002f));
         public static int Resample(IReadOnlyList<Vector3> knots,Vector3[] points,int samplesPerSegment,float amplitude,float phase,float turns)
         {
             int count=0;samplesPerSegment=Mathf.Clamp(samplesPerSegment,2,30);

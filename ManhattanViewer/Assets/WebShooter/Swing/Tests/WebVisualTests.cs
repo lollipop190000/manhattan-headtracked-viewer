@@ -4,6 +4,12 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class WebVisualTests
     {
+        [Test] public void TensionTremorIsZeroAtRestAndBoundedAtSpeed()
+        {
+            Assert.That(WebVisualMath.TremorAmplitude(0,0,1,.004f),Is.Zero);
+            Assert.That(WebVisualMath.TremorAmplitude(95,1000,1,.004f),Is.EqualTo(.004f));
+            Assert.That(WebVisualMath.TremorAmplitude(95,1000,0,.004f),Is.Zero);
+        }
         [Test] public void AttachmentHasSmallOvershootAndSettlesBy120Milliseconds()
         {
             Assert.That(WebVisualMath.AttachmentAmplitude(.22f,.03f,.12f),Is.GreaterThan(0));

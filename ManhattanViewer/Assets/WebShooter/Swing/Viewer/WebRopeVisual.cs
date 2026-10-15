@@ -10,6 +10,8 @@ namespace WebShooter.Swing
         [SerializeField,Min(0)] private float firingAmplitude=.22f;
         [SerializeField,Range(1,8)] private float waveTurns=3f;
         [SerializeField,Range(.1f,.15f)] private float settleSeconds=.12f;
+        [SerializeField,Min(0)] private float tremorStrength=1f;
+        [SerializeField,Range(0,.02f)] private float maximumTremor=.004f;
         [SerializeField,Min(.0001f)] private float thickness=.0012f;
         [SerializeField] private Transform emitter;
         private WebSwingMotionInput input;
@@ -74,6 +76,8 @@ namespace WebShooter.Swing
             if(!line.enabled)return;
             float amplitude=input.Flying?WebVisualMath.FiringAmplitude(firingAmplitude,input.ShotProgress):
                 input.Body.Attached?WebVisualMath.AttachmentAmplitude(firingAmplitude,attachmentAge,settleSeconds):0;
+            if(input.Body.Attached && !input.Flying && attachmentAge>=settleSeconds)
+                amplitude=WebVisualMath.TremorAmplitude(input.Body.Velocity.magnitude,input.Body.TensionAcceleration,tremorStrength,maximumTremor);
             int count=WebVisualMath.Resample(knots,points,flightSegments,amplitude,Time.time*24f,waveTurns);
             line.positionCount=count;
             for(int i=0;i<count;i++)line.SetPosition(i,points[i]);
