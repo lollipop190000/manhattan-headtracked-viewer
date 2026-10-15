@@ -91,7 +91,8 @@ namespace WebShooter.Swing
             EnsureInitialized();
             Release();
             if (!Finite(ray.origin) || !Finite(ray.direction) || ray.direction.sqrMagnitude < .0001f) return false;
-            if (!Physics.Raycast(ray, out RaycastHit hit, MaxRange, CollisionMask, QueryTriggerInteraction.Ignore)) return false;
+            Vector3 renderPlayer=Body.Position-(origin!=null?origin.Offset:Vector3.zero);
+            if (!TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,Body.Settings.features,out RaycastHit hit)) return false;
             Vector3 anchorCity = hit.point + (origin != null ? origin.Offset : Vector3.zero);
             if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
             ShotTarget = anchorCity;

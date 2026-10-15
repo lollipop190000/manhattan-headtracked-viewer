@@ -4,6 +4,19 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class TraversalPacingFeatureTests
     {
+        [Test] public void ZeroAimStrengthKeepsTheExactDirectHit()
+        {
+            var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                wall.layer=30;wall.transform.position=new Vector3(0,100,20);wall.transform.localScale=new Vector3(20,40,1);Physics.SyncTransforms();
+                var ray=new Ray(Vector3.up*100,Vector3.forward);Physics.Raycast(ray,out var direct,250,1<<30);
+                var f=new FlowFeatures{assistAnchor=true,anchorAssistStrength=0};
+                Assert.That(TraversalAim.Select(ray,ray.origin,Vector3.forward*40,250,1<<30,f,out var hit),Is.True);
+                Assert.That(hit.point,Is.EqualTo(direct.point));
+            }
+            finally{Object.DestroyImmediate(wall);}
+        }
         [Test] public void LongerAttachmentAllowsDropAndPointNineCreatesInitialTension()
         {
             var s=WebSwingMotionInput.TraversalSettings();s.features.attachmentDrop=true;

@@ -13,6 +13,10 @@ namespace WebShooter.Swing
         [SerializeField] public bool tensionOnlyRope;
         [SerializeField] public bool attachmentDrop;
         [SerializeField] public bool gentleReel;
+        [SerializeField] public bool assistAnchor;
+        [Range(0,1)] public float anchorAssistStrength=.35f;
+        [Range(1,25)] public float anchorConeDegrees=12f;
+        [Range(4,24)] public int anchorSamples=12;
         [Range(.8f,1.3f)] public float initialLengthRatio=1.08f;
         [Range(0,2)] public float gentleReelSpeed=.6f;
         [Range(0,1)] public float yankExitSpeedRatio = .5f;
