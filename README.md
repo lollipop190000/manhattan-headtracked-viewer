@@ -111,6 +111,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -EditorPlayMo
 
 The second command needs Unity and a graphics-capable desktop for rendered tests. Exact release checks and remaining limits are in the [v0.1.1 validation report](docs/release-v0.1.1.md). Historical reports remain tied to their recorded revisions; targets are not measured results.
 
+Experimental movement toggles, snag diagnostics and reproducible PPO/fixed-input comparisons are described in the [traversal lab guide](training/README.md), with measured and pending checks in the [flow validation report](docs/traversal-flow-validation.md).
+
 Open an issue with the release version, GPU, resolution, camera/no-camera mode, screenshot and reproduction steps. For code changes, branch from `main`, preserve Unity `.meta` files, run the relevant tests and open a pull request. See [CONTRIBUTING](CONTRIBUTING.md) and the [architecture guide](docs/architecture.md). Experimental model-import tools are explicit developer workflows and do not change normal startup content.
 
 ## License and credits

@@ -28,6 +28,15 @@ Original NYC sources retain [NYC Open Data Terms of Use](https://data.cityofnewy
 
 No example vase, furniture or studio HDRI from the separate technical demo is required by the city viewer. If team-authored content imports additional external assets, add source, author, license and file fingerprint here before merging it.
 
+## Authored traversal experiments
+
+| Asset | Source / author | Licence |
+|---|---|---|
+| Braided web texture, radial attachment pattern, transparent web shader and wind noise | Original Manhattan contributors' runtime generators; [asset notice](ManhattanViewer/Assets/WebShooter/Swing/NOTICE.md) | Repository [MIT](LICENSE) |
+| Seeded test-map layout and separate traversal lab scene | Original Manhattan contributors; [TraversalLab](ManhattanViewer/Assets/TraversalLab) | Repository [MIT](LICENSE); Unity primitive meshes retain Unity's terms |
+
+ML-Agents is installed separately through UPM and retains its package licence. Python training dependencies retain their own distribution notices. No pretrained policy, third-party art, recording or branded character asset is supplied by these experiments.
+
 ## Portable webcam application distribution
 
 The v0.1.1 Windows ZIP includes a freshly assembled CPython embeddable runtime,
