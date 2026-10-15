@@ -337,7 +337,12 @@ namespace WebShooter.Swing
             }
 
             float speed = v.magnitude;
-            if (speed > Settings.maxSpeed) v *= Settings.maxSpeed / speed;
+            if (speed > Settings.maxSpeed)
+            {
+                float limited=Settings.features.softSpeedLimit?
+                    Settings.maxSpeed+(speed-Settings.maxSpeed)*Mathf.Exp(-Settings.features.excessSpeedDamping*h):Settings.maxSpeed;
+                v*=limited/speed;
+            }
             Position = p;
             Velocity = v;
         }

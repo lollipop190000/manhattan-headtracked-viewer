@@ -15,6 +15,8 @@ namespace WebShooter.Swing
         [SerializeField] public bool gentleReel;
         [SerializeField] public bool assistAnchor;
         [SerializeField] public bool releaseBoost;
+        [SerializeField] public bool softSpeedLimit;
+        [Min(.01f)] public float excessSpeedDamping=2f;
         [Min(0)] public float releaseBoostSpeed=6f;
         [Range(0,1)] public float releasePhaseCosine=.65f;
         [Min(0)] public float releaseMinimumUpSpeed=3f;

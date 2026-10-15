@@ -4,6 +4,14 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class TraversalPacingFeatureTests
     {
+        [Test] public void SoftLimitDoesNotChopAnOverspeedVelocityInOneStep()
+        {
+            var s=WebSwingMotionInput.TraversalSettings();s.gravity=0;s.airDrag=0;s.features.softSpeedLimit=true;
+            var b=new SwingPhysics(s);b.Reset(Vector3.up*100);b.Velocity=Vector3.forward*110;b.Step(1f/120);
+            Assert.That(b.Velocity.magnitude,Is.InRange(109f,110f));
+            for(int i=0;i<600;i++)b.Step(1f/120);
+            Assert.That(b.Velocity.magnitude,Is.InRange(95f,95.01f));
+        }
         [Test] public void ReleaseBoostRequiresAscendingUpperArcAndExplicitRelease()
         {
             var s=WebSwingMotionInput.TraversalSettings();s.features.releaseBoost=true;
