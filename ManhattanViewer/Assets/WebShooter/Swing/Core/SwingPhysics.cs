@@ -8,6 +8,7 @@ namespace WebShooter.Swing
     [Serializable]
     public sealed class SwingSettings
     {
+        public FlowFeatures features = new FlowFeatures();
         [Tooltip("중력 가속도 (m/s^2, 아래 방향)")] public float gravity = 9.81f;
         [Tooltip("선형 공기 저항 계수 (1/s). 클수록 속도가 빨리 줄어든다")] public float airDrag = 0.05f;
         [Tooltip("최대 속도 (m/s)")] public float maxSpeed = 70f;
@@ -48,6 +49,7 @@ namespace WebShooter.Swing
         public TraversalState State => wallRunning ? TraversalState.WallRunning : Attached ? TraversalState.Swinging : Grounded ? TraversalState.Grounded : TraversalState.Airborne;
         public Vector3 ContactNormal { get; private set; }
         public float AssistStrength { get; set; } = 1f;
+        public bool Braking { get; set; }
         private bool wallRunning;
         private float wallTime, wallCooldown;
         private bool wallExhausted;
@@ -201,6 +203,25 @@ namespace WebShooter.Swing
 
         private void Substep(float h, Vector3 steering, Vector3 gravity, float reel)
         {
+            if (Settings.features.preserveSteeringMomentum && !Braking && !wallRunning && !Grounded && steering.sqrMagnitude > .0001f)
+            {
+                Vector3 normal = Attached ? (Position - Anchor).normalized : Vector3.up;
+                Vector3 tangent = Vector3.ProjectOnPlane(Velocity, normal);
+                Vector3 direction = Vector3.ProjectOnPlane(steering, normal).normalized;
+                float target = Attached ? Settings.cruiseSpeed : Settings.features.airTargetSpeed;
+                if (tangent.magnitude >= target)
+                {
+                    Vector3 turned = Vector3.RotateTowards(tangent, direction * tangent.magnitude,
+                        Settings.features.steeringTurnDegrees * Mathf.Deg2Rad * h, 0f);
+                    Velocity += turned - tangent;
+                }
+                else
+                {
+                    float deficit = Mathf.Max(0f, target - Vector3.Dot(tangent, direction));
+                    Velocity += direction * Mathf.Min(deficit, steering.magnitude * h);
+                }
+                steering = Vector3.zero;
+            }
             Vector3 v = Velocity + (gravity + steering) * h;
             v *= Mathf.Exp(-Settings.airDrag * h);
             Vector3 p = Position + v * h;

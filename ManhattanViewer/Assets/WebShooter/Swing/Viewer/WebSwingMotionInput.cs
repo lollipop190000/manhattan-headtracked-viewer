@@ -165,6 +165,7 @@ namespace WebShooter.Swing
             yaw += input.lookDegrees.x;
             pitch = Mathf.Clamp(pitch - input.lookDegrees.y, -85f, 85f);
             Quaternion heading = Quaternion.Euler(0f, yaw, 0f);
+            Body.Braking = input.localMovement.z < 0f;
             Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
             if (input.localMovement.z < 0f)
                 steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
