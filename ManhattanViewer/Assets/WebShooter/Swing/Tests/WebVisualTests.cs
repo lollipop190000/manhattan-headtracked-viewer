@@ -4,6 +4,18 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class WebVisualTests
     {
+        [Test] public void BraidedTextureHasTransparentEdgesAndInternalFilaments()
+        {
+            var t=WebTextureFactory.Strand(5);
+            try
+            {
+                Assert.That(t.width,Is.EqualTo(256));Assert.That(t.height,Is.EqualTo(64));
+                Assert.That(t.GetPixel(0,0).a,Is.Zero);Assert.That(t.GetPixel(0,63).a,Is.Zero);
+                Assert.That(t.GetPixel(0,32).a,Is.GreaterThan(.5f));
+                Assert.That(t.GetPixel(0,32),Is.Not.EqualTo(t.GetPixel(8,32)));
+            }
+            finally{Object.DestroyImmediate(t);}
+        }
         [Test] public void TensionTremorIsZeroAtRestAndBoundedAtSpeed()
         {
             Assert.That(WebVisualMath.TremorAmplitude(0,0,1,.004f),Is.Zero);

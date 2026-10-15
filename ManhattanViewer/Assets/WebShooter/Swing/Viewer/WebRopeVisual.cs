@@ -13,12 +13,15 @@ namespace WebShooter.Swing
         [SerializeField,Min(0)] private float tremorStrength=1f;
         [SerializeField,Range(0,.02f)] private float maximumTremor=.004f;
         [SerializeField,Min(.0001f)] private float thickness=.0012f;
+        [SerializeField,Range(2,12)] private int strandCount=5;
+        [SerializeField,Min(.1f)] private float textureRepeatsPerMetre=2f;
         [SerializeField] private Transform emitter;
         private WebSwingMotionInput input;
         private FloatingOrigin origin;
         private TraversalHands hands;
         private LineRenderer line;
         private Material material;
+        private Texture2D strandTexture;
         private Transform blob;
         private readonly Vector3[] points=new Vector3[512],lastCityKnots=new Vector3[16];
         private readonly List<Vector3> knots=new List<Vector3>(16);
@@ -34,9 +37,11 @@ namespace WebShooter.Swing
             input=motion;origin=floatingOrigin;hands=traversalHands;
             line=gameObject.AddComponent<LineRenderer>();line.useWorldSpace=true;line.positionCount=2;line.widthMultiplier=thickness;
             line.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
-            var template=Resources.Load<Material>("WindowFrameMaterial");
-            material=template!=null?new Material(template):new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            material.SetColor("_BaseColor",new Color(.83f,.85f,.84f));line.sharedMaterial=material;line.enabled=false;
+            material=new Material(Resources.Load<Shader>("TraversalWebStrand"));
+            material.SetColor("_Color",new Color(.83f,.85f,.84f,.88f));strandTexture=WebTextureFactory.Strand(strandCount);
+            material.SetTexture("_MainTex",strandTexture);line.sharedMaterial=material;line.enabled=false;
+            line.textureMode=LineTextureMode.Tile;line.textureScale=new Vector2(textureRepeatsPerMetre,1);
+            line.widthCurve=new AnimationCurve(new Keyframe(0,.65f),new Keyframe(1,1.15f));
             var tip=GameObject.CreatePrimitive(PrimitiveType.Sphere);tip.name="Travelling web knot";tip.layer=2;
             Destroy(tip.GetComponent<Collider>());tip.transform.SetParent(transform,false);tip.transform.localScale=Vector3.one*.025f;
             var renderer=tip.GetComponent<MeshRenderer>();renderer.sharedMaterial=material;renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -83,6 +88,6 @@ namespace WebShooter.Swing
             for(int i=0;i<count;i++)line.SetPosition(i,points[i]);
             line.widthMultiplier=thickness*(visible?1:fade/.3f);
         }
-        private void OnDestroy(){if(material!=null)Destroy(material);}
+        private void OnDestroy(){if(material!=null)Destroy(material);if(strandTexture!=null)Destroy(strandTexture);}
     }
 }
