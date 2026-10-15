@@ -1,0 +1,6 @@
+{
+  "name": "Manhattan.Traversal.Lab.Tests",
+  "references": ["Manhattan.Traversal.Lab"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
