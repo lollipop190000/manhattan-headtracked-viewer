@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace WebShooter.Swing
 {
-    public enum TraversalState { Airborne, Grounded, Swinging, WallRunning }
+    public enum TraversalState { Airborne, Grounded, Swinging, WallRunning, Yanking }
     /// <summary>튜닝 가능한 물리 값. 모든 길이는 미터, 시간은 초. 도시 좌표(y가 위)에서 쓴다.</summary>
     [Serializable]
     public sealed class SwingSettings
@@ -46,13 +46,15 @@ namespace WebShooter.Swing
         public SwingPhysics(SwingSettings settings = null) => Settings = settings ?? new SwingSettings();
 
         public float FloorY => Settings.groundHeight + Settings.eyeHeight;
-        public TraversalState State => wallRunning ? TraversalState.WallRunning : Attached ? TraversalState.Swinging : Grounded ? TraversalState.Grounded : TraversalState.Airborne;
+        public TraversalState State => wallRunning ? TraversalState.WallRunning : yanking ? TraversalState.Yanking : Attached ? TraversalState.Swinging : Grounded ? TraversalState.Grounded : TraversalState.Airborne;
         public Vector3 ContactNormal { get; private set; }
         public float AssistStrength { get; set; } = 1f;
         public bool Braking { get; set; }
         public bool WallRunRequested { get; set; }
         public string LastCollisionName { get; private set; } = "";
         private bool wallRunning;
+        private bool yanking, yankContact, yankExhausted;
+        private Vector3 yankDirection;
         private float wallTime, wallCooldown;
         private bool wallExhausted;
         private float wallEscapeTime, attachmentTakeupRemaining;
@@ -71,6 +73,7 @@ namespace WebShooter.Swing
 
         public void Contact(Vector3 normal, string colliderName = null)
         {
+            if(yanking) yankContact = true;
             if (colliderName != null) LastCollisionName = colliderName;
             ContactNormal = normal;
             float into = Vector3.Dot(Velocity, normal);
@@ -143,6 +146,7 @@ namespace WebShooter.Swing
             Velocity = Vector3.zero;
             Grounded = position.y <= FloorY + .03f;
             wallRunning = false;
+            yanking = yankContact = yankExhausted = false; LastCollisionName = "";
             wallExhausted = false;
             wallTime = wallCooldown = wallEscapeTime = 0f; WallDeflections = 0;
             Release();
@@ -161,7 +165,33 @@ namespace WebShooter.Swing
             return true;
         }
 
-        public void Release() { Attached = false; attachmentTakeupRemaining = 0f; }
+        public void Release() { Attached = false; yanking = false; attachmentTakeupRemaining = 0f; }
+
+        public bool BeginYank()
+        {
+            if(!Attached || yankExhausted || Vector3.Distance(Position,Anchor) <= Settings.minRopeLength + Settings.features.yankWallClearance) return false;
+            if(yanking) return true;
+            yanking = true; yankContact = false; yankDirection = (Anchor-Position).normalized;
+            if(Settings.features.preserveTransitionMomentum)
+                Velocity += yankDirection * Mathf.Max(0f,Settings.reelSpeed-Vector3.Dot(Velocity,yankDirection)) * Settings.features.yankStartBlend;
+            return true;
+        }
+        public void FinishYank()
+        {
+            if(!yanking) return;
+            if(Settings.features.preserveTransitionMomentum && !yankContact && !Grounded && Attached)
+                Velocity += yankDirection * Mathf.Max(0f,Settings.reelSpeed * Settings.features.yankExitSpeedRatio - Vector3.Dot(Velocity,yankDirection));
+            yanking = false;
+        }
+        private void AdvanceYank(float h)
+        {
+            if(!yanking) return;
+            if(Vector3.Distance(Position,Anchor) <= Settings.minRopeLength + Settings.features.yankWallClearance)
+            { FinishYank(); yankExhausted = true; return; }
+            yankDirection = (Anchor-Position).normalized;
+            if(Settings.features.preserveTransitionMomentum)
+                Velocity += yankDirection * Mathf.Max(0f,Settings.reelSpeed-Vector3.Dot(Velocity,yankDirection)) * (1f-Mathf.Exp(-15f*h));
+        }
 
         // Change the effective anchor at a wrap corner without moving the body or adding energy.
         public void RouteThrough(Vector3 anchor, float fixedLengthChange)
@@ -200,6 +230,8 @@ namespace WebShooter.Swing
         public void Step(float dt, Vector3 steer = default, float reel = 0f)
         {
             if (dt <= 0f) return;
+            if(reel > 0f) BeginYank();
+            else { FinishYank(); yankExhausted = false; }
             dt = Mathf.Min(dt, 0.1f);   // 멈췄다 재개할 때 폭주하지 않도록
             int steps = Mathf.Max(1, Mathf.CeilToInt(dt / Settings.maxStep));
             float h = dt / steps;
@@ -222,6 +254,7 @@ namespace WebShooter.Swing
 
         private void Substep(float h, Vector3 steering, Vector3 gravity, float reel)
         {
+            AdvanceYank(h);
             if (Settings.features.preserveSteeringMomentum && !Braking && !wallRunning && !Grounded && steering.sqrMagnitude > .0001f)
             {
                 Vector3 normal = Attached ? (Position - Anchor).normalized : Vector3.up;
