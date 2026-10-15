@@ -4,6 +4,22 @@ namespace WebShooter.Swing.Tests
 {
     public class FlowFeatureTests
     {
+        [TestCase(false)][TestCase(true)] public void ExistingWrapStaysAttachedAndOptionalResetIsTaut(bool enabled)
+        {
+            var box=GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                box.layer=30;box.transform.position=Vector3.up*100;box.transform.localScale=Vector3.one*4;Physics.SyncTransforms();
+                var s=WebSwingMotionInput.TraversalSettings();s.features.resetLengthAtWrap=enabled;
+                var b=new SwingPhysics(s);b.Reset(new Vector3(-5,100,0));b.Velocity=Vector3.forward*30;b.Attach(new Vector3(5,100,0));
+                var route=new WebRopeRoute();route.Begin(b.Anchor);Assert.That(route.Update(b.Position,Vector3.zero,1<<30),Is.True);
+                var velocity=b.Velocity;var position=b.Position;b.RouteThrough(route.Points[0],route.FixedLength);
+                Assert.That(b.Attached,Is.True);Assert.That(b.Velocity,Is.EqualTo(velocity));Assert.That(b.Position,Is.EqualTo(position));
+                if(enabled)Assert.That(b.RopeLength,Is.EqualTo(Vector3.Distance(position,b.Anchor)).Within(.001f));
+                TestContext.WriteLine($"FLOW wrap={enabled} points={route.Points.Count} speed={b.Velocity.magnitude:F4} slack={b.RopeLength-Vector3.Distance(b.Position,b.Anchor):F4}");
+            }
+            finally{Object.DestroyImmediate(box);}
+        }
         [TestCase(false)][TestCase(true)] public void GroundJumpAlreadyPreservesHorizontalMomentum(bool enabled)
         {
             var s=WebSwingMotionInput.TraversalSettings();s.features.preserveTransitionMomentum=enabled;

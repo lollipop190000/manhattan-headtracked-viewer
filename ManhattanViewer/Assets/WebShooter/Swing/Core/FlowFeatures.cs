@@ -9,6 +9,7 @@ namespace WebShooter.Swing
         [SerializeField] public bool preserveSteeringMomentum;
         [SerializeField] public bool preserveGlancingContact;
         [SerializeField] public bool preserveTransitionMomentum;
+        [SerializeField] public bool resetLengthAtWrap;
         [Range(0,1)] public float yankExitSpeedRatio = .5f;
         [Min(0)] public float yankWallClearance = .65f;
         [Range(0,1)] public float yankStartBlend = .65f;

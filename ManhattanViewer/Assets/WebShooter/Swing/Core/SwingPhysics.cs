@@ -200,6 +200,8 @@ namespace WebShooter.Swing
             // Only a real corner insertion/removal needs a new effective length.
             if (anchor == Anchor && Mathf.Abs(fixedLengthChange) < .00001f) return;
             Anchor = anchor;
+            if(Settings.features.resetLengthAtWrap)
+            { RopeLength = Mathf.Max(Settings.minRopeLength,Vector3.Distance(Position,anchor)); return; }
             RopeLength = Mathf.Max(Mathf.Max(Settings.minRopeLength, Vector3.Distance(Position, anchor)), RopeLength - fixedLengthChange);
         }
 
