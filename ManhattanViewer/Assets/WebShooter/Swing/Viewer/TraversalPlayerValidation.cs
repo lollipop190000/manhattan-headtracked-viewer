@@ -30,6 +30,9 @@ namespace WebShooter.Swing
             try
             {
                 report.unityVersion = Application.unityVersion;
+                var liveApp = FindFirstObjectByType<ManhattanBootstrap>();
+                Check(liveApp != null && liveApp.Rendering.AntialiasingName == (liveApp.Preferences.temporalAA ? "TemporalAntiAliasing" : "None"),
+                    "traversal preserves saved antialiasing preference");
                 // Isolated above the city; real PhysX queries and the shipping movement adapter.
                 var flight = rig.AddComponent<FreeFlightController>(); flight.enabled = false;
                 var start = new Vector3(0, 2000, 0);
@@ -58,7 +61,7 @@ namespace WebShooter.Swing
                 input.Body.Reset(start); flight.SetPose(start, Quaternion.identity);
                 var holdRay = new Ray(start, Vector3.forward);
                 Check(input.HandleMouseHold(true, true, true, holdRay), "mouse hold press starts shot");
-                for (int i = 0; i < 20; i++)
+                for (int i = 0; i < 40; i++)
                 {
                     input.HandleMouseHold(true, false, true, holdRay);
                     var command = input.Sample(1f / 120); flight.transform.position = command.cityPosition;
@@ -80,11 +83,16 @@ namespace WebShooter.Swing
                     "swing wall collision detaches and reflects outward");
                 Check(input.Body.Velocity.x > 11 && input.Body.WallDeflections == 1,
                     "glancing collision preserves tangential speed without repeated bounce");
-                var lean = new TrackedLeanSteering(); lean.Sample(0, true, 1f / 60);
-                float steering = 0;
-                for (int i = 0; i < 60; i++) steering = lean.Sample(.1f, true, 1f / 60);
-                Check(steering > .9f && lean.Sample(.1f, false, 1f / 60) == 0,
-                    "tracked lean builds gradually and stale tracking cancels immediately");
+                var taut = new SwingPhysics(new SwingSettings { gravity = 0, airDrag = 0, attachmentTakeupSeconds = .75f });
+                taut.Reset(start); taut.Velocity = Vector3.up * 10; taut.Attach(start + Vector3.up * 40);
+                for (int i = 0; i < 60; i++) taut.Step(1f / 120);
+                Check(Mathf.Abs(taut.RopeLength - Vector3.Distance(taut.Position, taut.Anchor)) < .01f,
+                    "initial attachment stays taut during inward motion");
+                Check(Mathf.Abs(taut.Position.y - start.y - 5) < .02f && taut.Velocity == Vector3.up * 10,
+                    "initial takeup adds no impulse or position jump");
+                taut.Step(.1f, default, -1);
+                Check(taut.RopeLength > Vector3.Distance(taut.Position, taut.Anchor) + 3,
+                    "manual payout overrides initial takeup");
                 input.Body.Reset(start);
                 input.Enabled = false;
                 var gate = new MouseWebShooter.FlightCollisionGate(input);

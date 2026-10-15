@@ -31,7 +31,6 @@ namespace WebShooter.Swing
         public Func<bool> CanSimulate { get; set; }
         public bool JumpRequested { get; set; }
         public float ReelInput { get; set; }
-        public bool AutoFollow { get; set; }
         public bool AutomaticRopeAssist { get; set; }
         public bool AutomaticCruiseAssist { get; set; }
         public bool MouseOwnsRope { get; private set; }
@@ -45,11 +44,12 @@ namespace WebShooter.Swing
             MouseOwnsRope = hit;
             return hit;
         }
-        public float TrackedSteering { get; set; }
-        private float manualLookHold, flightAssistTime;
         public int CollisionReleaseCount { get; private set; }
         public TraversalCollision Collision { get; }
+        public WebRopeRoute Route { get; } = new WebRopeRoute();
         public bool Flying { get; private set; }
+        public float ShotAge { get; private set; }
+        public const float GestureSeconds = .12f;
         public Vector3 ShotTarget { get; private set; }
         public float ShotProgress { get; private set; }
         private float shotDuration;
@@ -64,7 +64,7 @@ namespace WebShooter.Swing
             look = lookSource;
             flight = flightController ?? throw new ArgumentNullException(nameof(flightController));
             origin = floatingOrigin;
-            Body = new SwingPhysics(settings);
+            Body = new SwingPhysics(settings ?? new SwingSettings { ratchetRope = true });
             Collision = new TraversalCollision(origin, Body);
         }
 
@@ -82,7 +82,7 @@ namespace WebShooter.Swing
             if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
             ShotTarget = anchorCity;
             shotCollider = hit.collider;
-            ShotProgress = 0f;
+            ShotProgress = 0f; ShotAge = 0f;
             shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
             Flying = true;
             return true;
@@ -104,6 +104,7 @@ namespace WebShooter.Swing
         {
             MouseOwnsRope = false;
             Flying = false;
+            Route.Clear();
             if (!Body.Attached) return;
             Body.Release();
             WebReleased?.Invoke();
@@ -155,18 +156,14 @@ namespace WebShooter.Swing
 
             yaw += input.lookDegrees.x;
             pitch = Mathf.Clamp(pitch - input.lookDegrees.y, -85f, 85f);
-            if (input.lookDegrees.sqrMagnitude > .001f) manualLookHold = 1.5f;
-            else manualLookHold = Mathf.Max(0f, manualLookHold - deltaTime);
             Quaternion heading = Quaternion.Euler(0f, yaw, 0f);
             Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
             if (input.localMovement.z < 0f)
                 steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
-            // Explicit keyboard steering wins over tracked head lean.
-            if (!Body.Grounded && Mathf.Abs(input.localMovement.x) < .1f && (Body.Attached || flightAssistTime > 0f))
-                steer += heading * Vector3.right * (Mathf.Clamp(TrackedSteering, -1f, 1f) * .4f);
             if (Flying)
             {
-                ShotProgress = Mathf.Min(1f, ShotProgress + deltaTime / shotDuration);
+                ShotAge += deltaTime;
+                ShotProgress = Mathf.Clamp01((ShotAge - GestureSeconds) / shotDuration);
                 if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy) Release();
                 else if (ShotProgress >= 1f)
                 {
@@ -177,17 +174,16 @@ namespace WebShooter.Swing
                         Body.Jump();
                         var direction = Vector3.ProjectOnPlane(ShotTarget - Body.Position, Vector3.up).normalized;
                         Body.Velocity += direction * (12f * Body.AssistStrength);
-                        flightAssistTime = 1f;
                     }
-                    if (Body.Attach(ShotTarget)) WebAttached?.Invoke(ShotTarget);
+                    if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
                 }
             }
             if (Body.Attached)
             {
-                Vector3 segment = Body.Anchor - Body.Position;
-                Vector3 start = Body.Position - (origin != null ? origin.Offset : Vector3.zero);
+                float oldFixed = Route.FixedLength;
                 if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy ||
-                    Physics.Raycast(start, segment.normalized, out var obstruction, Mathf.Max(0f, segment.magnitude - .1f), CollisionMask, QueryTriggerInteraction.Ignore)) Release();
+                    !Route.Update(Body.Position, origin != null ? origin.Offset : Vector3.zero, CollisionMask)) Release();
+                else Body.RouteThrough(Route.Points[0], Route.FixedLength - oldFixed);
             }
             if (JumpRequested)
             {
@@ -223,20 +219,6 @@ namespace WebShooter.Swing
                     Release(); Body.Reset(Finite(before) ? before : actual);
                 }
                 remaining -= h;
-            }
-
-            if (Body.Attached || Flying || Body.State == TraversalState.WallRunning) flightAssistTime = 1f;
-            else flightAssistTime = Mathf.Max(0f, flightAssistTime - deltaTime);
-            if (AutoFollow && Body.AssistStrength > 0f && manualLookHold <= 0f && flightAssistTime > 0f && !Body.Grounded)
-            {
-                Vector3 horizontal = Vector3.ProjectOnPlane(Body.Velocity, Vector3.up);
-                if (horizontal.magnitude > 5f)
-                {
-                    float targetYaw = Mathf.Atan2(horizontal.x, horizontal.z) * Mathf.Rad2Deg;
-                    yaw = Mathf.MoveTowardsAngle(yaw, targetYaw, 40f * Mathf.Min(deltaTime, .1f) * Body.AssistStrength);
-                    float targetPitch = Mathf.Clamp(-Mathf.Atan2(Body.Velocity.y, horizontal.magnitude) * Mathf.Rad2Deg * .35f, -18f, 18f);
-                    pitch = Mathf.MoveTowards(pitch, targetPitch, 20f * Mathf.Min(deltaTime, .1f));
-                }
             }
 
             lastRequested = Body.Position;

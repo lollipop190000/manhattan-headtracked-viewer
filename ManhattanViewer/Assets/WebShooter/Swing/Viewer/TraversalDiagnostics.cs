@@ -33,7 +33,7 @@ namespace WebShooter.Swing
             }
             if (elapsed < 5) return;
             frames.Sort(); samples.Sort(); int i = Mathf.Min(frames.Count-1, Mathf.FloorToInt(frames.Count*.95f));
-            Debug.Log($"TRAVERSAL_PERF frames={frames.Count} frameP50Ms={frames[frames.Count/2]:F2} frameP95Ms={frames[i]:F2} motionP95Ms={samples[i]:F3} tracking={app.Display.IsTracking} headAgeMs={app.Display.ResultAgeMilliseconds:F1}");
+            Debug.Log($"TRAVERSAL_PERF frames={frames.Count} frameP50Ms={frames[frames.Count/2]:F2} frameP95Ms={frames[i]:F2} motionP95Ms={samples[i]:F3} tracking={app.Display.IsTracking} headAgeMs={app.Display.ResultAgeMilliseconds:F1} aa={app.Rendering.AntialiasingName}");
             frames.Clear(); samples.Clear(); elapsed = 0;
         }
     }

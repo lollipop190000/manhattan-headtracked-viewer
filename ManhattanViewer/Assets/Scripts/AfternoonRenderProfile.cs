@@ -11,7 +11,6 @@ namespace Manhattan.Viewer
         private UniversalRenderPipelineAsset runtimePipeline;
         private RenderPipelineAsset previousQualityPipeline;
         private VolumeProfile runtimeVolume;
-        private bool traversalStability, temporalRequested = true;
         public CitySunlight Sunlight { get; private set; }
         public static void ConfigureShadows(UniversalRenderPipelineAsset pipeline)
         {
@@ -50,9 +49,8 @@ namespace Manhattan.Viewer
         }
         public void SetTemporalAA(bool value)
         {
-            temporalRequested = value;
             if (cameraData == null) return;
-            var desired = traversalStability ? AntialiasingMode.FastApproximateAntialiasing : value ? AntialiasingMode.TemporalAntiAliasing : AntialiasingMode.None;
+            var desired = value ? AntialiasingMode.TemporalAntiAliasing : AntialiasingMode.None;
             if (cameraData.antialiasing == desired) return;
             cameraData.antialiasing = desired;
             ref var taa = ref cameraData.taaSettings;
@@ -63,12 +61,7 @@ namespace Manhattan.Viewer
             taa.mipBias = 0f; taa.varianceClampScale = 1.2f; taa.contrastAdaptiveSharpening = 0f;
             ResetHistory();
         }
-        public void SetTraversalStability(bool value)
-        {
-            if (traversalStability == value) return;
-            traversalStability = value;
-            SetTemporalAA(temporalRequested);
-        }
+        public string AntialiasingName => cameraData != null ? cameraData.antialiasing.ToString() : "Unavailable";
         public void ResetHistory() { if (cameraData != null) cameraData.resetHistory = true; }
         private void OnDestroy()
         {

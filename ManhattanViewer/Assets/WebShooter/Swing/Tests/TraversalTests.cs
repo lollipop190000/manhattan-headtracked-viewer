@@ -7,6 +7,31 @@ namespace WebShooter.Swing.Tests
     public class TraversalTests
     {
         [TestCase(30)] [TestCase(60)] [TestCase(120)]
+        public void InitialTakeupStaysTautWithoutChangingTrajectory(int fps)
+        {
+            var b=new SwingPhysics(new SwingSettings { gravity=0, airDrag=0, attachmentTakeupSeconds=.75f });
+            b.Reset(Vector3.up*100); b.Velocity=Vector3.up*10; b.Attach(Vector3.up*150);
+            for(int i=0;i<fps/2;i++)
+            {
+                b.Step(1f/fps);
+                Assert.That(b.RopeLength,Is.EqualTo(Vector3.Distance(b.Position,b.Anchor)).Within(.001f));
+            }
+            Assert.That(b.Position.y,Is.EqualTo(105).Within(.002f));
+            Assert.That(b.Velocity,Is.EqualTo(Vector3.up*10));
+            b.Release(); Assert.That(b.Velocity,Is.EqualTo(Vector3.up*10));
+        }
+        [Test] public void InitialTakeupExpiresAndManualPayoutWins()
+        {
+            var b=new SwingPhysics(new SwingSettings { gravity=0, airDrag=0, attachmentTakeupSeconds=.75f });
+            b.Reset(Vector3.up*100); b.Attach(Vector3.up*150); b.Velocity=Vector3.up*10;
+            for(int i=0;i<120;i++) b.Step(1f/120);
+            Assert.That(b.RopeLength-Vector3.Distance(b.Position,b.Anchor),Is.GreaterThan(2));
+            b.Attach(Vector3.up*150); b.Step(.1f,default,-1);
+            float length=b.RopeLength; b.Step(.1f);
+            Assert.That(b.RopeLength,Is.EqualTo(length).Within(.001f));
+            Assert.That(b.RopeLength-Vector3.Distance(b.Position,b.Anchor),Is.GreaterThan(4));
+        }
+        [TestCase(30)] [TestCase(60)] [TestCase(120)]
         public void MouseHoldReleasesDuringFlightAndAfterAttachment(int fps)
         {
             var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -62,7 +87,7 @@ namespace WebShooter.Swing.Tests
             {
                 var flight=rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up*100,Quaternion.identity);
                 var input=new WebSwingMotionInput(null,flight,null); input.Activate();
-                Assert.That(input.AutoFollow || input.AutomaticRopeAssist || input.AutomaticCruiseAssist,Is.False);
+                Assert.That(input.AutomaticRopeAssist || input.AutomaticCruiseAssist,Is.False);
                 input.Body.Velocity=Vector3.right*20;
                 var c=input.Sample(.1f); Assert.That(Quaternion.Angle(c.cityRotation,Quaternion.identity),Is.LessThan(.001f));
                 input.Collision.Dispose();
@@ -97,19 +122,6 @@ namespace WebShooter.Swing.Tests
             b.AssistStrength = 1; b.AssistCruise(.1f, false); Assert.That(b.Velocity.z, Is.EqualTo(21.2f).Within(.001f));
             b.Release(); var v = b.Velocity; b.AssistCruise(.1f, false); Assert.That(b.Velocity, Is.EqualTo(v));
         }
-        [TestCase(30)] [TestCase(60)] [TestCase(120)]
-        public void TrackedLeanRejectsJitterAndDropsStaleInput(int fps)
-        {
-            var lean = new TrackedLeanSteering(); float dt = 1f / fps;
-            lean.Sample(.03f, true, dt);
-            for (int i = 0; i < fps; i++) Assert.That(lean.Sample(.04f, true, dt), Is.Zero);
-            float value = 0;
-            for (int i = 0; i < fps; i++) value = lean.Sample(.13f, true, dt);
-            Assert.That(value, Is.EqualTo(1f).Within(.001f));
-            Assert.That(lean.Sample(.13f, false, dt), Is.Zero);
-            Assert.That(lean.Sample(.13f, true, dt), Is.Zero);
-            Assert.That(lean.Sample(float.NaN, true, dt), Is.Zero);
-        }
         [Test] public void HighShotAutomaticallyLaunchesButMissDoesNot()
         {
             var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -121,6 +133,8 @@ namespace WebShooter.Swing.Tests
                 Assert.That(input.TryFire(new Ray(flight.CityPosition, new Vector3(0, 10, 20))), Is.True);
                 Assert.That(input.Body.Velocity, Is.EqualTo(Vector3.zero), "no launch before arrival");
                 Assert.That(input.Body.Attached, Is.False);
+                input.Sample(.1f);
+                Assert.That(input.Body.Attached, Is.False, "gesture completes before launch");
                 input.Sample(.1f);
                 Assert.That(input.Body.Attached, Is.True);
                 Assert.That(input.Body.Velocity.y, Is.GreaterThan(12)); Assert.That(input.Body.Velocity.z, Is.GreaterThan(10));
@@ -164,23 +178,6 @@ namespace WebShooter.Swing.Tests
                     Assert.That(c.cityPosition.z, Is.LessThan(49.3f));
                 }
                 Assert.That(peak, Is.GreaterThan(8f)); Assert.That(lateHeight, Is.GreaterThan(3f));
-            }
-            finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
-        }
-        [Test] public void AutomaticViewFollowsFlightGraduallyWithoutMouseInput()
-        {
-            var rig = new GameObject(); var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            try
-            {
-                wall.layer = 30; wall.transform.position = new Vector3(0, 100, 20); wall.transform.localScale = new Vector3(100, 100, 1);
-                var flight = rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 100, Quaternion.identity);
-                var input = new WebSwingMotionInput(null, flight, null) { AutoFollow = true };
-                Physics.SyncTransforms(); input.TryFire(new Ray(flight.CityPosition, Vector3.forward)); input.Body.Velocity = Vector3.right * 15;
-                var command = input.Sample(.1f);
-                Assert.That(command.cityRotation.eulerAngles.y, Is.InRange(3.9f, 4.1f));
-                Assert.That(Mathf.Abs(Mathf.DeltaAngle(0, command.cityRotation.eulerAngles.z)), Is.LessThan(.001f));
-                input.AutoFollow = false; flight.transform.SetPositionAndRotation(command.cityPosition, command.cityRotation);
-                var next = input.Sample(.1f); Assert.That(next.cityRotation, Is.EqualTo(command.cityRotation));
             }
             finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
         }
@@ -397,7 +394,8 @@ namespace WebShooter.Swing.Tests
                 Physics.SyncTransforms(); var flight = go.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up * 100, Quaternion.identity);
                 var input = new WebSwingMotionInput(null, flight, null);
                 Assert.That(input.TryFire(new Ray(Vector3.up * 100, Vector3.forward)), Is.True);
-                Assert.That(input.Body.Attached, Is.False); input.Sample(.07f); Assert.That(input.Body.Attached, Is.True);
+                Assert.That(input.Body.Attached, Is.False); input.Sample(.07f); Assert.That(input.Body.Attached, Is.False);
+                input.Sample(.1f); input.Sample(.05f); Assert.That(input.Body.Attached, Is.True);
                 Assert.That(input.TryFire(new Ray(Vector3.up * 100, Vector3.back)), Is.False); Assert.That(input.Body.Attached, Is.False);
             }
             finally { Object.DestroyImmediate(go); Object.DestroyImmediate(wall); }

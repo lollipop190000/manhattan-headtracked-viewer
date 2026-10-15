@@ -17,6 +17,8 @@ namespace WebShooter.Swing
         [Tooltip("공중 조향 가속도 (m/s^2)")] public float airControl = 12f;
         [Tooltip("줄을 감는 속도 (m/s)")] public float reelSpeed = 24f;
         public float payoutSpeed = 32f;
+        [Tooltip("Initial slack-only takeup window; zero keeps unassisted rope physics.")]
+        public float attachmentTakeupSeconds = 0f;
         [Tooltip("이보다 가까운 곳에는 거미줄을 붙일 수 없다 (m)")] public float minRopeLength = 2f;
         [Tooltip("물리 하위 스텝의 최대 시간 (s). 프레임이 길어도 이 값 이하로 나눠 적분한다")] public float maxStep = 1f / 120f;
         [Tooltip("거미줄이 붙는 순간 앵커 쪽으로 더해 주는 속도 (m/s). 0이면 끔. 줄은 안쪽으로 당기지 않으므로 지상에서 시작하려면 필요하다")] public float attachPull = 0f;
@@ -47,7 +49,7 @@ namespace WebShooter.Swing
         private bool wallRunning;
         private float wallTime, wallCooldown;
         private bool wallExhausted;
-        private float wallEscapeTime;
+        private float wallEscapeTime, attachmentTakeupRemaining;
         private Vector3 escapeNormal;
         public int WallDeflections { get; private set; }
         public void AssistCruise(float dt, bool braking)
@@ -121,11 +123,19 @@ namespace WebShooter.Swing
             Anchor = anchor;
             RopeLength = distance;
             Attached = true;
+            attachmentTakeupRemaining = Mathf.Max(0f, Settings.attachmentTakeupSeconds);
             if (Settings.attachPull > 0f) Velocity += (anchor - Position) / distance * Settings.attachPull;
             return true;
         }
 
-        public void Release() => Attached = false;
+        public void Release() { Attached = false; attachmentTakeupRemaining = 0f; }
+
+        // Change the effective anchor at a wrap corner without moving the body or adding energy.
+        public void RouteThrough(Vector3 anchor, float fixedLengthChange)
+        {
+            Anchor = anchor;
+            RopeLength = Mathf.Max(Mathf.Max(Settings.minRopeLength, Vector3.Distance(Position, anchor)), RopeLength - fixedLengthChange);
+        }
 
         public void AssistRope(float dt)
         {
@@ -182,10 +192,17 @@ namespace WebShooter.Swing
 
             if (Attached)
             {
+                if (reel != 0f) attachmentTakeupRemaining = 0f;
                 if (reel != 0f) RopeLength = Mathf.Clamp(RopeLength - reel * (reel > 0f ? Settings.reelSpeed : Settings.payoutSpeed) * h, Settings.minRopeLength, 250f);
                 Vector3 d = p - Anchor;
                 float dist = d.magnitude;
-                if (Settings.ratchetRope && dist < RopeLength) RopeLength = Mathf.Max(Settings.minRopeLength, dist);
+                // Reel in only length already made slack by inward movement. No teleport or impulse.
+                if (attachmentTakeupRemaining > 0f)
+                {
+                    RopeLength = Mathf.Min(RopeLength, Mathf.Max(Settings.minRopeLength, dist));
+                    attachmentTakeupRemaining = Mathf.Max(0f, attachmentTakeupRemaining - h);
+                }
+                if (Settings.ratchetRope && reel == 0f && dist < RopeLength) RopeLength = Mathf.Max(Settings.minRopeLength, dist);
                 if (dist > RopeLength && dist > 1e-6f)
                 {
                     Vector3 n = d / dist;
