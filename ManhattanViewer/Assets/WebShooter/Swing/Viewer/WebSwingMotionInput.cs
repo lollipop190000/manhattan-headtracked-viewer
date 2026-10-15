@@ -112,6 +112,7 @@ namespace WebShooter.Swing
         /// </summary>
         public void Activate()
         {
+            Release();
             initialized = false;
             hasRequested = false;
             Enabled = true;
@@ -182,24 +183,6 @@ namespace WebShooter.Swing
             Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
             if (input.localMovement.z < 0f)
                 steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
-            if (Flying)
-            {
-                ShotAge += deltaTime;
-                ShotProgress = Mathf.Clamp01((ShotAge - GestureSeconds) / shotDuration);
-                if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy) Release();
-                else
-                {
-                    bool ready=Body.Settings.features.fixedAttachmentDelay?
-                        ShotAge>=Mathf.Clamp(Body.Settings.features.attachmentDelaySeconds,.01f,.05f):ShotProgress>=1f;
-                    if(!shotAttached && ready)
-                    {
-                        shotAttached=true;
-                        if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
-                        else Release();
-                    }
-                    if(ShotProgress>=1f)Flying=false;
-                }
-            }
             if (Body.Attached)
             {
                 float oldFixed = Route.FixedLength;
@@ -218,6 +201,7 @@ namespace WebShooter.Swing
             while (remaining > .000001f)
             {
                 float h = Mathf.Min(remaining, Body.Settings.maxStep);
+                AdvanceShot(h);
                 int contactsBefore = Body.ContactSequence;
                 bool attached = Body.Attached;
                 Body.WallRunRequested = input.localMovement.z > .1f;
@@ -278,6 +262,21 @@ namespace WebShooter.Swing
         }
         private void NotifyExternalRelease()
         {Flying=false;shotAttached=false;MouseOwnsRope=false;Route.Clear();WebReleased?.Invoke();}
+        private void AdvanceShot(float dt)
+        {
+            if(!Flying)return;
+            ShotAge+=dt;ShotProgress=Mathf.Clamp01((ShotAge-GestureSeconds)/shotDuration);
+            if(shotCollider==null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy){Release();return;}
+            bool ready=Body.Settings.features.fixedAttachmentDelay?
+                ShotAge+1e-6f>=Mathf.Clamp(Body.Settings.features.attachmentDelaySeconds,.01f,.05f):ShotProgress>=1f;
+            if(!shotAttached && ready)
+            {
+                shotAttached=true;
+                if(Body.Attach(ShotTarget)){Route.Begin(ShotTarget);WebAttached?.Invoke(ShotTarget);}
+                else Release();
+            }
+            if(ShotProgress>=1f)Flying=false;
+        }
         private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }
 }

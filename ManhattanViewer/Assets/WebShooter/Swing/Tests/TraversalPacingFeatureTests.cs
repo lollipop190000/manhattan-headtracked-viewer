@@ -4,7 +4,8 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class TraversalPacingFeatureTests
     {
-        [TestCase(20)][TestCase(200)] public void FixedPhysicalAttachmentIsIndependentOfVisualDistance(float distance)
+        [TestCase(20,30)][TestCase(200,30)][TestCase(20,60)][TestCase(200,60)][TestCase(20,120)][TestCase(200,120)]
+        public void FixedPhysicalAttachmentIsIndependentOfVisualDistance(float distance,int fps)
         {
             var rig=new GameObject();var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);WebSwingMotionInput input=null;
             try
@@ -12,10 +13,11 @@ namespace WebShooter.Swing.Tests
                 wall.layer=30;wall.transform.position=new Vector3(0,100,distance);wall.transform.localScale=new Vector3(30,30,1);
                 var flight=rig.AddComponent<Manhattan.Viewer.FreeFlightController>();flight.SetPose(Vector3.up*100,Quaternion.identity);
                 var s=WebSwingMotionInput.TraversalSettings();s.gravity=0;s.features.fixedAttachmentDelay=true;
-                input=new WebSwingMotionInput(null,flight,null,s);Physics.SyncTransforms();Assert.That(input.TryFire(new Ray(flight.CityPosition,Vector3.forward)),Is.True);
-                float age=0;while(!input.Body.Attached && age<.1f){var c=input.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);age+=1f/120;}
-                Assert.That(age,Is.LessThanOrEqualTo(.05f));Assert.That(input.Flying,Is.True);
-                TestContext.WriteLine($"PACING distance={distance} physicalAttachSeconds={age:F6}");
+                input=new WebSwingMotionInput(null,flight,null,s);float attachAge=-1;input.WebAttached+=_=>attachAge=input.ShotAge;
+                Physics.SyncTransforms();Assert.That(input.TryFire(new Ray(flight.CityPosition,Vector3.forward)),Is.True);
+                float age=0;while(!input.Body.Attached && age<.1f){var c=input.Sample(1f/fps);flight.SetPose(c.cityPosition,c.cityRotation);age+=1f/fps;}
+                Assert.That(attachAge,Is.InRange(.04f,.05f));Assert.That(input.Flying,Is.True);
+                TestContext.WriteLine($"PACING fps={fps} distance={distance} physicalAttachSeconds={attachAge:F6}");
             }
             finally{input?.Collision.Dispose();Object.DestroyImmediate(rig);Object.DestroyImmediate(wall);}
         }
