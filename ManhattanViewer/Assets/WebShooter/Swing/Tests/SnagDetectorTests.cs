@@ -29,8 +29,20 @@ namespace WebShooter.Swing.Tests
         }
         [Test] public void NoInputAndApexDoNotBecomeStuck()
         {
-            var d=new SnagDetector();for(int i=0;i<360;i++)d.Observe(new TraversalSample{time=i/120f,movementInput=true,state=TraversalState.Swinging});
+            var d=new SnagDetector();for(int i=0;i<360;i++)d.Observe(new TraversalSample{time=i/120f,state=TraversalState.Swinging});
             Assert.That(d.Stucks,Is.Zero);
+            for(int i=0;i<360;i++)
+            {
+                float t=i/120f;
+                d.Observe(new TraversalSample{time=3+t,movementInput=true,state=TraversalState.Swinging,
+                    position=new Vector3(0,100-5*(t-1.5f)*(t-1.5f),0)});
+            }
+            Assert.That(d.Stucks,Is.Zero);
+        }
+        [Test] public void AStationaryAttachedWebDoesNotHideTwoSecondsOfBlockedInput()
+        {
+            var d=new SnagDetector();for(int i=0;i<360;i++)d.Observe(new TraversalSample{time=i/120f,movementInput=true,state=TraversalState.Swinging});
+            Assert.That(d.Stucks,Is.EqualTo(1));
         }
         [Test] public void CsvSupportsQuotedCommaAndEmbeddedNewline()
         {

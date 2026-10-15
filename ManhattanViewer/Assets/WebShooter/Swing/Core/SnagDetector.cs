@@ -29,10 +29,13 @@ namespace WebShooter.Swing
             bool apex = s.state==TraversalState.Swinging && !s.collided;
             bool verticalLanding = s.state==TraversalState.Grounded && s.previousVelocity.y < -5f &&
                 Vector3.ProjectOnPlane(s.previousVelocity,Vector3.up).magnitude<.5f;
-            if(!s.movementInput || apex || verticalLanding)
+            if(!s.movementInput || verticalLanding)
             { window.Clear(); active=stuckLatched=false; return; }
-            if(s.previousVelocity.magnitude>5f && s.velocity.magnitude<.5f)
+            if(!apex && s.previousVelocity.magnitude>5f && s.velocity.magnitude<.5f)
             { Snags++; Detected?.Invoke(new SnagEvent{kind=SnagKind.Snag,sample=s}); }
+            // A free apex may suppress an instantaneous snag, but must not hide
+            // a web that remains stationary with movement input for two seconds.
+            // A normal apex still travels beyond the 0.3 m path threshold.
             if(!active){active=true;path=0;lastPosition=s.position;}
             path+=Vector3.Distance(lastPosition,s.position);lastPosition=s.position;
             window.Enqueue(new Point{time=s.time,distance=path});
