@@ -4,6 +4,14 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class TraversalPacingFeatureTests
     {
+        [Test] public void ReleaseBoostRequiresAscendingUpperArcAndExplicitRelease()
+        {
+            var s=WebSwingMotionInput.TraversalSettings();s.features.releaseBoost=true;
+            var b=new SwingPhysics(s);b.Reset(new Vector3(30,80,0));b.Attach(Vector3.up*100);b.Velocity=new Vector3(20,30,0);
+            var v=b.Velocity;b.Release(true);Assert.That((b.Velocity-v).magnitude,Is.EqualTo(6).Within(.001f));
+            b.Reset(Vector3.up*50);b.Attach(Vector3.up*100);b.Velocity=Vector3.right*40;v=b.Velocity;b.Release(true);Assert.That(b.Velocity,Is.EqualTo(v));
+            b.Reset(new Vector3(30,80,0));b.Attach(Vector3.up*100);b.Velocity=new Vector3(20,30,0);v=b.Velocity;b.Release();Assert.That(b.Velocity,Is.EqualTo(v));
+        }
         [Test] public void ZeroAimStrengthKeepsTheExactDirectHit()
         {
             var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);

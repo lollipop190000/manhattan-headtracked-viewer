@@ -38,7 +38,7 @@ namespace WebShooter.Swing
         public bool HandleMouseHold(bool active, bool pressed, bool held, Ray ray)
         {
             if (!active) { Release(); return false; }
-            if (MouseOwnsRope && !held) Release();
+            if (MouseOwnsRope && !held) Release(true);
             if (!pressed || !held) return false;
             bool hit = TryFire(ray);
             MouseOwnsRope = hit;
@@ -116,13 +116,13 @@ namespace WebShooter.Swing
             EnsureInitialized();
         }
 
-        public void Release()
+        public void Release(bool allowBoost=false)
         {
             MouseOwnsRope = false;
             Flying = false;
             Route.Clear();
             if (!Body.Attached) return;
-            Body.Release();
+            Body.Release(allowBoost);
             WebReleased?.Invoke();
         }
 
@@ -265,7 +265,7 @@ namespace WebShooter.Swing
             Body.AssistStrength=Mathf.Clamp01(Body.AssistStrength+a.assistDelta);
             if(a.firePressed)InputFireRequested?.Invoke(a.viewportX);
             HandleMouseHold(true,a.firePressed,a.fireHeld,a.aim);
-            if(a.release)Release();
+            if(a.release)Release(true);
         }
         private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }

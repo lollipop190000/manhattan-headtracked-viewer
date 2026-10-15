@@ -14,6 +14,10 @@ namespace WebShooter.Swing
         [SerializeField] public bool attachmentDrop;
         [SerializeField] public bool gentleReel;
         [SerializeField] public bool assistAnchor;
+        [SerializeField] public bool releaseBoost;
+        [Min(0)] public float releaseBoostSpeed=6f;
+        [Range(0,1)] public float releasePhaseCosine=.65f;
+        [Min(0)] public float releaseMinimumUpSpeed=3f;
         [Range(0,1)] public float anchorAssistStrength=.35f;
         [Range(1,25)] public float anchorConeDegrees=12f;
         [Range(4,24)] public int anchorSamples=12;

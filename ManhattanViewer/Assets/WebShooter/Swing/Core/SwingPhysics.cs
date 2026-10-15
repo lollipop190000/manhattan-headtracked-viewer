@@ -169,7 +169,17 @@ namespace WebShooter.Swing
             return true;
         }
 
-        public void Release() { Attached = false; yanking = false; attachmentTakeupRemaining = 0f; }
+        public void Release(bool allowBoost=false)
+        {
+            var f=Settings.features;
+            if(allowBoost && Attached && f.releaseBoost && !Grounded && Velocity.y>f.releaseMinimumUpSpeed &&
+                Vector3.Dot((Position-Anchor).normalized,Vector3.down)<f.releasePhaseCosine)
+            {
+                Vector3 forward=Vector3.ProjectOnPlane(Velocity,Vector3.up).normalized;
+                Velocity+=(forward*.8f+Vector3.up*.6f).normalized*(f.releaseBoostSpeed*AssistStrength);
+            }
+            Attached = false; yanking = false; attachmentTakeupRemaining = 0f;
+        }
 
         public bool BeginYank()
         {
