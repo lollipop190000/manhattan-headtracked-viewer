@@ -21,6 +21,8 @@ namespace WebShooter.Swing
             for(int i=0;i+1<args.Length;i++)if(args[i]=="--visual-output")folder=args[i+1];
             Directory.CreateDirectory(folder);
             var initialPosition=app.Flight.CityPosition;var initialRotation=app.Flight.transform.rotation;
+            yield return new WaitForEndOfFrame();
+            var idle=ScreenCapture.CaptureScreenshotAsTexture();File.WriteAllBytes(Path.Combine(folder,"idle.png"),idle.EncodeToPNG());Destroy(idle);
             for(int side=0;side<2;side++)
             {
                 motion.Release();app.Flight.SetPose(initialPosition,initialRotation);motion.Activate();hands.Select(side==0?.2f:.8f);
@@ -38,10 +40,13 @@ namespace WebShooter.Swing
                         var shot=ScreenCapture.CaptureScreenshotAsTexture();File.WriteAllBytes(Path.Combine(folder,name),shot.EncodeToPNG());Destroy(shot);
                     }
                 }
-                Debug.Log($"VISUAL_QA side={side} attached={motion.Body.Attached} corners={motion.Route.Points.Count-1} slack={motion.Body.RopeLength-Vector3.Distance(motion.Body.Position,motion.Body.Anchor):F4}");
+                Debug.Log($"VISUAL_QA side={side} attached={motion.Body.Attached} speed={motion.Body.Velocity.magnitude:F2} handCount={hands.VisibleHands} wristZ={hands.SelectedWristDepth:F3} corners={motion.Route.Points.Count-1} slack={motion.Body.RopeLength-Vector3.Distance(motion.Body.Position,motion.Body.Anchor):F4}");
                 motion.HandleMouseHold(true,false,false,default);
                 for(int i=0;i<30;i++){var c=motion.Sample(1f/60);app.Flight.SetPose(c.cityPosition,c.cityRotation);yield return null;}
             }
+            yield return new WaitForEndOfFrame();
+            var released=ScreenCapture.CaptureScreenshotAsTexture();File.WriteAllBytes(Path.Combine(folder,"released.png"),released.EncodeToPNG());Destroy(released);
+            Debug.Log($"VISUAL_QA released handCount={hands.VisibleHands} speed={motion.Body.Velocity.magnitude:F2}");
             Application.Quit(0);
         }
     }

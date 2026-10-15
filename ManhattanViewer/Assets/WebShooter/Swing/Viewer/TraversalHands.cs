@@ -23,12 +23,19 @@ namespace WebShooter.Swing
         private float extension, grip;
         public bool LeftSelected { get; private set; }
         public Vector3 WebOrigin { get; private set; }
+        public static float WristDepth(float eyeZ, float scale, float reach) =>
+            Mathf.Lerp(.08f * scale, -Mathf.Min(.20f * scale, Mathf.Abs(eyeZ) * .45f), reach);
+        public static bool ShouldShow(bool enabled, bool paused, bool selected, float extension) =>
+            enabled && !paused && selected && extension > .01f;
+        public int VisibleHands { get; private set; }
+        public float SelectedWristDepth { get; private set; }
         public void Select(float viewportX) { if(viewportX<.47f) LeftSelected=true; else if(viewportX>.53f) LeftSelected=false; }
         public void Configure(WebSwingMotionInput motion,HeadTrackedDisplay target)
         {
             input=motion; display=target;
             var template=Resources.Load<Material>("WindowFrameMaterial");
             glove=new Material(template); glove.name="Crimson articulated glove";
+            glove.SetShaderPassEnabled("MotionVectors",true);
             glove.SetColor("_BaseColor",new Color(.48f,.018f,.03f));
             fabric=new Texture2D(128,128,TextureFormat.RGBA32,false); fabric.name="Glove web stitching";
             var pixels=new Color[128*128];
@@ -58,7 +65,7 @@ namespace WebShooter.Swing
                     float radius=t<.15f?Mathf.Sin(t/.15f*Mathf.PI*.5f):t>.85f?Mathf.Sin((1f-t)/.15f*Mathf.PI*.5f):1f;
                     radius=Mathf.Max(.015f,radius);
                     if(bone==2) radius*=Mathf.Lerp(.68f,.95f,Mathf.Clamp01(t*2));
-                    float axial=t*1.3f-.15f;
+                    float axial=bone<2?t*1.08f-.04f:t*1.3f-.15f;
                     for(int s=0;s<=sides;s++)
                     {
                         float a=s*2*Mathf.PI/sides;var n=new Vector3(Mathf.Cos(a),Mathf.Sin(a),0);
@@ -86,16 +93,19 @@ namespace WebShooter.Swing
             grip=Mathf.MoveTowards(grip,input.Body.Attached?1:0,dt*7);
             Rect aperture=display.ProjectionScreenRectMeters;
             float scale=Mathf.Clamp(aperture.width/.55f,.55f,1.8f)*.78f;
+            VisibleHands=0;
             for(int i=0;i<2;i++)
             {
                 var h=hands[i];if(h==null)continue;
                 h.root.SetParent(display.ScreenPlane,false);h.root.localPosition=Vector3.zero;h.root.localRotation=Quaternion.identity;h.root.localScale=Vector3.one;
-                h.renderer.enabled=input.Enabled;
                 float side=i==0?-1:1;bool selected=(i==0)==LeftSelected;
+                h.renderer.enabled=ShouldShow(input.Enabled,input.Paused,selected,extension);
+                if(h.renderer.enabled) VisibleHands++;
                 float reach=selected?Mathf.SmoothStep(0,1,extension):0;
-                Vector3 wrist=new Vector3(aperture.center.x+side*aperture.width*(.36f-.13f*reach),aperture.yMin+aperture.height*(-.05f+.34f*reach),(.08f-.12f*reach)*scale);
-                Vector3 elbow=new Vector3(aperture.center.x+side*aperture.width*.52f,aperture.yMin-.13f*scale,.16f*scale);
+                Vector3 wrist=new Vector3(aperture.center.x+side*aperture.width*(.36f-.13f*reach),aperture.yMin+aperture.height*(-.05f+.34f*reach),WristDepth(display.EyePositionMeters.z,scale,reach));
+                Vector3 elbow=new Vector3(aperture.center.x+side*aperture.width*.52f,aperture.yMin-.13f*scale,Mathf.Lerp(.16f,-.055f,reach)*scale);
                 Vector3 shoulder=new Vector3(aperture.center.x+side*aperture.width*.65f,aperture.yMin-.32f*scale,.28f*scale);
+                if(selected) SelectedWristDepth=wrist.z;
                 Vector3 target=input.Body.Attached?input.Body.Anchor:input.ShotTarget;
                 var worldOrigin=display.ScreenPlane.TransformPoint(wrist);
                 // Fingers point up/out during the web gesture; the palm turns towards tension when gripping.

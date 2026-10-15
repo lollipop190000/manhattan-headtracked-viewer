@@ -17,6 +17,8 @@ namespace WebShooter.Swing
         [Tooltip("공중 조향 가속도 (m/s^2)")] public float airControl = 12f;
         [Tooltip("줄을 감는 속도 (m/s)")] public float reelSpeed = 24f;
         public float payoutSpeed = 32f;
+        public float jumpSpeed = 14f, launchForwardSpeed = 12f;
+        public float cruiseSpeed = 34f, cruiseAcceleration = 12f;
         [Tooltip("Initial slack-only takeup window; zero keeps unassisted rope physics.")]
         public float attachmentTakeupSeconds = 0f;
         [Tooltip("이보다 가까운 곳에는 거미줄을 붙일 수 없다 (m)")] public float minRopeLength = 2f;
@@ -54,10 +56,10 @@ namespace WebShooter.Swing
         public int WallDeflections { get; private set; }
         public void AssistCruise(float dt, bool braking)
         {
-            if (!Attached || AssistStrength <= 0f || braking || Velocity.magnitude >= 34f) return;
+            if (!Attached || AssistStrength <= 0f || braking || Velocity.magnitude >= Settings.cruiseSpeed) return;
             Vector3 tangent = Vector3.ProjectOnPlane(Velocity, (Position - Anchor).normalized);
             if (tangent.sqrMagnitude > 1f)
-                Velocity += tangent.normalized * (12f * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
+                Velocity += tangent.normalized * (Settings.cruiseAcceleration * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
         }
 
         public void Contact(Vector3 normal)
@@ -98,7 +100,7 @@ namespace WebShooter.Swing
         {
             if (wallRunning) { Velocity += ContactNormal * 9f + Vector3.up * 7f; wallRunning = false; wallCooldown = .3f; }
             else if (Attached) { Release(); Velocity += Vector3.up * (4f * AssistStrength); }
-            else if (Grounded || Position.y <= FloorY + .03f) { Velocity = new Vector3(Velocity.x, 14f, Velocity.z); }
+            else if (Grounded || Position.y <= FloorY + .03f) { Velocity = new Vector3(Velocity.x, Settings.jumpSpeed, Velocity.z); }
             else return false;
             Grounded = false;
             return true;

@@ -58,13 +58,21 @@ namespace WebShooter.Swing
         public event Action<Vector3> WebAttached;
         public event Action WebReleased;
 
+        public static SwingSettings TraversalSettings() => new SwingSettings
+        {
+            ratchetRope = true, gravity = 24f, airDrag = .01f, maxSpeed = 95f,
+            airControl = 18f, jumpSpeed = 20f, launchForwardSpeed = 24f,
+            cruiseSpeed = 52f, cruiseAcceleration = 20f
+        };
+
         public WebSwingMotionInput(IMotionInputSource lookSource, FreeFlightController flightController, FloatingOrigin floatingOrigin,
             SwingSettings settings = null)
         {
             look = lookSource;
             flight = flightController ?? throw new ArgumentNullException(nameof(flightController));
             origin = floatingOrigin;
-            Body = new SwingPhysics(settings ?? new SwingSettings { ratchetRope = true });
+            Body = new SwingPhysics(settings ?? TraversalSettings());
+            AutomaticCruiseAssist = settings == null;
             Collision = new TraversalCollision(origin, Body);
         }
 
@@ -173,7 +181,7 @@ namespace WebShooter.Swing
                     {
                         Body.Jump();
                         var direction = Vector3.ProjectOnPlane(ShotTarget - Body.Position, Vector3.up).normalized;
-                        Body.Velocity += direction * (12f * Body.AssistStrength);
+                        Body.Velocity += direction * (Body.Settings.launchForwardSpeed * Body.AssistStrength);
                     }
                     if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
                 }

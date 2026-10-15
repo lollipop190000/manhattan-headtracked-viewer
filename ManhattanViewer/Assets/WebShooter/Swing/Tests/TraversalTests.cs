@@ -80,14 +80,15 @@ namespace WebShooter.Swing.Tests
             }
             finally { Object.DestroyImmediate(rig); Object.DestroyImmediate(wall); }
         }
-        [Test] public void DefaultTraversalDoesNotRotateViewOrEnableAutomaticForces()
+        [Test] public void DefaultTraversalKeepsViewStableWithTangentialCruise()
         {
             var rig = new GameObject();
             try
             {
                 var flight=rig.AddComponent<FreeFlightController>(); flight.SetPose(Vector3.up*100,Quaternion.identity);
                 var input=new WebSwingMotionInput(null,flight,null); input.Activate();
-                Assert.That(input.AutomaticRopeAssist || input.AutomaticCruiseAssist,Is.False);
+                Assert.That(input.AutomaticRopeAssist,Is.False);
+                Assert.That(input.AutomaticCruiseAssist,Is.True);
                 input.Body.Velocity=Vector3.right*20;
                 var c=input.Sample(.1f); Assert.That(Quaternion.Angle(c.cityRotation,Quaternion.identity),Is.LessThan(.001f));
                 input.Collision.Dispose();
