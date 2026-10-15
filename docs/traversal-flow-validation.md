@@ -73,3 +73,13 @@ The environment later prevented licensed Editor startup: the Licensing Client IP
 - New Windows Manhattan development build and another person's five-minute feel review.
 
 No numeric table for these pending comparisons exists. Missing telemetry is rejected by the tools; it is not treated as zero events. The preserved development player is still the prior `44a6410` build and does not contain this branch's changes. No release/build identity has been overwritten. Follow [the lab guide](../training/README.md) to resume the native checks in a licensed, connected environment; only then publish the requested completed PR.
+
+## Connection retry on 2026-10-15
+
+After the restricted execution environment was removed, DNS resolution, TCP 443 and the official package registry request succeeded (HTTP 200). Editor inventory and Licensing Client IPC also became accessible. The registry supplied ML-Agents 4.1.0 metadata and its original archive; this is inspection, not a UPM installation.
+
+DataOnly was rerun in that environment: **171 cases, 169 passed, zero failures, two skipped**. Source-manifest validation and the five GPU-log / three benchmark-environment parser assertions passed. The earlier two junction failures are resolved.
+
+The fresh Editor attempt exposed a second blocker previously hidden by IPC failure: the OAuth session was stale and no active Editor entitlement was returned. Official CLI OAuth login completed and now reports a fresh session. Default entitlement activation returned success with an empty product list; a subsequent status and Editor launch confirmed that no usable license had been activated (Editor exit 198, `com.unity.editor.headless` missing). Do not interpret that empty activation response as a working license.
+
+Restoring the existing account's free Personal license requires the CLI's `--personal --accept-eula` option. Explicit user consent for that terms step has been requested. Native tests, package installation, builds and training remain pending until a valid Editor license is confirmed. No paid subscription is requested or purchased.

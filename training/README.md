@@ -8,6 +8,8 @@ Implementation and measured results have different status: see [validation](../d
 
 Keep this project on **Unity 6000.3.22f1**. Unity's [6.6 package list](https://docs.unity.com/en-us/engine/6000.6/manual/packages-list/packages-all/pack-safe/com-unity-ml-agents) identifies ML-Agents **4.1.0**; its [installation guide](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.1/manual/Installation.html) pairs Python **3.10.12** with trainer **1.1.0**. These are the selected pins, not a claim that this project's 6000.3 integration has passed. A successful package install, C# compilation and real trainer handshake are still required.
 
+The official registry metadata for `com.unity.ml-agents@4.1.0` was retrieved successfully on the retry: it declares minimum Unity `6000.0` and dependency `com.unity.ai.inference@2.6.1`. The pinned Editor satisfies that version constraint. This confirms package availability and the declared constraint, not native integration or a trainer handshake.
+
 `requirements-lock.txt` pins the installed Windows training dependencies, including `mlagents==1.1.0`, `mlagents-envs==1.1.0`, `torch==2.2.2`, `numpy==1.23.5`, `onnx==1.15.0` and `tensorboard==2.15.2`. Evaluation uses the pinned ONNX reference evaluator on CPU; it needs no separate ONNX Runtime installation. Python 3.13 used for the repository's data tools is not the training interpreter.
 
 From the repository root, with Python 3.10.12 x64 and a licensed Editor installed:
