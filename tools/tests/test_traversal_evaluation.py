@@ -30,6 +30,10 @@ class TraversalEvaluationTests(unittest.TestCase):
     def test_navigation_success_does_not_hide_absent_swing_coverage(self):
         result=analyze([self.row(attachments='0') for _ in range(500)])
         self.assertTrue(any('do not certify swing coverage' in s for s in result['analysis']))
+    def test_converged_navigation_still_warns_about_low_swing_coverage(self):
+        result=analyze([self.row(swing_fraction='.01') for _ in range(500)])
+        self.assertTrue(result['converged'])
+        self.assertTrue(any('Low swing coverage' in s for s in result['analysis']))
     def test_parallel_worker_files_are_ordered_by_completion_not_random_filename(self):
         with tempfile.TemporaryDirectory() as folder:
             for name,stamp,episode in [('a','2026-01-01T00:00:02Z','1'),('z','2026-01-01T00:00:01Z','0')]:
