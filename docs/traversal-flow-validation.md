@@ -130,4 +130,19 @@ Initial native swing/input checks passed **107/107**, including nine reconnect c
 
 Two preceding rendered PlayMode runs each had one synthetic measurement first-hold failure (183/184): the workflow correctly returned to A after an observation-stream restart. The fixture now permits at most two explicit A retries, each reacquiring the full fresh two-second readiness window, while retaining freshness/sample-count/report assertions. Production tracking guards and the pinned package are unchanged. Raw failed reports are preserved. The final 184/184 run needed no logged retry; the exact cause of the earlier stream interruptions was not established.
 
-An idle-machine frame-time comparison and an independent five-minute human feel review are tracked separately. A ready-for-merge claim requires that human review; automated validation does not replace it. Hardware wrist input, live eye tracking and moving head-tracked comfort have not been exercised by the native fixtures.
+The clean reconnect player was built from **41fa3a6f13609ad8bea02548c1c310f1175c7846** and passed **40 native Windows checks** through the delivered launcher. Reconnect attachment measured **41.667 ms**, with **40.000 m/s before and after firing**. A second launcher run confirmed `--reconnect-off` reaches the player composition. The six extra scripted checks enable assistance explicitly, so that second run's fixture result is not evidence that OFF behaves like ON. Six fresh shipping captures show both hand gestures/grips and release in the actual city; these are stationary fixtures. The old `809ddc9` player is preserved separately. The standalone NoTracker ZIP contains 893 files, each checked against its integrity receipt; its extracted executable independently passed all 40 native checks. ZIP size is 187,136,665 bytes; SHA-256 is `b37994595f219affddcd81d85f96ce75cbee2db63c5a0d1f70bc1235ad366acb`.
+
+Follow-up commits: `2fcd4d2` keeps low-swing coverage warnings independent of navigation convergence (eight Python tests); `6b8ac4d` adds the bounded fresh-A fixture retry; `41fa3a6` adds reconnect assistance and its regression/native checks. The full 401/184 run covers the code in the clean reconnect player. Later reporting-only commits do not change its embedded identity.
+
+## Fixed frame-time comparison
+
+With all training/evaluation processes stopped, the old `44a6410` player and new `41fa3a6` player ran sequentially on the same Midtown route: 15 seconds warm-up, 60 measured seconds, 50 m/s, 1920 × 1200 windowed, VSync 1, TAA, collision proxies enabled, no webcam. Hardware was an RTX 4070 Laptop GPU / Core Ultra 9 185H on AC, driver 591.74; the driver reported an 80 W enforced GPU limit. That reading does not establish a fixed laptop power profile.
+
+| Build | Frames | Frame p95 / p99 ms | Max frame ms | Frames >50 ms | Streaming p95 ms | Collision p95 ms | Max process working set MiB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `44a6410` | 3600 | 17.641 / 33.308 | 119.059 | 3 | 1.2145 | 0.0906 | 1779.906 |
+| `41fa3a6` | 3613 | 17.454 / 32.233 | 48.675 | 0 | 1.2060 | 0.0748 | 1794.848 |
+
+Both reports recorded zero streaming failures and full sampled route coverage, but zero complete measured circuits. One run per build is insufficient to establish a small performance improvement. Both p95 values exceed the 16.667 ms frame budget, and the full performance target remains false with tracking disabled. The benchmark bypasses the web-shooter installation; it measures streaming/collision/render cost, **not active web VFX, reconnect cost, moving head tracking or comfort**. Dedicated graphics-memory counters were unavailable. Raw environment metadata, per-frame CSVs, screenshots and native identity are delivered alongside the report.
+
+An independent five-minute human feel review remains pending. A ready-for-merge claim requires that human review; automated validation does not replace it. Hardware wrist input, live eye tracking and moving head-tracked comfort have not been exercised by the native fixtures. The author has not yet tested the new reconnect player.
