@@ -11,6 +11,7 @@ Compare velocity continuity and obstruction events with the same input and polic
 ## Implementation for review
 
 - Keep the existing motion and translation interfaces. Share a traversal action interface between human and agent adapters; keep the documented keys.
+- The requested human-input revision maps held right mouse to reeling (E remains an alias); releasing left mouse detaches. Keep agent release actions separate and update control documentation/HUD together.
 - Expose independent serialized feature flags. Store event positions in city metres and sample after collision resolution at each physical substep.
 - Add a seeded, separate training scene. Use the actual movement adapter and collision queries, not a surrogate physics implementation.
 - Snag and stuck are diagnostics only; neither changes the training reward. Compare one policy across both conditions and separately retrained policies across conditions.
