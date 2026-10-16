@@ -17,6 +17,7 @@ namespace WebShooter.Swing
             public bool passed; public string error; public string unityVersion;
             public float reconnectAttachSeconds,reconnectSpeedBefore,reconnectSpeedAfterFire;
             public float airFullTurnDegrees,airQuarterTurnDegrees,anchorGeometricSpeed,anchorMomentumSpeed,mouseReeledMetres;
+            public List<WallTraversalChecks.Metric> wallMetrics = new List<WallTraversalChecks.Metric>();
             public List<string> checks = new List<string>();
         }
         private readonly Report report = new Report();
@@ -191,6 +192,7 @@ namespace WebShooter.Swing
                     "focus loss cancels buffered reconnect without replaying an old ray");
                 relay.Collision.Dispose();
                 ValidateContinuity();
+                WallTraversalChecks.Run(Check,(name,value)=>report.wallMetrics.Add(new WallTraversalChecks.Metric{name=name,value=value}));
                 report.passed = true;
             }
             catch (Exception e) { report.error = e.ToString(); Debug.LogException(e); }

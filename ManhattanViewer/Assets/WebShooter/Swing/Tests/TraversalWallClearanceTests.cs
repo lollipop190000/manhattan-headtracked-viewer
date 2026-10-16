@@ -5,6 +5,8 @@ namespace WebShooter.Swing.Tests
 {
     public sealed class TraversalWallClearanceTests
     {
+        [Test] public void ShippingWallScenariosMatchAtAllFrameRates() => WallTraversalChecks.Run(
+            (ok,name)=>Assert.That(ok,Is.True,name),(name,value)=>TestContext.WriteLine($"WALL_METRIC {name}={value:F6}"));
         private static SwingPhysics Body(Vector3 p)
         {var s=WebSwingMotionInput.TraversalSettings();s.features.SetFlow(true);s.airDrag=0;var b=new SwingPhysics(s);b.Reset(p);return b;}
         private static GameObject Box(float x,float width,float height=100)

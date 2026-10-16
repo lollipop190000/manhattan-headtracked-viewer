@@ -20,6 +20,10 @@ Compare velocity continuity and obstruction events with the same input and polic
 - Speed FOV and shake are separate optional gameplay effects and default off for the physical head-tracked view. They do not alter saved screen calibration. Third-person cameras exist in the test scene, not as a replacement for the tracked viewer.
 - A rope shorter than attachment distance removes initial drop clearance; it does not create slack. Expose the requested ratio as an experiment and measure it alongside a slack ratio greater than one. Keep automatic reeling and release boost optional.
 
+- Wall clearance follows the physical capsule plus skin, while roof support requires an actual footprint. Resident and PhysX recovery share one corrected start, retaining the intended travel delta.
+- Retain a reachable current wall independently of view yaw; choose the closest surrounding wall for entry. Parallel unwebbed entry requires horizontal tangential speed; glancing attached swings and vertical-only falls keep frontal entry guards.
+- Preserve S braking at speed, allowing a bounded backward target near rest in unattached air. Expose the low-speed option and thresholds; keep existing buttons and tracking projection unchanged.
+
 ## Validation
 
 Record measured outcomes, failed checks and training limitations in the PR and the traversal validation document. Do not describe a scripted route as trained-agent evaluation or a training smoke run as convergence. Other-person comfort playtesting remains a human review step.
