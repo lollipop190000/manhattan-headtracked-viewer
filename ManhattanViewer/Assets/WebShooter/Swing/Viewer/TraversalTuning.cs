@@ -9,6 +9,7 @@ namespace WebShooter.Swing
         [Range(.1f,2f)] public float releaseWindowSeconds=1.2f;
         [Range(.05f,.6f)] public float bufferSeconds=.35f;
         [Range(0,15)] public float aimConeDegrees=12f;
+        [Range(0,2)] public float momentumWeight=1.5f;
         [Range(.01f,.05f)] public float attachmentSeconds=.04f;
     }
     public sealed class TraversalTuning : MonoBehaviour

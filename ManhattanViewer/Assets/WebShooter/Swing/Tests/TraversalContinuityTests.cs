@@ -2,6 +2,59 @@ using NUnit.Framework;
 using UnityEngine;
 namespace WebShooter.Swing.Tests
 {
+    public sealed class TraversalAnchorMomentumTests
+    {
+        [TestCase(-80,6.945927f)][TestCase(-45,28.28427f)][TestCase(0,40)][TestCase(45,40)]
+        public void RetainedSpeedPredictsOnlyOutwardLoss(float angle,float expected)
+        {
+            var radial=Quaternion.AngleAxis(angle,Vector3.right)*Vector3.down;
+            Assert.That(TraversalAim.RetainedSpeed(Vector3.zero,-radial*50,Vector3.forward*40),Is.EqualTo(expected).Within(.001f));
+        }
+        [Test] public void FallingReconnectSelectsMoreRetainedMomentumWithinTheSameCone()
+        {
+            var near=GameObject.CreatePrimitive(PrimitiveType.Cube);var wide=GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var rig=new GameObject();WebSwingMotionInput motion=null;
+            try
+            {
+                Vector3 start=Vector3.up*100;var aim=new Ray(start,new Vector3(0,1,.25f));
+                near.layer=wide.layer=30;near.transform.position=start+new Vector3(0,60,17);near.transform.localScale=new Vector3(8,1,2);
+                wide.transform.position=start+new Vector3(0,60,27);wide.transform.localScale=new Vector3(12,1,6);Physics.SyncTransforms();
+                Assert.That(Physics.Raycast(aim,250,1<<30),Is.False);
+                var flight=rig.AddComponent<Manhattan.Viewer.FreeFlightController>();flight.enabled=false;
+                var s=WebSwingMotionInput.TraversalSettings();s.gravity=0;s.airDrag=0;s.features.SetFlow(true);
+                motion=new WebSwingMotionInput(null,flight,null,s);motion.ReconnectAssist.enabled=true;
+                float Run(float weight)
+                {
+                    flight.SetPose(start,Quaternion.identity);motion.Activate();motion.Body.Attach(start+Vector3.up*50);motion.Release();
+                    motion.Body.Velocity=Vector3.down*40;motion.ReconnectAssist.momentumWeight=weight;
+                    Assert.That(motion.TryFire(aim),Is.True);Vector3 target=motion.ShotTarget;
+                    Assert.That(Vector3.Angle(aim.direction,target-start),Is.LessThanOrEqualTo(12.01f));
+                    for(int i=0;i<5;i++){var c=motion.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                    Assert.That(motion.Body.Attached,Is.True);Assert.That(motion.ShotAge,Is.InRange(.04f,.05f));
+                    float result=motion.Body.Velocity.magnitude;
+                    Assert.That(result,Is.LessThanOrEqualTo(40.001f));
+                    TestContext.WriteLine($"ANCHOR weight={weight:F1} target={target:F4} angle={Vector3.Angle(aim.direction,target-start):F6} afterAttachSpeed={result:F6}");
+                    return result;
+                }
+                float geometric=Run(0),momentum=Run(1.5f);
+                Assert.That(momentum,Is.GreaterThan(geometric*1.2f));
+            }
+            finally{motion?.Collision.Dispose();Object.DestroyImmediate(near);Object.DestroyImmediate(wide);Object.DestroyImmediate(rig);}
+        }
+        [Test] public void DirectHitRemainsExactWithMomentumScoring()
+        {
+            var wall=GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                wall.layer=30;wall.transform.position=new Vector3(0,160,15);wall.transform.localScale=Vector3.one*5;Physics.SyncTransforms();
+                var ray=new Ray(Vector3.up*100,wall.transform.position-Vector3.up*100);Physics.Raycast(ray,out var direct,250,1<<30);
+                var f=new FlowFeatures{assistAnchor=true,anchorAssistStrength=1,anchorMomentumWeight=2};
+                Assert.That(TraversalAim.Select(ray,ray.origin,Vector3.down*40,250,1<<30,f,out var selected),Is.True);
+                Assert.That(selected.point,Is.EqualTo(direct.point));
+            }
+            finally{Object.DestroyImmediate(wall);}
+        }
+    }
     public sealed class TraversalSteeringStrengthTests
     {
         [TestCase(1,1)][TestCase(1,.1f)][TestCase(.25f,1)][TestCase(.25f,.1f)]

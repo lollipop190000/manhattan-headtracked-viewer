@@ -131,6 +131,7 @@ namespace WebShooter.Swing
                 if(!direct)
                 {
                     reconnectAim.anchorConeDegrees=Mathf.Clamp(ReconnectAssist.aimConeDegrees,0,15)*Mathf.Clamp01(Body.AssistStrength);
+                    reconnectAim.anchorMomentumWeight=ReconnectAssist.momentumWeight;
                     if(reconnectAim.anchorConeDegrees<=0 || !TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,reconnectAim,out hit))return false;
                 }
             }
