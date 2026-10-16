@@ -294,8 +294,12 @@ namespace WebShooter.Swing
                 float target = Attached ? Settings.cruiseSpeed : Settings.features.airTargetSpeed;
                 if (tangent.magnitude >= target)
                 {
+                    // Preserve the effective input force: normalization must not turn a tiny axis or assist into full steering.
+                    float fullAcceleration = Settings.airControl * (Attached ? 3f : 1f);
+                    float inputStrength = Mathf.Clamp01(steering.magnitude / Mathf.Max(.0001f, fullAcceleration));
+                    float turnScale = inputStrength * (Attached ? 1f : Settings.features.airSteeringRatio);
                     Vector3 turned = Vector3.RotateTowards(tangent, direction * tangent.magnitude,
-                        Settings.features.steeringTurnDegrees * Mathf.Deg2Rad * h, 0f);
+                        Settings.features.steeringTurnDegrees * turnScale * Mathf.Deg2Rad * h, 0f);
                     Velocity += turned - tangent;
                 }
                 else

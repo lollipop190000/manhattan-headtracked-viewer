@@ -79,7 +79,8 @@ namespace WebShooter.Swing.Tests
             var b=new SwingPhysics(s);b.Reset(Vector3.up*100);b.Velocity=Vector3.forward*40;
             for(int i=0;i<120;i++)b.Step(1f/120,Vector3.right);
             Assert.That(b.Velocity.magnitude,Is.EqualTo(40).Within(.002f));
-            Assert.That(b.Velocity.x,Is.GreaterThan(30));
+            float expected=s.features.steeringTurnDegrees*s.features.airSteeringRatio;
+            Assert.That(Mathf.Atan2(b.Velocity.x,b.Velocity.z)*Mathf.Rad2Deg,Is.EqualTo(expected).Within(.02f));
         }
     }
 }

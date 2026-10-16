@@ -2,6 +2,27 @@ using NUnit.Framework;
 using UnityEngine;
 namespace WebShooter.Swing.Tests
 {
+    public sealed class TraversalSteeringStrengthTests
+    {
+        [TestCase(1,1)][TestCase(1,.1f)][TestCase(.25f,1)][TestCase(.25f,.1f)]
+        [TestCase(.01f,1)][TestCase(.01f,.1f)][TestCase(0,1)][TestCase(1,0)]
+        public void HighSpeedAirTurnScalesWithAssistAndAxis(float assist,float axis)
+        {
+            var s=WebSwingMotionInput.TraversalSettings();s.features.SetFlow(true);s.gravity=0;s.airDrag=0;
+            var b=new SwingPhysics(s);b.Reset(Vector3.up*100);b.AssistStrength=assist;b.Velocity=Vector3.forward*40;
+            for(int i=0;i<120;i++)b.Step(1f/120,Vector3.right*axis);
+            float angle=Mathf.Atan2(b.Velocity.x,b.Velocity.z)*Mathf.Rad2Deg;
+            Assert.That(angle,Is.EqualTo(65*.35f*assist*axis).Within(.005f));
+            Assert.That(b.Velocity.magnitude,Is.EqualTo(40).Within(.002f));
+            TestContext.WriteLine($"AIR assist={assist:F2} axis={axis:F2} turnDegrees={angle:F6} speed={b.Velocity.magnitude:F6}");
+        }
+        [Test] public void AirTurnRatioCanDisableRotationWithoutDiscardingMomentum()
+        {
+            var s=WebSwingMotionInput.TraversalSettings();s.features.SetFlow(true);s.features.airSteeringRatio=0;s.gravity=0;s.airDrag=0;
+            var b=new SwingPhysics(s);b.Reset(Vector3.up*100);b.Velocity=Vector3.forward*40;b.Step(.1f,Vector3.right);
+            Assert.That(b.Velocity,Is.EqualTo(Vector3.forward*40));
+        }
+    }
     public sealed class TraversalWallTransitionTests
     {
         private static SwingPhysics Runner()
