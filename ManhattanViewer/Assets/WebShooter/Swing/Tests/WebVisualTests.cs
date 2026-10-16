@@ -25,6 +25,16 @@ namespace WebShooter.Swing.Tests
             foreach(var n in new[]{Vector3.up,Vector3.right,Vector3.back})
                 Assert.That(Vector3.Distance(WebAnchorMark.SurfaceRotation(n)*Vector3.forward,n),Is.LessThan(.001f));
         }
+        [Test] public void AttachmentMarkAllocatesNativePropertiesDuringConfiguration()
+        {
+            var quad=GameObject.CreatePrimitive(PrimitiveType.Quad);var material=new Material(Resources.Load<Shader>("TraversalWebStrand"));
+            try
+            {
+                var mark=quad.AddComponent<WebAnchorMark>();mark.Configure(Vector3.up*10,Vector3.up,null,material,()=>false,.5f);
+                Assert.That(quad.transform.position.y,Is.EqualTo(10.015f).Within(.0001f));mark.Release(.1f);
+            }
+            finally{Object.DestroyImmediate(quad);Object.DestroyImmediate(material);}
+        }
         [Test] public void BraidedTextureHasTransparentEdgesAndInternalFilaments()
         {
             var t=WebTextureFactory.Strand(5);

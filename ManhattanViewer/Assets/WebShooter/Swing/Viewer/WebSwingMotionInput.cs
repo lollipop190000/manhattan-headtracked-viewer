@@ -28,6 +28,8 @@ namespace WebShooter.Swing
         public float MaxRange { get; set; } = 250f;
         public bool Enabled { get; set; } = true;
         public bool Paused { get; set; }
+        /// <summary>Explicit replay source; null keeps the installed human/sensor adapter.</summary>
+        public IMotionInputSource InputOverride { get; set; }
         public Func<bool> CanSimulate { get; set; }
         public bool JumpRequested { get; set; }
         public float ReelInput { get; set; }
@@ -149,8 +151,9 @@ namespace WebShooter.Swing
         }
         private MotionCommand SampleCore(float deltaTime)
         {
-            MotionCommand input = look != null ? look.Sample(deltaTime) : default;
-            if(look is ITraversalInputSource traversal)ApplyActions(traversal.ReadActions());
+            var source=InputOverride??look;
+            MotionCommand input = source != null ? source.Sample(deltaTime) : default;
+            if(source is ITraversalInputSource traversal)ApplyActions(traversal.ReadActions());
             if (!Enabled) return input;
             EnsureInitialized();
             if (CanSimulate != null) Paused = !CanSimulate();

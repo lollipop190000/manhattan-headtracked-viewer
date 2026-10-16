@@ -18,6 +18,7 @@ namespace WebShooter.Swing
             float readyDeadline=Time.realtimeSinceStartup+60f;
             while(app.Streamer.LoadedTiles==0 && Time.realtimeSinceStartup<readyDeadline) yield return null;
             var motion=shooter.Motion;var hands=shooter.GetComponent<TraversalHands>();shooter.enabled=false;app.Flight.enabled=false;
+            var controls=new BufferedTraversalInput();controls.Actions=new TraversalActions{active=true};motion.InputOverride=controls;
             motion.CanSimulate=()=>true;motion.Paused=false;
             string folder=Application.persistentDataPath;var args=Environment.GetCommandLineArgs();
             for(int i=0;i+1<args.Length;i++)if(args[i]=="--visual-output")folder=args[i+1];
@@ -28,6 +29,7 @@ namespace WebShooter.Swing
             for(int side=0;side<2;side++)
             {
                 motion.Release();app.Flight.SetPose(initialPosition,initialRotation);motion.Activate();hands.Select(side==0?.2f:.8f);
+                controls.Actions.fireHeld=true;
                 bool hit=false;
                 float deadline=Time.realtimeSinceStartup+30f;
                 while(!hit && Time.realtimeSinceStartup<deadline)
@@ -50,6 +52,7 @@ namespace WebShooter.Swing
                 }
                 Debug.Log($"VISUAL_QA side={side} attached={motion.Body.Attached} speed={motion.Body.Velocity.magnitude:F2} handCount={hands.VisibleHands} wristZ={hands.SelectedWristDepth:F3} corners={motion.Route.Points.Count-1} slack={motion.Body.RopeLength-Vector3.Distance(motion.Body.Position,motion.Body.Anchor):F4}");
                 motion.HandleMouseHold(true,false,false,default);
+                controls.Actions.fireHeld=false;
                 for(int i=0;i<30;i++){var c=motion.Sample(1f/60);app.Flight.SetPose(c.cityPosition,c.cityRotation);yield return null;}
             }
             yield return new WaitForEndOfFrame();

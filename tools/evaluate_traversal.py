@@ -72,11 +72,13 @@ class ExportedPolicy:
 def evaluate_one(args,label,model,condition,index):
     from mlagents_envs.environment import UnityEnvironment
     from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
+    from mlagents_envs.side_channel.stats_side_channel import StatsSideChannel
     folder=args.output/label;folder.mkdir()
     channel=EngineConfigurationChannel();channel.set_configuration_parameters(time_scale=args.time_scale,quality_level=0,target_frame_rate=-1)
+    stats=StatsSideChannel()
     policy=ExportedPolicy(model)
     env=UnityEnvironment(file_name=str(args.env),base_port=args.base_port,worker_id=index,seed=args.seed,no_graphics=True,
-        side_channels=[channel],log_folder=str(folder),timeout_wait=120,additional_args=['--traversal-agent','--evaluation','--flow',condition,
+        side_channels=[channel,stats],log_folder=str(folder),timeout_wait=120,additional_args=['--traversal-agent','--evaluation','--flow',condition,
         '--map-seed',str(args.seed),'--episodes-per-map',str(args.episodes),'--telemetry-dir',str(folder)])
     try:
         env.reset();behavior=next(iter(env.behavior_specs));spec=env.behavior_specs[behavior]
@@ -86,7 +88,7 @@ def evaluate_one(args,label,model,condition,index):
             steps,terminal=env.get_steps(behavior);completed+=len(terminal)
             if completed>=args.maps*args.episodes:break
             if len(steps):env.set_actions(behavior,policy.actions(steps,spec))
-            env.step();decisions+=1
+            env.step();stats.get_and_reset_stats();decisions+=1
             if decisions>limit:raise RuntimeError('Evaluation did not complete; no partial result is presented as complete.')
     finally:env.close()
     rows=read_rows(folder);validate_schedule(rows,args.seed,args.maps,args.episodes)
