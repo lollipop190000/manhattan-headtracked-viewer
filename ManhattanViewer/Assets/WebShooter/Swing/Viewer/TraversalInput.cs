@@ -23,13 +23,13 @@ namespace WebShooter.Swing
         public MotionCommand Sample(float dt)=>movement!=null?movement.Sample(dt):default;
         public TraversalActions ReadActions()
         {
-            bool active=canRead() && Application.isFocused;var k=Keyboard.current;var m=Mouse.current;
+            bool active=canRead();var k=Keyboard.current;var m=Mouse.current;
             if(active && m!=null && Mathf.Abs(m.delta.ReadValue().x)>.5f)side=m.delta.ReadValue().x<0?.3f:.7f;
             bool edge=active && capturedLast;
             var a=new TraversalActions{active=active,firePressed=edge && m!=null && m.leftButton.wasPressedThisFrame && Camera.main!=null,
-                fireHeld=active && m!=null && m.leftButton.isPressed,release=edge && m!=null && m.rightButton.wasPressedThisFrame,
+                fireHeld=active && m!=null && m.leftButton.isPressed,
                 jump=edge && k!=null && k.spaceKey.wasPressedThisFrame,toggleFlight=edge && k!=null && k.rKey.wasPressedThisFrame,
-                reel=active && k!=null?(k.eKey.isPressed?1:0)-(k.qKey.isPressed?1:0):0,
+                reel=active?((m!=null && m.rightButton.isPressed || k!=null && k.eKey.isPressed)?1:0)-(k!=null && k.qKey.isPressed?1:0):0,
                 assistDelta=edge && k!=null?((k.rightBracketKey.wasPressedThisFrame?1:0)-(k.leftBracketKey.wasPressedThisFrame?1:0))*.25f:0,
                 viewportX=Cursor.lockState==CursorLockMode.Locked?side:m!=null?m.position.ReadValue().x/Mathf.Max(1,Screen.width):.7f,
                 aim=Camera.main!=null?Camera.main.ViewportPointToRay(new Vector3(.5f,.5f,0)):default};

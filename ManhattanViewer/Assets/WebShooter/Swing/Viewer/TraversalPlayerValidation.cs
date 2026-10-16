@@ -4,13 +4,21 @@ using System.Collections.Generic;
 using System.IO;
 using Manhattan.Viewer;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 namespace WebShooter.Swing
 {
     /// <summary>Opt-in executable regression check. Never runs in normal play.</summary>
     public sealed class TraversalPlayerValidation : MonoBehaviour
     {
-        [Serializable] private sealed class Report { public bool passed; public string error; public string unityVersion; public float reconnectAttachSeconds,reconnectSpeedBefore,reconnectSpeedAfterFire; public List<string> checks = new List<string>(); }
+        [Serializable] private sealed class Report
+        {
+            public bool passed; public string error; public string unityVersion;
+            public float reconnectAttachSeconds,reconnectSpeedBefore,reconnectSpeedAfterFire;
+            public float airFullTurnDegrees,airQuarterTurnDegrees,anchorGeometricSpeed,anchorMomentumSpeed,mouseReeledMetres;
+            public List<string> checks = new List<string>();
+        }
         private readonly Report report = new Report();
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -182,6 +190,7 @@ namespace WebShooter.Swing
                 Check(!relay.HandleMouseHold(true,false,true,new Ray(relay.Body.Position,wall.transform.position-relay.Body.Position)) && !relay.Flying,
                     "focus loss cancels buffered reconnect without replaying an old ray");
                 relay.Collision.Dispose();
+                ValidateContinuity();
                 report.passed = true;
             }
             catch (Exception e) { report.error = e.ToString(); Debug.LogException(e); }
@@ -194,6 +203,79 @@ namespace WebShooter.Swing
                 File.WriteAllText(output, JsonUtility.ToJson(report, true));
             }
             Application.Quit(report.passed ? 0 : 1);
+        }
+        private void ValidateContinuity()
+        {
+            SwingPhysics NewBody()
+            {
+                var s=WebSwingMotionInput.TraversalSettings();s.features.SetFlow(true);s.gravity=0;s.airDrag=0;
+                var b=new SwingPhysics(s);b.Reset(Vector3.up*4000);return b;
+            }
+            var wallBody=NewBody();wallBody.WallRunRequested=true;wallBody.Velocity=Vector3.left*20;wallBody.Contact(Vector3.right);
+            wallBody.Jump();wallBody.Velocity=Vector3.left*20;wallBody.Contact(Vector3.right);
+            Check(wallBody.State==TraversalState.Airborne,"contact respects wall jump cooldown");
+            for(int i=0;i<37;i++){wallBody.Velocity=Vector3.left*20;wallBody.UpdateWall(Vector3.right,true,1f/120);}
+            Check(wallBody.State==TraversalState.WallRunning,"wall entry resumes after cooldown");
+            wallBody.Velocity=Vector3.forward*20;wallBody.Attach(wallBody.Position+new Vector3(0,50,50));
+            wallBody.UpdateWall(Vector3.right,true,1f/120);
+            Check(wallBody.Attached && wallBody.State==TraversalState.Swinging && wallBody.Velocity==Vector3.forward*20,
+                "new web exits wall run without losing velocity or immediate reentry");
+            wallBody.Release();wallBody.UpdateWall(Vector3.zero,true,.4f);wallBody.Velocity=Vector3.left*20;wallBody.Contact(Vector3.right);
+            for(int i=0;i<250;i++){wallBody.Velocity=Vector3.left*20;wallBody.UpdateWall(Vector3.right,true,1f/120);wallBody.Velocity=Vector3.left*20;wallBody.Contact(Vector3.right);}
+            Check(wallBody.State==TraversalState.Airborne,"repeated contacts cannot bypass wall run exhaustion");
+            float Turn(float assist)
+            {
+                var b=NewBody();b.AssistStrength=assist;b.Velocity=Vector3.forward*40;
+                for(int i=0;i<120;i++)b.Step(1f/120,Vector3.right);
+                Check(Mathf.Abs(b.Velocity.magnitude-40)<.002f,"air turning preserves forty metres per second at assist "+assist);
+                return Mathf.Atan2(b.Velocity.x,b.Velocity.z)*Mathf.Rad2Deg;
+            }
+            report.airFullTurnDegrees=Turn(1);report.airQuarterTurnDegrees=Turn(.25f);
+            Check(Mathf.Abs(report.airFullTurnDegrees-22.75f)<.01f && Mathf.Abs(report.airQuarterTurnDegrees-report.airFullTurnDegrees*.25f)<.01f,
+                "air turn rate scales with assistance and weaker air ratio");
+            var near=GameObject.CreatePrimitive(PrimitiveType.Cube);var wide=GameObject.CreatePrimitive(PrimitiveType.Cube);var rig=new GameObject("Continuity input fixture");
+            WebSwingMotionInput motion=null;Mouse mouse=null;Keyboard keyboard=null;
+            try
+            {
+                var start=Vector3.up*4000;var ray=new Ray(start,new Vector3(0,1,.25f));
+                near.layer=wide.layer=30;near.transform.position=start+new Vector3(0,60,17);near.transform.localScale=new Vector3(8,1,2);
+                wide.transform.position=start+new Vector3(0,60,27);wide.transform.localScale=new Vector3(12,1,6);Physics.SyncTransforms();
+                Check(!Physics.Raycast(ray,250,1<<30),"anchor comparison begins from an actual aim miss");
+                var flight=rig.AddComponent<FreeFlightController>();flight.enabled=false;var s=NewBody().Settings;
+                motion=new WebSwingMotionInput(null,flight,null,s);motion.ReconnectAssist.enabled=true;
+                float AttachSpeed(float weight)
+                {
+                    flight.SetPose(start,Quaternion.identity);motion.Activate();motion.Body.Attach(start+Vector3.up*50);motion.Release();motion.Body.Velocity=Vector3.down*40;
+                    motion.ReconnectAssist.momentumWeight=weight;Check(motion.TryFire(ray),"real cone hit at momentum weight "+weight);
+                    Check(Vector3.Angle(ray.direction,motion.ShotTarget-start)<=12.01f,"assisted anchor stays within twelve degrees at weight "+weight);
+                    for(int i=0;i<5;i++){var c=motion.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                    Check(motion.Body.Attached && motion.ShotAge<=.05f,"physical reconnect stays below fifty milliseconds at weight "+weight);
+                    return motion.Body.Velocity.magnitude;
+                }
+                report.anchorGeometricSpeed=AttachSpeed(0);report.anchorMomentumSpeed=AttachSpeed(1.5f);
+                Check(report.anchorMomentumSpeed>report.anchorGeometricSpeed*1.2f && report.anchorMomentumSpeed<=40.001f,
+                    "momentum-aware assisted anchor retains more speed without adding energy");
+                motion.Release();flight.SetPose(start,Quaternion.identity);motion.Activate();
+                mouse=InputSystem.AddDevice<Mouse>();keyboard=InputSystem.AddDevice<Keyboard>();InputSystem.QueueStateEvent(keyboard,new KeyboardState());
+                var human=new HumanTraversalInput(null,()=>true);motion.InputOverride=human;
+                InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(MouseButton.Left));InputSystem.Update();human.ReadActions();InputSystem.Update();
+                Check(motion.HandleMouseHold(true,true,true,new Ray(start,near.transform.position-start)),"mouse reel fixture attaches through the real shot and route");
+                for(int i=0;i<60;i++){var c=motion.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                Check(motion.Body.Attached,"mouse reel fixture reaches attachment");
+                InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(MouseButton.Left).WithButton(MouseButton.Right));InputSystem.Update();var actions=human.ReadActions();
+                Check(actions.reel==1 && !actions.release,"real right mouse hold maps to reel instead of release");
+                float length=motion.Body.RopeLength;
+                for(int i=0;i<30;i++){var c=motion.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                report.mouseReeledMetres=length-motion.Body.RopeLength;
+                Check(motion.Body.Attached && Mathf.Abs(report.mouseReeledMetres-6)<.002f,"held right mouse reels six metres in a quarter second and stays attached");
+                InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(MouseButton.Left));InputSystem.Update();
+                var command=motion.Sample(1f/120);flight.SetPose(command.cityPosition,command.cityRotation);
+                Check(motion.Body.Attached && motion.ReelInput==0,"right mouse up stops reeling without detaching");
+                InputSystem.QueueStateEvent(mouse,new MouseState());InputSystem.Update();
+                command=motion.Sample(1f/120);flight.SetPose(command.cityPosition,command.cityRotation);
+                Check(!motion.Flying && !motion.Body.Attached,"left mouse up still releases after right mouse remap");
+            }
+            finally{if(mouse!=null)InputSystem.RemoveDevice(mouse);if(keyboard!=null)InputSystem.RemoveDevice(keyboard);motion?.Collision.Dispose();DestroyImmediate(near);DestroyImmediate(wide);DestroyImmediate(rig);}
         }
     }
 }

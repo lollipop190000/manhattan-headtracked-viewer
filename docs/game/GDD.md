@@ -49,9 +49,11 @@ Exit test: five outside players try it; at least three ask to play again without
 
 | Input | Action |
 |---|---|
-| Left click | Fire (re-attaches if already swinging) |
-| Right click or R | Release |
-| E / Q | Reel in / out |
+| Hold left click / release left click | Fire and hold / detach |
+| Hold right click / E | Reel in |
+| Q | Pay out |
+| R | Toggle flight / traversal |
+| Space | Ground jump / swing hop / wall jump |
 | WASD | Air steer |
 | Wrist device | Aim and fire (planned, not wired) |
 | Gamepad / BLE | Move (aim and fire not defined yet) |

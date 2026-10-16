@@ -1,6 +1,6 @@
 {
   "name": "WebShooter.Swing.Tests",
-  "references": ["WebShooter.Swing.Core", "WebShooter.Swing.Viewer", "Manhattan.Viewer.Runtime"],
+  "references": ["WebShooter.Swing.Core", "WebShooter.Swing.Viewer", "Manhattan.Viewer.Runtime", "Unity.InputSystem"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

@@ -50,7 +50,7 @@ namespace WebShooter.Swing
             previousInput = app.Flight.InputSource;
             previousConstraint = app.Flight.TranslationConstraint;
             var tuning=gameObject.AddComponent<TraversalTuning>();
-            var human=new HumanTraversalInput(previousInput,()=>app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured);
+            var human=new HumanTraversalInput(previousInput,()=>app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured && Application.isFocused);
             swing = new WebSwingMotionInput(human, app.Flight, app.Origin,tuning.Settings) { Paused = true, AutomaticCruiseAssist = true };
             swing.ReconnectAssist=tuning.Reconnect;
             var features=swing.Body.Settings.features;
@@ -79,11 +79,11 @@ namespace WebShooter.Swing
             if (swing == null) return;
             if (!app.KeyboardInput.Captured)
             {
-                GUI.Box(new Rect(12, Screen.height - 60, 740, 48), "Click to capture. Space: jump. Aim HIGH and HOLD left mouse to attach.\nW: boost | Let go: release | E: reel in | Q: reel out | R: flight");
+                GUI.Box(new Rect(12, Screen.height - 60, 740, 48), "Click to capture. Space: jump. Aim HIGH and HOLD left mouse to attach.\nW: boost | Let go LMB: release | HOLD RMB / E: reel in | Q: reel out | R: flight");
                 return;
             }
             GUI.Label(new Rect(Screen.width * .5f - 8, Screen.height * .5f - 12, 20, 24), "+");
-            GUI.Label(new Rect(12, Screen.height - 52, 1200, 24), "Space: jump | HOLD LMB: attach | Let go: release | W: boost | E/Q: reel in/out | R: flight");
+            GUI.Label(new Rect(12, Screen.height - 52, 1200, 24), "Space: jump | HOLD LMB: attach | Let go LMB: release | W: boost | HOLD RMB / E: reel in | Q: reel out | R: flight");
             GUI.Label(new Rect(12, Screen.height - 28, 800, 24), swing.Enabled ? $"{swing.Body.State} | {swing.Body.Velocity.magnitude:0.0} m/s | Assist {swing.Body.AssistStrength:0.00} ([ / ])" : "Free flight (wall collision ON)");
         }
         private void OnDestroy()
