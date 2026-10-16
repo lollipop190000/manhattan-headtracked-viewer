@@ -10,7 +10,7 @@ namespace WebShooter.Swing
     /// <summary>Opt-in executable regression check. Never runs in normal play.</summary>
     public sealed class TraversalPlayerValidation : MonoBehaviour
     {
-        [Serializable] private sealed class Report { public bool passed; public string error; public string unityVersion; public List<string> checks = new List<string>(); }
+        [Serializable] private sealed class Report { public bool passed; public string error; public string unityVersion; public float reconnectAttachSeconds,reconnectSpeedBefore,reconnectSpeedAfterFire; public List<string> checks = new List<string>(); }
         private readonly Report report = new Report();
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -160,6 +160,28 @@ namespace WebShooter.Swing
                 input.Body.Position = start; input.Paused = true; input.Sample(.1f);
                 Check(input.Body.Position == start, "paused physics");
                 input.Collision.Dispose();
+                // Exercise the shipping reconnect input path with real colliders, independently of the agent policy.
+                wall.transform.position=start+new Vector3(0,25,100);wall.transform.localScale=new Vector3(10,20,1);
+                flight.SetPose(start,Quaternion.identity);Physics.SyncTransforms();
+                var relaySettings=WebSwingMotionInput.TraversalSettings();relaySettings.gravity=0;relaySettings.airDrag=0;
+                var relay=new WebSwingMotionInput(null,flight,null,relaySettings);relay.Activate();relay.ReconnectAssist.enabled=true;
+                relay.Body.Attach(start+Vector3.up*50);relay.Release();relay.Body.Velocity=Vector3.right*40;
+                Check(!relay.HandleMouseHold(true,true,true,new Ray(start,Vector3.right)) && relay.ReconnectPending,"reconnect buffers a missed press");
+                for(int i=0;i<6;i++){var c=relay.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                report.reconnectSpeedBefore=relay.Body.Velocity.magnitude;
+                Check(relay.HandleMouseHold(true,false,true,new Ray(relay.Body.Position,wall.transform.position-relay.Body.Position)),"reconnect accepts fresh aim without another click");
+                report.reconnectSpeedAfterFire=relay.Body.Velocity.magnitude;
+                Check(Mathf.Abs(report.reconnectSpeedBefore-report.reconnectSpeedAfterFire)<.0001f,"reconnect preserves incoming velocity");
+                for(int i=0;i<5;i++){var c=relay.Sample(1f/120);flight.SetPose(c.cityPosition,c.cityRotation);}
+                report.reconnectAttachSeconds=relay.ShotAge;
+                Check(relay.Body.Attached && report.reconnectAttachSeconds<=.05f,"reconnect physically attaches within fifty milliseconds");
+                velocity=relay.Body.Velocity;relay.HandleMouseHold(true,false,false,default);
+                Check(!relay.Body.Attached && relay.Body.Velocity==velocity,"reconnected web still releases on mouse up without impulse");
+                relay.HandleMouseHold(true,true,true,new Ray(relay.Body.Position,Vector3.right));
+                relay.HandleMouseHold(false,false,true,default);
+                Check(!relay.HandleMouseHold(true,false,true,new Ray(relay.Body.Position,wall.transform.position-relay.Body.Position)) && !relay.Flying,
+                    "focus loss cancels buffered reconnect without replaying an old ray");
+                relay.Collision.Dispose();
                 report.passed = true;
             }
             catch (Exception e) { report.error = e.ToString(); Debug.LogException(e); }

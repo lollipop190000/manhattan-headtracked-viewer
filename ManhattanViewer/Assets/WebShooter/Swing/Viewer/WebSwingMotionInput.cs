@@ -35,16 +35,43 @@ namespace WebShooter.Swing
         public float ReelInput { get; set; }
         public bool AutomaticRopeAssist { get; set; }
         public bool AutomaticCruiseAssist { get; set; }
+        // Opted into by the human/sensor composition only. Agent comparisons retain their exact inputs.
+        public ReconnectAssistSettings ReconnectAssist { get; set; } = new ReconnectAssistSettings();
+        public bool ReconnectPending => reconnectBuffered && SimulatedTime<=reconnectBufferUntil;
+        public bool LastShotWasReconnect { get; private set; }
+        public int ReconnectShots { get; private set; }
+        private float lastDetachTime=float.NegativeInfinity,reconnectBufferUntil,reconnectNextAttempt;
+        private bool reconnectBuffered;
+        private float shotAttachmentOverride=-1f;
+        private readonly FlowFeatures reconnectAim = new FlowFeatures {assistAnchor=true,anchorAssistStrength=1f,anchorSamples=16};
+        private bool CanAssistReconnect => ReconnectAssist.enabled && Body.AssistStrength>0f && !Body.Grounded &&
+            (Body.Attached || SimulatedTime-lastDetachTime<=Mathf.Clamp(ReconnectAssist.releaseWindowSeconds,.1f,2f));
         public bool MouseOwnsRope { get; private set; }
         public double LastSampleMilliseconds { get; private set; }
         public bool HandleMouseHold(bool active, bool pressed, bool held, Ray ray)
         {
-            if (!active) { Release(); return false; }
-            if (MouseOwnsRope && !held) Release(true);
-            if (!pressed || !held) return false;
-            bool hit = TryFire(ray);
-            MouseOwnsRope = hit;
-            return hit;
+            if (!active) { Release(); lastDetachTime=float.NegativeInfinity; return false; }
+            if (!held) { reconnectBuffered=false; if(MouseOwnsRope)Release(true); return false; }
+            if(pressed)
+            {
+                bool buffer=CanAssistReconnect && ReconnectAssist.bufferMisses;
+                bool hit=TryFire(ray);MouseOwnsRope=hit;
+                if(!hit && buffer)
+                {
+                    reconnectBuffered=true;reconnectBufferUntil=SimulatedTime+Mathf.Clamp(ReconnectAssist.bufferSeconds,.05f,.6f);
+                    reconnectNextAttempt=SimulatedTime+.03f;
+                }
+                return hit;
+            }
+            if(!reconnectBuffered)return false;
+            if(!ReconnectAssist.enabled || Body.AssistStrength<=0f || !ReconnectAssist.bufferMisses || SimulatedTime>reconnectBufferUntil)
+            {reconnectBuffered=false;return false;}
+            if(SimulatedTime+1e-6f<reconnectNextAttempt)return false;
+            float until=reconnectBufferUntil;
+            bool attached=TryFire(ray);MouseOwnsRope=attached;
+            // Retry the fresh ray supplied this frame, never a cached sensor ray.
+            if(!attached){reconnectBuffered=true;reconnectBufferUntil=until;reconnectNextAttempt=SimulatedTime+.03f;}
+            return attached;
         }
         public int CollisionReleaseCount { get; private set; }
         public TraversalCollision Collision { get; }
@@ -92,10 +119,22 @@ namespace WebShooter.Swing
         public bool TryFire(Ray ray)
         {
             EnsureInitialized();
+            bool reconnect=CanAssistReconnect;
             Release();
             if (!Finite(ray.origin) || !Finite(ray.direction) || ray.direction.sqrMagnitude < .0001f) return false;
             Vector3 renderPlayer=Body.Position-(origin!=null?origin.Offset:Vector3.zero);
-            if (!TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,Body.Settings.features,out RaycastHit hit)) return false;
+            RaycastHit hit;
+            if(reconnect && ReconnectAssist.aimTolerance)
+            {
+                // Keep a direct hit exactly where aimed. Only a miss gets the bounded overhead/forward cone.
+                bool direct=Physics.Raycast(ray,out hit,MaxRange,CollisionMask,QueryTriggerInteraction.Ignore);
+                if(!direct)
+                {
+                    reconnectAim.anchorConeDegrees=Mathf.Clamp(ReconnectAssist.aimConeDegrees,0,15)*Mathf.Clamp01(Body.AssistStrength);
+                    if(reconnectAim.anchorConeDegrees<=0 || !TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,reconnectAim,out hit))return false;
+                }
+            }
+            else if(!TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,Body.Settings.features,out hit))return false;
             Vector3 anchorCity = hit.point + (origin != null ? origin.Offset : Vector3.zero);
             if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
             ShotTarget = anchorCity;
@@ -105,6 +144,9 @@ namespace WebShooter.Swing
             shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
             Flying = true;
             shotAttached=false;
+            LastShotWasReconnect=reconnect;
+            shotAttachmentOverride=reconnect && ReconnectAssist.quickAttachment?Mathf.Clamp(ReconnectAssist.attachmentSeconds,.01f,.05f):-1f;
+            if(reconnect)ReconnectShots++;
             return true;
         }
 
@@ -116,6 +158,7 @@ namespace WebShooter.Swing
         {
             Release();
             initialized = false;
+            lastDetachTime=float.NegativeInfinity;
             hasRequested = false;
             Enabled = true;
             EnsureInitialized();
@@ -123,11 +166,13 @@ namespace WebShooter.Swing
 
         public void Release(bool allowBoost=false)
         {
+            reconnectBuffered=false;
             MouseOwnsRope = false;
             Flying = false;
             shotAttached=false;
             Route.Clear();
             if (!Body.Attached) return;
+            lastDetachTime=SimulatedTime;
             Body.Release(allowBoost);
             WebReleased?.Invoke();
         }
@@ -157,7 +202,7 @@ namespace WebShooter.Swing
             if (!Enabled) return input;
             EnsureInitialized();
             if (CanSimulate != null) Paused = !CanSimulate();
-            if (Paused) { JumpRequested = false; yaw = flight.transform.eulerAngles.y; pitch = Mathf.DeltaAngle(0f, flight.transform.eulerAngles.x); return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
+            if (Paused) { reconnectBuffered=false; JumpRequested = false; yaw = flight.transform.eulerAngles.y; pitch = Mathf.DeltaAngle(0f, flight.transform.eulerAngles.x); return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
 
             Physics.SyncTransforms();
             // 지난 프레임에 요청한 위치와 실제 위치를 비교: 크게 다르면 순간이동, 조금 다르면 충돌로 막힌 것
@@ -254,23 +299,24 @@ namespace WebShooter.Swing
         private void ApplyActions(TraversalActions a)
         {
             Paused=!a.active;
-            if(!a.active){Release();ReelInput=0;JumpRequested=false;return;}
+            if(!a.active){HandleMouseHold(false,false,false,default);ReelInput=0;JumpRequested=false;return;}
             if(a.toggleFlight){Release();if(Enabled)Enabled=false;else Activate();}
             if(!Enabled)return;
             ReelInput=Mathf.Clamp(a.reel,-1,1);JumpRequested|=a.jump;
             Body.AssistStrength=Mathf.Clamp01(Body.AssistStrength+a.assistDelta);
             if(a.firePressed)InputFireRequested?.Invoke(a.viewportX);
-            HandleMouseHold(true,a.firePressed,a.fireHeld,a.aim);
+            bool fired=HandleMouseHold(true,a.firePressed,a.fireHeld,a.aim);
+            if(fired && !a.firePressed)InputFireRequested?.Invoke(a.viewportX);
             if(a.release)Release(true);
         }
         private void NotifyExternalRelease()
-        {Flying=false;shotAttached=false;MouseOwnsRope=false;Route.Clear();WebReleased?.Invoke();}
+        {lastDetachTime=SimulatedTime;reconnectBuffered=false;Flying=false;shotAttached=false;MouseOwnsRope=false;Route.Clear();WebReleased?.Invoke();}
         private void AdvanceShot(float dt)
         {
             if(!Flying)return;
             ShotAge+=dt;ShotProgress=Mathf.Clamp01((ShotAge-GestureSeconds)/shotDuration);
             if(shotCollider==null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy){Release();return;}
-            bool ready=Body.Settings.features.fixedAttachmentDelay?
+            bool ready=shotAttachmentOverride>=0?ShotAge+1e-6f>=shotAttachmentOverride:Body.Settings.features.fixedAttachmentDelay?
                 ShotAge+1e-6f>=Mathf.Clamp(Body.Settings.features.attachmentDelaySeconds,.01f,.05f):ShotProgress>=1f;
             if(!shotAttached && ready)
             {
