@@ -21,12 +21,14 @@ namespace WebShooter.Swing
         public Vector3 Constrain(Vector3 current, Vector3 requested, bool synchronize)
         {
             if (synchronize) Physics.SyncTransforms();
-            if (CitySolids != null)
-            {
-                requested = CitySolids.Constrain(current, requested);
-            }
-            Vector3 p = current - Offset, remaining = requested - current;
-            p = ResolveOverlap(p);
+            // Recover one shared starting pose. Recovery displacement is not
+            // requested travel and must not be added a second time by the sweep.
+            Vector3 delta = requested - current;
+            Vector3 recovered = CitySolids != null ? CitySolids.Recover(current) : current;
+            Vector3 p = ResolveOverlap(recovered - Offset);
+            Vector3 cityStart = p + Offset;
+            Vector3 target = CitySolids != null ? CitySolids.Constrain(cityStart, cityStart + delta) : cityStart + delta;
+            Vector3 remaining = target - cityStart;
             for (int i = 0; i < 8 && remaining.sqrMagnitude > 1e-10f; i++)
             {
                 if (!Physics.CapsuleCast(Bottom(p), p, Radius, remaining.normalized, out var hit,

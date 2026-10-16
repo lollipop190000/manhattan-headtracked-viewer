@@ -49,5 +49,21 @@ namespace WebShooter.Swing.Tests
             }
             finally{Object.DestroyImmediate(left);Object.DestroyImmediate(right);}
         }
+        [Test] public void SharedRecoveryDoesNotApplyStartPenetrationTwice()
+        {
+            var wall=Box(0,10);
+            try
+            {
+                Physics.SyncTransforms();var start=new Vector3(-4.9f,50,0);var b=Body(start);
+                var resident=new CitySolidRecovery(new[]{Record(0,10)},b);var residentOnly=resident.Constrain(start,start);
+                b.Reset(start);using var c=new TraversalCollision(null,b);c.CitySolids=resident;b.Position=c.Constrain(start,start);
+                Assert.That(Vector3.Distance(b.Position,residentOnly),Is.LessThan(.001f));
+                Assert.That(c.FindWall(b.Position,Vector3.forward).sqrMagnitude,Is.GreaterThan(.5f));
+                var retreat=c.Constrain(b.Position,b.Position+Vector3.left*2);
+                Assert.That(retreat.x,Is.EqualTo(b.Position.x-2).Within(.001f));
+                TestContext.WriteLine($"OVERLAP startX={start.x:F6} residentOnlyX={residentOnly.x:F6} combinedX={b.Position.x:F6} extraDisplacement={Vector3.Distance(b.Position,residentOnly):F6} wallDetected={c.FindWall(b.Position,Vector3.forward).sqrMagnitude>.5f}");
+            }
+            finally{Object.DestroyImmediate(wall);}
+        }
     }
 }

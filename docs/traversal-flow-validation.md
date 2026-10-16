@@ -164,3 +164,7 @@ The ZIP has **893 hashed files**, is **187,139,088 bytes**, and SHA-256 `6be478a
 ### Wall clearance follow-up: real support (2026-10-17)
 
 Resident footprint clearance now matches the swept capsule (0.30m + 0.02m skin). Roof recovery requires the eye projection to lie inside the footprint; outside proximity cannot manufacture support. Focused Unity EditMode: four cases passed. At gaps 0.8/1.2/1.8m, falling from Y104 at -20m/s with gravity24 for 0.5s ends at Y90.950, vertical speed -32.000m/s, zero supported steps, with and without resident geometry. Previously resident 0.8/1.2m gaps produced Y101.870 and 49 supported steps. Reversing the 1.2m-gap catalog now leaves X0 and zero contacts (previously +/-0.201m, 32 contacts).
+
+### Shared overlap start
+
+Resident and PhysX now recover the same starting pose before applying only the intended travel delta. Five focused EditMode cases passed. At X-4.9 inside a box with face X-5, resident-only and combined recovery both finish at X-5.321; extra displacement is 0.000m (previously 0.420m). Wall detection remains available and a 2m retreat is unobstructed.
