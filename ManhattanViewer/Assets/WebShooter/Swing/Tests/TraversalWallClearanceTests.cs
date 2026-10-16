@@ -65,5 +65,25 @@ namespace WebShooter.Swing.Tests
             }
             finally{Object.DestroyImmediate(wall);}
         }
+        [Test] public void SideEntryAndLookingAwayKeepTheActualWall()
+        {
+            var wall=Box(5,10,300);
+            try
+            {
+                Physics.SyncTransforms();var b=Body(new Vector3(-.801f,100,0));using var c=new TraversalCollision(null,b);
+                b.Velocity=Vector3.forward*20;b.WallRunRequested=true;var along=c.FindWall(b.Position,Vector3.forward);
+                b.UpdateWall(along,true,1f/120);var sideState=b.State;
+                for(int i=0;i<120;i++){b.UpdateWall(c.FindWall(b.Position,Vector3.forward),true,1f/120);var p=b.Position;b.Step(1f/120,Vector3.right);b.Position=c.Constrain(p,b.Position);}
+                TestContext.WriteLine($"SIDE detectedNormal={along} initialState={sideState} afterOneSecond={b.State} position={b.Position:F6}");
+                b.Reset(new Vector3(-.801f,100,0));b.WallRunRequested=true;b.Velocity=Vector3.right*20;b.Contact(Vector3.left);b.Velocity=Vector3.forward*20;
+                var before=b.State;var away=c.FindWall(b.Position,Vector3.left);b.UpdateWall(away,true,1f/120);
+                TestContext.WriteLine($"LOOK before={before} awayNormal={away} after={b.State} bodyWallDistance={-b.Position.x:F6}");
+                Assert.That(before,Is.EqualTo(TraversalState.WallRunning));Assert.That(away,Is.EqualTo(Vector3.left));Assert.That(sideState,Is.EqualTo(TraversalState.WallRunning));Assert.That(b.State,Is.EqualTo(TraversalState.WallRunning));
+                b.Reset(new Vector3(-.321f,100,0));b.Velocity=Vector3.forward*20;b.Attach(b.Position+Vector3.up*50);b.UpdateWall(Vector3.left,true,1f/120);
+                Assert.That(b.Attached,Is.True);Assert.That(b.State,Is.EqualTo(TraversalState.Swinging));
+                b.Release();b.Velocity=Vector3.down*20;b.UpdateWall(Vector3.left,true,1f/120);Assert.That(b.State,Is.EqualTo(TraversalState.Airborne));
+            }
+            finally{Object.DestroyImmediate(wall);}
+        }
     }
 }

@@ -168,3 +168,7 @@ Resident footprint clearance now matches the swept capsule (0.30m + 0.02m skin).
 ### Shared overlap start
 
 Resident and PhysX now recover the same starting pose before applying only the intended travel delta. Five focused EditMode cases passed. At X-4.9 inside a box with face X-5, resident-only and combined recovery both finish at X-5.321; extra displacement is 0.000m (previously 0.420m). Wall detection remains available and a 2m retreat is unobstructed.
+
+### Wall entry and retention
+
+Wall sensing checks all horizontal directions, chooses the closest hit for entry, and retains a still-reachable current wall independently of view yaw. An unattached runner needs at least 3m/s horizontal tangential speed for parallel entry; attached glancing webs and vertical-only falls still require frontal entry. Twelve focused wall/transition cases passed, including existing 0.3s cooldown and 2s exhaustion guards. At 20m/s parallel approach, entry and the state after 1s are WallRunning; looking directly away still returns the physical wall normal and retains WallRunning (previously Airborne). No camera roll, forced view, or tracking package change.

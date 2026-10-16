@@ -83,19 +83,24 @@ namespace WebShooter.Swing
             probe = null;
         }
 
-        public Vector3 FindWall(Vector3 position, Vector3 forward, bool synchronize = true)
+        public Vector3 FindWall(Vector3 position, Vector3 forward, bool synchronize = true, Vector3 retainedNormal = default)
         {
             if (synchronize) Physics.SyncTransforms();
             Vector3 p = position - Offset;
-            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-            for (int i = 0; i < 3; i++)
+            // Retention follows the physical wall, even when the view turns away.
+            // Do not jump between opposing walls in a narrow alley.
+            if (retainedNormal.sqrMagnitude > .5f && CastWall(p, -retainedNormal, out var retained)) return retained.normal;
+            float nearest = float.PositiveInfinity; Vector3 normal = Vector3.zero;
+            for (int i = 0; i < 9; i++)
             {
-                Vector3 direction = i == 0 ? forward : i == 1 ? right : -right;
-                // Include the 0.8m resident visual clearance around city footprints.
-                if (Physics.CapsuleCast(Bottom(p), p, Radius, direction, out var hit, .7f, Mask, QueryTriggerInteraction.Ignore)
-                    && Mathf.Abs(hit.normal.y) < .2f) return hit.normal;
+                Vector3 direction = i == 8 ? Vector3.ProjectOnPlane(forward, Vector3.up).normalized :
+                    Quaternion.Euler(0, i * 45f, 0) * Vector3.forward;
+                if (CastWall(p, direction, out var hit) && hit.distance < nearest)
+                { nearest = hit.distance; normal = hit.normal; }
             }
-            return Vector3.zero;
+            return normal;
         }
+        private bool CastWall(Vector3 p, Vector3 direction, out RaycastHit hit) =>
+            Physics.CapsuleCast(Bottom(p), p, Radius, direction, out hit, .7f, Mask, QueryTriggerInteraction.Ignore) && Mathf.Abs(hit.normal.y) < .2f;
     }
 }

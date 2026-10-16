@@ -123,7 +123,12 @@ namespace WebShooter.Swing
             bool valid = forward && !Grounded && Mathf.Abs(normal.y) < .2f && normal.sqrMagnitude > .5f && Velocity.magnitude >= 3f;
             if (normal.sqrMagnitude < .5f || Grounded || !forward) wallExhausted = false;
             if (wallRunning && (!valid || wallTime >= 2f)) EndWallRun(.3f, wallTime >= 2f);
-            TryBeginWallRun(normal, forward, Settings.features.preserveGlancingContact);
+            // A free airborne runner may enter along the wall without aiming
+            // into it. Attached glancing swings and vertical-only falls retain
+            // their trajectory; only a frontal impact may take over their state.
+            float alongSpeed = Vector3.ProjectOnPlane(Vector3.ProjectOnPlane(Velocity, Vector3.up), normal).magnitude;
+            bool frontalOnly = Settings.features.preserveGlancingContact && (Attached || alongSpeed < 3f);
+            TryBeginWallRun(normal, forward, frontalOnly);
             if (wallRunning)
             {
                 ContactNormal = normal; wallTime += dt;

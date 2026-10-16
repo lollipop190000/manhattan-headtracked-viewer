@@ -255,7 +255,8 @@ namespace WebShooter.Swing
                 bool attached = Body.Attached;
                 Body.WallRunRequested = input.localMovement.z > .1f;
                 bool wantsWall = Body.WallRunRequested && (!Body.Attached || Body.Settings.features.preserveGlancingContact) && !Body.Grounded;
-                Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false) : Vector3.zero, wantsWall, h);
+                Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false,
+                    Body.State == TraversalState.WallRunning ? Body.ContactNormal : Vector3.zero) : Vector3.zero, wantsWall, h);
                 if (attached && !Body.Attached) NotifyExternalRelease();
                 Vector3 before = Body.Position;
                 if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
