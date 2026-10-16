@@ -9,7 +9,7 @@ namespace WebShooter.Swing
         private readonly FloatingOrigin origin;
         private readonly SwingPhysics body;
         public const int Mask = 1 << 30;
-        private const float Radius = .3f, Skin = .02f;
+        public const float Radius = .3f, Skin = .02f;
         private CapsuleCollider probe;
         private readonly Collider[] overlaps = new Collider[128];
         public CitySolidRecovery CitySolids { get; set; }

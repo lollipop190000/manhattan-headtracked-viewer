@@ -9,7 +9,10 @@ namespace WebShooter.Swing
     // queries do not reliably report. Coordinates here are always city coordinates.
     public sealed class CitySolidRecovery
     {
-        private const float Cell = 100f, Radius = .8f;
+        private const float Cell = 100f;
+        // Match the swept capsule, not a wider visual exclusion zone: two such
+        // zones used to overlap across walkable alleys and manufacture roof support.
+        private const float Radius = TraversalCollision.Radius + TraversalCollision.Skin;
         private readonly Dictionary<Vector2Int, List<BuildingRecord>> cells = new Dictionary<Vector2Int, List<BuildingRecord>>();
         private readonly SwingPhysics body;
         public CitySolidRecovery(BuildingRecord[] buildings, SwingPhysics body)
@@ -47,7 +50,7 @@ namespace WebShooter.Swing
             }
             return p;
         }
-        private Vector3 Recover(Vector3 p)
+        public Vector3 Recover(Vector3 p)
         {
             for (int pass = 0; pass < 8; pass++)
             {
@@ -76,7 +79,9 @@ namespace WebShooter.Swing
                     float distance = Mathf.Sqrt(distance2);
                     float horizontalEscape = inside ? distance + Radius : Radius - distance;
                     Vector3 normal;
-                    if (roofEscape < horizontalEscape) { normal = Vector3.up; p.y += roofEscape; }
+                    // Only the actual footprint can support the feet. Proximity
+                    // to an outside edge must never become a landing in empty air.
+                    if (inside && roofEscape < horizontalEscape) { normal = Vector3.up; p.y += roofEscape; }
                     else
                     {
                         Vector2 outward = distance > .00001f ? (inside ? closest - q : q - closest) / distance : new Vector2(edge.y, -edge.x).normalized;
