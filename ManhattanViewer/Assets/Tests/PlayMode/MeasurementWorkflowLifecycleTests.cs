@@ -25,8 +25,10 @@ public sealed class MeasurementWorkflowLifecycleTests
         priorDirectory = Environment.GetEnvironmentVariable("HEADTRACKED_CALIBRATION_DIRECTORY");
         directory = Path.Combine(Path.GetTempPath(), "measurement-workflow-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("HEADTRACKED_CALIBRATION_DIRECTORY", directory);
-        root = new GameObject("Synthetic measurement workflow"); app = root.AddComponent<ManhattanBootstrap>();
-        // No CityCatalog is present in this fixture. Production composition is used, with an opt-in synthetic source.
+        root = new GameObject("Synthetic measurement workflow"); root.SetActive(false);
+        app = root.AddComponent<ManhattanBootstrap>(); app.discoverCatalog = false; root.SetActive(true);
+        // This fixture explicitly opts out of city discovery even when generated assets exist.
+        // Production display composition is used, with an opt-in synthetic source.
         Assert.That(app.catalog, Is.Null);
         var c = app.Display.Calibration; c.webcamPosition = Vector3.zero; c.webcamEulerDegrees = Vector3.zero; c.mirrorImageX = false;
         source = root.AddComponent<SyntheticHeadObservationSource>(); source.Calibration = c; source.RigidPose = true;
