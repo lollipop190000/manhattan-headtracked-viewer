@@ -83,14 +83,10 @@ namespace WebShooter.Swing
             float into = Vector3.Dot(Velocity, normal);
             if (Settings.features.preserveGlancingContact && !Grounded && Mathf.Abs(normal.y) < .2f && into < 0f)
             {
-                bool frontal = FrontalApproach(normal);
                 float incoming = Velocity.magnitude;
+                bool started = TryBeginWallRun(normal, WallRunRequested, true);
                 Velocity = Vector3.ProjectOnPlane(Velocity, normal);
-                if (frontal && WallRunRequested)
-                {
-                    wallRunning = true; wallTime = 0f; Release();
-                    if (Velocity.magnitude < 3f) Velocity += Vector3.up * Mathf.Min(12f, incoming * .5f);
-                }
+                if (started && Velocity.magnitude < 3f) Velocity += Vector3.up * Mathf.Min(12f, incoming * .5f);
                 return;
             }
             if (into < 0f)
@@ -104,17 +100,30 @@ namespace WebShooter.Swing
                 }
                 else Velocity -= normal * into;
             }
-            if (normal.y > .65f) Grounded = true;
+            if (normal.y > .65f) { Grounded = true; if(wallRunning) EndWallRun(.3f); }
+        }
+
+        private bool TryBeginWallRun(Vector3 normal, bool requested, bool frontalOnly)
+        {
+            if (wallRunning || !requested || Grounded || wallExhausted || wallCooldown > 0f ||
+                Mathf.Abs(normal.y) >= .2f || normal.sqrMagnitude < .5f || Velocity.magnitude < 3f ||
+                (frontalOnly && !FrontalApproach(normal))) return false;
+            wallRunning = true; wallTime = 0f; ContactNormal = normal; Release();
+            return true;
+        }
+        private void EndWallRun(float cooldown, bool exhausted=false)
+        {
+            wallRunning = false; wallTime = 0f;
+            wallCooldown = Mathf.Max(wallCooldown, cooldown); wallExhausted |= exhausted;
         }
 
         public void UpdateWall(Vector3 normal, bool forward, float dt)
         {
             wallCooldown = Mathf.Max(0f, wallCooldown - dt);
             bool valid = forward && !Grounded && Mathf.Abs(normal.y) < .2f && normal.sqrMagnitude > .5f && Velocity.magnitude >= 3f;
-            if (Settings.features.preserveGlancingContact && !wallRunning) valid &= FrontalApproach(normal);
             if (normal.sqrMagnitude < .5f || Grounded || !forward) wallExhausted = false;
-            if (wallRunning && (!valid || wallTime >= 2f)) { wallExhausted = wallTime >= 2f; wallRunning = false; wallCooldown = .3f; }
-            if (!wallRunning && valid && !wallExhausted && wallCooldown <= 0f) { wallRunning = true; wallTime = 0f; Release(); }
+            if (wallRunning && (!valid || wallTime >= 2f)) EndWallRun(.3f, wallTime >= 2f);
+            TryBeginWallRun(normal, forward, Settings.features.preserveGlancingContact);
             if (wallRunning)
             {
                 ContactNormal = normal; wallTime += dt;
@@ -126,7 +135,7 @@ namespace WebShooter.Swing
 
         public bool Jump()
         {
-            if (wallRunning) { Velocity += ContactNormal * 9f + Vector3.up * 7f; wallRunning = false; wallCooldown = .3f; }
+            if (wallRunning) { Velocity += ContactNormal * 9f + Vector3.up * 7f; EndWallRun(.3f); }
             else if (Grounded || Position.y <= FloorY + .03f) { Velocity = new Vector3(Velocity.x, Settings.jumpSpeed, Velocity.z); }
             else if (Attached) { Release(); Velocity += Vector3.up * (4f * AssistStrength); }
             else return false;
@@ -161,6 +170,9 @@ namespace WebShooter.Swing
         {
             float distance = Vector3.Distance(Position, anchor);
             if (distance < Settings.minRopeLength) return false;
+            // A new web owns traversal immediately. Briefly inhibit wall reentry while still near the surface.
+            if (wallRunning) EndWallRun(.3f);
+            yanking = yankContact = yankExhausted = false;
             Anchor = anchor;
             RopeLength = distance;
             if(Settings.features.attachmentDrop)RopeLength=Mathf.Clamp(distance*Settings.features.initialLengthRatio,Settings.minRopeLength,250f);
