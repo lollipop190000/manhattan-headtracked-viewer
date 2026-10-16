@@ -229,9 +229,6 @@ namespace WebShooter.Swing
             pitch = Mathf.Clamp(pitch - input.lookDegrees.y, -85f, 85f);
             Quaternion heading = Quaternion.Euler(0f, yaw, 0f);
             Body.Braking = input.localMovement.z < 0f;
-            Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
-            if (input.localMovement.z < 0f)
-                steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
             if (Body.Attached)
             {
                 float oldFixed = Route.FixedLength;
@@ -262,7 +259,7 @@ namespace WebShooter.Swing
                 if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
                 if (AutomaticCruiseAssist && input.localMovement.z > .1f && !Body.Grounded)
                     Body.AssistCruise(h, false);
-                Body.Step(h, steer, Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
+                Body.Step(h, Steering(input.localMovement, heading), Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
                 Vector3 requested = Body.Position;
                 bool ropeBeforeContact = Body.Attached;
                 Body.Position = Collision.Constrain(before, requested, false);
@@ -297,6 +294,24 @@ namespace WebShooter.Swing
                 cityPosition = Body.Position,
                 cityRotation = Quaternion.Euler(pitch, yaw, 0f)
             };
+        }
+        private Vector3 Steering(Vector3 input, Quaternion heading)
+        {
+            if (input.z >= 0f) return heading * new Vector3(input.x, 0, input.z);
+            var velocity = Vector3.ProjectOnPlane(Body.Velocity, Vector3.up);
+            Vector3 brake = -velocity.normalized;
+            var settings = Body.Settings;
+            if (settings.lowSpeedReverse && !Body.Attached && !Body.Grounded &&
+                velocity.magnitude < settings.reverseTransitionSpeed && Body.AssistStrength > 0f)
+            {
+                // A bounded target velocity avoids the old zero-speed dead end
+                // and avoids oscillating between a brake and a reverse impulse.
+                Vector3 backward = heading * Vector3.back;
+                float acceleration = settings.airControl * Body.AssistStrength;
+                brake = Vector3.ClampMagnitude((backward * Mathf.Min(settings.reverseSpeed,
+                    settings.reverseTransitionSpeed * .9f) - velocity) / Mathf.Max(.001f, acceleration * .2f), 1f);
+            }
+            return heading * new Vector3(input.x, 0, 0) + brake * -input.z;
         }
         private void ApplyActions(TraversalActions a)
         {

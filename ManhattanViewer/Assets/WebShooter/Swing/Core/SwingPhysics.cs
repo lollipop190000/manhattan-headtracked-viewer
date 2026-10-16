@@ -20,6 +20,10 @@ namespace WebShooter.Swing
         public float payoutSpeed = 32f;
         public float jumpSpeed = 14f, launchForwardSpeed = 12f;
         public float cruiseSpeed = 34f, cruiseAcceleration = 12f;
+        [Tooltip("S brakes at speed, then permits controlled backward escape near rest.")]
+        [SerializeField] public bool lowSpeedReverse = true;
+        [Min(0)] public float reverseSpeed = 3f;
+        [Min(0)] public float reverseTransitionSpeed = 4f;
         [Tooltip("Initial slack-only takeup window; zero keeps unassisted rope physics.")]
         public float attachmentTakeupSeconds = 0f;
         [Tooltip("이보다 가까운 곳에는 거미줄을 붙일 수 없다 (m)")] public float minRopeLength = 2f;

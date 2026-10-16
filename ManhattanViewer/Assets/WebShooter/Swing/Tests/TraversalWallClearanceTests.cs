@@ -85,5 +85,23 @@ namespace WebShooter.Swing.Tests
             }
             finally{Object.DestroyImmediate(wall);}
         }
+        [Test] public void AirImpactCanRetreatWithSWithoutPenetration()
+        {
+            var wall=Box(5,10,300);var rig=new GameObject();WebSwingMotionInput motion=null;
+            try
+            {
+                Physics.SyncTransforms();var flight=rig.AddComponent<FreeFlightController>();flight.enabled=false;flight.SetPose(new Vector3(-2,100,0),Quaternion.Euler(0,90,0));
+                var controls=new BufferedTraversalInput{Actions=new TraversalActions{active=true}};motion=new WebSwingMotionInput(controls,flight,null);motion.Body.Settings.features.SetFlow(true);motion.Activate();
+                motion.Collision.CitySolids=new CitySolidRecovery(new[]{Record(5,10,300)},motion.Body);motion.Body.Velocity=Vector3.right*70;
+                for(int i=0;i<12;i++){var command=motion.Sample(1f/120);flight.SetPose(command.cityPosition,command.cityRotation);}
+                var impact=motion.Body.Position;var impactVelocity=motion.Body.Velocity;controls.Movement=Vector2.down;
+                for(int i=0;i<120;i++){var command=motion.Sample(1f/120);flight.SetPose(command.cityPosition,command.cityRotation);}
+                Assert.That(impact.x,Is.LessThanOrEqualTo(-.319f));
+                Assert.That(motion.Body.Position.x,Is.LessThan(impact.x-2f));Assert.That(motion.Body.Grounded,Is.False);
+                Assert.That(motion.Body.Velocity.x,Is.InRange(-3.01f,-2.9f));
+                TestContext.WriteLine($"IMPACT incoming=70 state={motion.Body.State} afterImpactPosition={impact:F6} afterImpactVelocity={impactVelocity:F6} afterBrakePosition={motion.Body.Position:F6} afterBrakeVelocity={motion.Body.Velocity:F6} horizontalEscape={Mathf.Abs(motion.Body.Position.x-impact.x):F6}");
+            }
+            finally{motion?.Collision.Dispose();Object.DestroyImmediate(wall);Object.DestroyImmediate(rig);}
+        }
     }
 }

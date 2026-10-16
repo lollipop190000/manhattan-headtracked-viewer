@@ -172,3 +172,7 @@ Resident and PhysX now recover the same starting pose before applying only the i
 ### Wall entry and retention
 
 Wall sensing checks all horizontal directions, chooses the closest hit for entry, and retains a still-reachable current wall independently of view yaw. An unattached runner needs at least 3m/s horizontal tangential speed for parallel entry; attached glancing webs and vertical-only falls still require frontal entry. Twelve focused wall/transition cases passed, including existing 0.3s cooldown and 2s exhaustion guards. At 20m/s parallel approach, entry and the state after 1s are WallRunning; looking directly away still returns the physical wall normal and retains WallRunning (previously Airborne). No camera roll, forced view, or tracking package change.
+
+### Low-speed escape after impact
+
+S retains braking above 4m/s; below that speed an unattached airborne player can approach a bounded 3m/s backward target with a 0.2s response, using the existing steering assistance strength. SwingSettings.lowSpeedReverse permits comparison; reverseSpeed/reverseTransitionSpeed expose tuning. Seven focused cases passed. After a 70m/s frontal collision, holding S for 1s retreats 2.424737m, ends at horizontal velocity -2.976068m/s, remains Airborne, and never penetrates the face (previously 0m retreat). RMB/E reel, LMB release, Q payout, and R flight are unchanged.
