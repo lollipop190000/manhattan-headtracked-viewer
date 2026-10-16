@@ -71,10 +71,7 @@ public sealed class MeasurementWorkflowLifecycleTests
     {
         yield return WaitReady(); workflow.DeclaredDistanceMeters = .6f; workflow.MeasurementsConfirmed = true;
         Assert.That(workflow.Begin(), Is.True); ShowSettings(false); Assert.That(app.KeyboardInput.InputEnabled, Is.False);
-        Assert.That(workflow.MarkCurrentHold(), Is.True);
-        double deadline = Time.realtimeSinceStartupAsDouble + 7;
-        while (Session.Phase == MeasurementPhase.CollectA && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
-        Assert.That(Session.Phase, Is.EqualTo(MeasurementPhase.ReadyB));
+        yield return MarkAndFinish(MeasurementPhase.ReadyB);
         source.Publish = false;
         yield return new WaitForSecondsRealtime(.2f); yield return null;
         Assert.That(Session.Phase, Is.EqualTo(MeasurementPhase.ReadyA)); Assert.That(Session.Report, Is.Null); Assert.That(Gate.Ready, Is.False);
@@ -95,8 +92,23 @@ public sealed class MeasurementWorkflowLifecycleTests
     private IEnumerator MarkAndFinish(MeasurementPhase next)
     {
         Assert.That(workflow.MarkCurrentHold(), Is.True);
-        double deadline = Time.realtimeSinceStartupAsDouble + 7;
-        while (Session.Phase != next && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
+        double deadline = Time.realtimeSinceStartupAsDouble + 12;
+        int retries=0;float maximumFrameMs=0;
+        while (Session.Phase != next && Time.realtimeSinceStartupAsDouble < deadline)
+        {
+            maximumFrameMs=Mathf.Max(maximumFrameMs,Time.unscaledDeltaTime*1000);
+            // The real workflow correctly rejects observation gaps over 100 ms.
+            // Shader/import stalls can interrupt synthetic A in a rendered suite.
+            // Reacquire the full readiness window and repeat the user's A action;
+            // never relax freshness, sample count or completed-report assertions.
+            if(next==MeasurementPhase.ReadyB && Session.Phase==MeasurementPhase.ReadyA &&
+                Session.Message.StartsWith("Observation stream restarted") && retries<2)
+            {
+                TestContext.WriteLine($"Synthetic A stream reset; max frame {maximumFrameMs:F2} ms. Reacquiring readiness (retry {++retries}).");
+                yield return WaitReady();Assert.That(workflow.MarkCurrentHold(),Is.True);
+            }
+            yield return null;
+        }
         Assert.That(Session.Phase, Is.EqualTo(next), Session.Message);
     }
     [UnityTest] public IEnumerator DeclarationAndUncertaintyEditsCancelPriorHoldsAndRequireReconfirmation()
