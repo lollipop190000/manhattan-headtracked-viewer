@@ -18,9 +18,11 @@ Choose **Tools → Traversal → Load Snag CSV** to display red snag and orange 
 
 The 13 flow cases and five detector/CSV cases passed in the licensed Editor at their respective stages. These are staged measurements; they do not certify the final revision after later input, VFX, pacing and lab changes.
 
-The final detector follow-up removes a blind spot that excluded every non-colliding swinging sample from the two-second window. A sixth case now distinguishes normal apex travel from persistent stationary web input. Its source compiles; the revised six-case detector suite has not executed in Unity.
+The detector follow-up removes a blind spot that excluded every non-colliding swinging sample from the two-second window. Six native cases now pass, including the distinction between normal apex travel and persistent stationary web input.
 
 ## Independent implementation commits
+
+This table records evidence available at each implementation stage. The executed follow-up checks below supersede its historical pending statuses.
 
 | Stage | Commit | Change / validation evidence |
 |---|---|---|
@@ -56,30 +58,49 @@ The final detector follow-up removes a blind spot that excluded every non-collid
 
 Configured values in this table are implementation parameters, not measurements. All seven pacing flags remain OFF by default. A rope ratio below one initially tightens toward the anchor; it does not provide drop clearance. Compare the 1.08 and 0.90 cases before selecting a gameplay default.
 
-## Final validation boundary
+## Executed checks on 2026-10-16
 
-The final non-ML managed source was compiled against the installed Editor's existing reference assemblies: seven assemblies, zero C# errors. This checks source/API syntax without starting Unity; it does not compile shaders, execute physics, validate the ML template assembly or confirm a working player.
+The unrestricted retry exposed separate infrastructure problems: registry DNS/TCP access had failed, the account OAuth session was stale, and the Editor had no usable Personal entitlement. Official account login and user-approved Personal reactivation restored the license. The Licensing Client was kept alive during activation through its documented helper option. Following a later host/network change, official reactivation refreshed the stale machine binding. No licensing files or package verification were bypassed.
 
-Python evaluation checks: seven passed, covering time/transition weighting, missing/duplicate schedules, unavailable results, convergence evidence, absent web coverage and chronological merging of parallel worker logs. An untrained hybrid ML-Agents policy was exported through the actual installed trainer; deterministic continuous/discrete ONNX actions matched Torch at batches one and three with action masks. This is a Python export check, not learning or a Unity handshake. Independent GPU-log parser and benchmark-environment parser checks passed five and three assertions respectively.
+- DataOnly: **171 cases, 169 passed, zero failures, two skipped**; source manifest valid; five GPU-log parser and three benchmark-environment parser assertions passed. The earlier sandbox junction failures are resolved.
+- Full native Unity suites: **389 EditMode and 184 PlayMode tests, zero failures**. A later focused three-case input/Inspector suite also passed, including changing all four serialized flags on an existing body. Those three cases overlap the full suite in two places.
+- Focused flow/lab suite: **96/96 passed**, including six distance/FPS attachment cases. At 20 m and 200 m, across 30/60/120 fps, fast physical attachment measured **41.667 ms**.
+- The real ML-Agents 4.1.0/inference 2.6.1 packages resolved; the native agent assembly compiled. Genuine four-environment PPO learning and model exports run with trainer 1.1.0. Short 2,000-step handshake runs are smoke checks, not learned-policy quality evidence.
+- Seven Python evaluation tests passed. Deterministic ONNX actions matched the trainer's Torch policy at batches one and three with action masks. Evaluation now registers and drains the ML statistics channel.
+- New reduced-city Windows player built from clean **809ddc95e6e8836a033abeee5b5842026cdf04a4**, pinned tracking revision **c5ddab14d12dcc8acc8b31048f5752686984f3ab**. Its development profile contains **612/10038 tiles**. Source profile backups were restored after building; the main scene SHA-256 stayed unchanged.
+- Shipping Windows validation: **34 checks passed**, including continuous attachment/release, focus cancellation, real-mesh and unloaded-tile collision, wall jumping, rooftop friction and passive pendulum energy.
+- Shipping GPU inspection captured idle, left/right gesture/grip and release. One hand is visible during attachment, wrist depth is -0.150 m, and hands disappear after release. The scripted fixture stands still; it does not certify moving hardware comfort.
+- Six isolated native GPU captures cover first/third-person firing, settling and attachment. The third-person capsule is a test proxy. Procedural texture center alpha measured **0.549020**, braid contrast **0.278431**, radial-mark maximum alpha **1.0**. A native-only material-property-block construction error and incorrect smooth-step texture falloffs found during this retry were repaired.
 
-Final DataOnly ran 171 cases: 167 passed, two failed and two skipped. Both failures were pre-existing junction-creation tests denied by the restricted Windows environment (`test_junction_destination_ancestor_rejected` and `test_junction_source_payload_rejected`). The failures were not suppressed or changed into skips. Since the suite aborts on those failures, source-manifest validation was run separately and passed (`manhattan-2026-10-10-v2`), as were the five GPU-log and three benchmark-environment parser assertions.
+Raw test XML, native logs/captures and build identity are delivered outside Git. The preserved prior `44a6410` player remains available separately.
 
-The environment later prevented licensed Editor startup: the Licensing Client IPC channel refused connection. The package registry hostname also failed to resolve. Consequently the following are **not tested / not measured**:
+## Matched fixed-input replay
 
-- Final Unity EditMode/PlayMode suite, ML package installation/manifest resolution and agent assembly compilation.
-- Native matched replay OFF/ON snag and stuck counts, bottom speed, release rise and attachment latency.
-- Shader compilation, 1p/3p screenshots, final frame-time comparison and head-tracked comfort.
-- Real trainer handshake, PPO learning curves, convergence, 16 × 8 matched-policy and retrained-policy evaluations.
-- New Windows Manhattan development build and another person's five-minute feel review.
+Eight seeded maps used the same 32-second input timeline per condition. Bounds exits can end an episode sooner. This is a scripted baseline, not a trained policy or a successful goal route.
 
-No numeric table for these pending comparisons exists. Missing telemetry is rejected by the tools; it is not treated as zero events. The preserved development player is still the prior `44a6410` build and does not contain this branch's changes. No release/build identity has been overwritten. Follow [the lab guide](../training/README.md) to resume the native checks in a licensed, connected environment; only then publish the requested completed PR.
+| Four flow flags | Snag count | Stuck count | Stuck/min | Mean speed m/s | Air % | Mean transition loss m/s |
+|---|---:|---:|---:|---:|---:|---:|
+| OFF | 0 | 8 | 2.835 | 3.899 | 7.35 | 2.357 |
+| ON | 0 | 15 | 3.952 | 3.751 | 7.76 | 6.325 |
 
-## Connection retry on 2026-10-15
+ON performs worse on this timeline. Event rows primarily show grounded movement into buildings, and swing time is only 1.37% OFF / 2.80% ON. This route cannot substantiate a general swing improvement. Counts are retained, including the unfavorable result; no reward or detector threshold was changed to conceal it.
 
-After the restricted execution environment was removed, DNS resolution, TCP 443 and the official package registry request succeeded (HTTP 200). Editor inventory and Licensing Client IPC also became accessible. The registry supplied ML-Agents 4.1.0 metadata and its original archive; this is inspection, not a UPM installation.
+## Pacing measurements
 
-DataOnly was rerun in that environment: **171 cases, 169 passed, zero failures, two skipped**. Source-manifest validation and the five GPU-log / three benchmark-environment parser assertions passed. The earlier two junction failures are resolved.
+All three cases start at y=100 m with velocity `(0,-21.2132,21.2132)` m/s, target the same elevated anchor `(0,149.5,49.5)`, use gravity 24 m/s², and have the four flow flags ON. Anchor-selection strength is zero to keep the actual attachment fixed. The elevated block leaves the measured pendulum plane unobstructed. An earlier full-height-wall/sideways fixture failed to reach the specified upper release phase; its failed output is preserved separately.
 
-The fresh Editor attempt exposed a second blocker previously hidden by IPC failure: the OAuth session was stale and no active Editor entitlement was returned. Official CLI OAuth login completed and now reports a fresh session. Default entitlement activation returned success with an empty product list; a subsequent status and Editor launch confirmed that no usable license had been activated (Editor exit 198, `com.unity.editor.headless` missing). Do not interpret that empty activation response as a working license.
+| Pacing flags | Physical attach ms | Drop before bottom m | First bottom m/s | Release before/after m/s | Rise over next 3 s m | Early constraint correction m |
+|---|---:|---:|---:|---:|---:|---:|
+| OFF | 266.667 | 21.577 | 42.526 | 23.698 / 23.698 | 6.645 | 0.072 |
+| ON, length ratio 1.08 | 41.667 | 25.544 | 41.151 | 19.554 / 25.445 | 6.972 | 0.000 |
+| ON, length ratio 0.90 | 41.667 | 12.763 | 41.662 | 25.468 / 31.354 | 10.770 | 7.017 |
 
-Restoring the existing account's free Personal license requires the CLI's `--personal --accept-eula` option. Explicit user consent for that terms step has been requested. Native tests, package installation, builds and training remain pending until a valid Editor license is confirmed. No paid subscription is requested or purchased.
+Fast attachment is verified. The combined 1.08 setup does **not** increase bottom speed in this fixture; the higher release speed comes from the explicit phase boost. Combining flags prevents attributing the bottom-speed change to gentle reel alone. Ratio 0.90 creates a seven-metre positional correction and is unsuitable as a default. All pacing flags and speed effects remain opt-in; four flow flags default ON in the Windows player and can be disabled with `--flow-off`.
+
+## Learning and final evaluation
+
+Three real PPO runs use 600,000 steps each, four headless environments, trainer seed 17, time scale 20 and unchanged reward configuration. Final comparisons use held-out map seeds beginning at 900000: 16 maps × 8 episodes × four conditions. The same mixed policy is compared OFF/ON, followed by separately retrained OFF/ON policies. Report convergence and swing coverage independently; do not equate navigation success with competent web use.
+
+The mixed run completed 2,037 episodes. Its final five 100-episode success rates were 82%, 83%, 81%, 84%, 85%, below the declared convergence criterion. Final-window failures comprised 73 timeouts and 12 earlier bounds/fall exits; only 6.54% of 37,011 shots attached. Whole-run swing fraction was 2.58%. These observations indicate limited effective aiming/web exploration and remaining long-route failures. They do not establish a single causal explanation. Rewards were not changed.
+
+OFF/ON retraining, held-out evaluation, an idle-machine frame-time comparison and an independent five-minute human feel review are tracked separately. A ready-for-merge claim requires that human review; automated validation does not replace it. Hardware wrist input, live eye tracking and moving head-tracked comfort have not been exercised by the native fixtures.
