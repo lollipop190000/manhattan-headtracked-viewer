@@ -146,7 +146,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e33883c101248918b369eb003fd76fd, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Manhattan.Traversal.Lab::Manhattan.TraversalLab.TraversalLabBootstrap
 --- !u!4 &176265117
 Transform:
