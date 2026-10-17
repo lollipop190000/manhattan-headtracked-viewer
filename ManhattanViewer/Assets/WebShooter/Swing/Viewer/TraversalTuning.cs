@@ -22,6 +22,7 @@ namespace WebShooter.Swing
         public static SwingSettings Defaults()
         {
             var s=WebSwingMotionInput.TraversalSettings();s.features.SetFlow(!Manhattan.Viewer.ManhattanBootstrap.HasArgument("--flow-off"));
+            s.chain.enabled=!Manhattan.Viewer.ManhattanBootstrap.HasArgument("--chain-off");
             if(Manhattan.Viewer.ManhattanBootstrap.HasArgument("--pacing-on"))s.features.SetPacing(true);
             return s;
         }

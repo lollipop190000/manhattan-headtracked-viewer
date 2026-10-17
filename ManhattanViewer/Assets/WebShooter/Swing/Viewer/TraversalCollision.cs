@@ -102,5 +102,59 @@ namespace WebShooter.Swing
         }
         private bool CastWall(Vector3 p, Vector3 direction, out RaycastHit hit) =>
             Physics.CapsuleCast(Bottom(p), p, Radius, direction, out hit, .7f, Mask, QueryTriggerInteraction.Ignore) && Mathf.Abs(hit.normal.y) < .2f;
+
+        // Input guidance only: this never moves the body or rewrites velocity.
+        // A preview keeps a requested corner cut tangent to the approaching wall
+        // until the crossing opens. The ordinary swept collision remains active.
+        public bool CornerThreat { get; private set; }
+        public Vector3 CornerNormal { get; private set; }
+        private float cornerRemaining;
+        public void ResetGuidance(){CornerThreat=false;CornerNormal=Vector3.zero;cornerRemaining=0;}
+        public Vector3 GuideCorner(Vector3 position, Vector3 velocity, Vector3 requested, float seconds, float clearance, float turnDegrees,float dt)
+        {
+            CornerThreat=false;CornerNormal=Vector3.zero;
+            Vector3 horizontal=Vector3.ProjectOnPlane(velocity,Vector3.up);
+            cornerRemaining=Mathf.Max(0,cornerRemaining-dt);
+            if(requested.sqrMagnitude<.001f || horizontal.magnitude<12)return requested;
+            if(Vector3.Angle(horizontal,requested)>15)cornerRemaining=1f;
+            if(cornerRemaining==0)return requested;
+            Vector3 p=position-Offset;
+            if(ClearCurve(p,horizontal,requested,seconds,clearance,turnDegrees,out var normal))return requested;
+            CornerThreat=true;
+            CornerNormal=normal;
+            Vector3 best=horizontal.normalized;float score=float.NegativeInfinity;
+            for(int i=0;i<4;i++)
+            {
+                Vector3 candidate=i==0?Vector3.ProjectOnPlane(requested,normal):i==1?requested+normal:
+                    i==2?Vector3.ProjectOnPlane(horizontal,normal):horizontal;
+                if(candidate.sqrMagnitude<.001f || !ClearCurve(p,horizontal,candidate,seconds,clearance,turnDegrees,out _))continue;
+                float value=Vector3.Dot(candidate.normalized,requested.normalized);
+                if(value>score){score=value;best=candidate.normalized;}
+            }
+            return best*requested.magnitude;
+        }
+        private bool ClearCurve(Vector3 p,Vector3 velocity,Vector3 requested,float seconds,float clearance,float degrees,out Vector3 normal)
+        {
+            normal=Vector3.zero;float h=seconds/6f;float speed=velocity.magnitude;
+            for(int i=0;i<6;i++)
+            {
+                var previousVelocity=velocity;
+                velocity=Vector3.RotateTowards(velocity,requested.normalized*speed,degrees*Mathf.Deg2Rad*h,0);
+                // Average the velocities over the segment. Using only the
+                // already-turned end velocity understated the turning radius
+                // and falsely cleared paths that the 120Hz body would hit.
+                Vector3 delta=(previousVelocity+velocity)*(.5f*h);
+                if(Physics.CapsuleCast(Bottom(p),p,Radius+clearance,delta.normalized,out var hit,delta.magnitude,Mask,QueryTriggerInteraction.Ignore)
+                    && Mathf.Abs(hit.normal.y)<.2f){normal=hit.normal;return false;}
+                // The expanded preview can already overlap a wall, and PhysX
+                // sweeps do not report starting overlaps. Keep the physical
+                // capsule sweep too, so crossing into the buffer cannot turn
+                // an unsafe curve into a false clear result.
+                if(Physics.CapsuleCast(Bottom(p),p,Radius,delta.normalized,out hit,delta.magnitude+Skin,Mask,QueryTriggerInteraction.Ignore)
+                    && Mathf.Abs(hit.normal.y)<.2f){normal=hit.normal;return false;}
+                p+=delta;
+            }
+            return true;
+        }
     }
 }

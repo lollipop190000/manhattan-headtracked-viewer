@@ -46,15 +46,19 @@ namespace WebShooter.Swing
         private readonly FlowFeatures reconnectAim = new FlowFeatures {assistAnchor=true,anchorAssistStrength=1f,anchorSamples=16};
         private bool CanAssistReconnect => ReconnectAssist.enabled && Body.AssistStrength>0f && !Body.Grounded &&
             (Body.Attached || SimulatedTime-lastDetachTime<=Mathf.Clamp(ReconnectAssist.releaseWindowSeconds,.1f,2f));
+        private bool CanAssistAirShot => CanAssistReconnect || (ReconnectAssist.enabled && Body.Settings.chain.enabled &&
+            Body.Settings.chain.airborneAimTolerance && Body.AssistStrength>0f && !Body.Grounded);
         public bool MouseOwnsRope { get; private set; }
         public double LastSampleMilliseconds { get; private set; }
+        public int WallApproachBrakeSteps { get; private set; }
         public bool HandleMouseHold(bool active, bool pressed, bool held, Ray ray)
         {
             if (!active) { Release(); lastDetachTime=float.NegativeInfinity; return false; }
             if (!held) { reconnectBuffered=false; if(MouseOwnsRope)Release(true); return false; }
             if(pressed)
             {
-                bool buffer=CanAssistReconnect && ReconnectAssist.bufferMisses;
+                EnsureInitialized();
+                bool buffer=CanAssistAirShot && ReconnectAssist.bufferMisses;
                 bool hit=TryFire(ray);MouseOwnsRope=hit;
                 if(!hit && buffer)
                 {
@@ -123,19 +127,24 @@ namespace WebShooter.Swing
             Release();
             if (!Finite(ray.origin) || !Finite(ray.direction) || ray.direction.sqrMagnitude < .0001f) return false;
             Vector3 renderPlayer=Body.Position-(origin!=null?origin.Offset:Vector3.zero);
+            var chainAim=Body.Settings.chain;
+            float minimumDistance=chainAim.enabled && chainAim.avoidUnsafeCloseAnchors && !Body.Grounded && Body.AssistStrength>0?
+                Body.Velocity.magnitude*chainAim.anchorReactionSeconds*Mathf.Clamp01(Body.AssistStrength):0;
             RaycastHit hit;
-            if(reconnect && ReconnectAssist.aimTolerance)
+            if(CanAssistAirShot && ReconnectAssist.aimTolerance)
             {
                 // Keep a direct hit exactly where aimed. Only a miss gets the bounded overhead/forward cone.
                 bool direct=Physics.Raycast(ray,out hit,MaxRange,CollisionMask,QueryTriggerInteraction.Ignore);
+                if(direct && Vector3.Distance(renderPlayer,hit.point)<minimumDistance)direct=false;
                 if(!direct)
                 {
                     reconnectAim.anchorConeDegrees=Mathf.Clamp(ReconnectAssist.aimConeDegrees,0,15)*Mathf.Clamp01(Body.AssistStrength);
                     reconnectAim.anchorMomentumWeight=ReconnectAssist.momentumWeight;
-                    if(reconnectAim.anchorConeDegrees<=0 || !TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,reconnectAim,out hit))return false;
+                    if(reconnectAim.anchorConeDegrees<=0 || !TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,reconnectAim,out hit,
+                        Body.Settings.chain.enabled?Body.Settings.chain.aimAcquisitionRadius*Mathf.Clamp01(Body.AssistStrength):0,Body.Settings.chain.enabled,minimumDistance))return false;
                 }
             }
-            else if(!TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,Body.Settings.features,out hit))return false;
+            else if(!TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,Body.Settings.features,out hit,minimumDistance:minimumDistance))return false;
             Vector3 anchorCity = hit.point + (origin != null ? origin.Offset : Vector3.zero);
             if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
             ShotTarget = anchorCity;
@@ -147,6 +156,8 @@ namespace WebShooter.Swing
             shotAttached=false;
             LastShotWasReconnect=reconnect;
             shotAttachmentOverride=reconnect && ReconnectAssist.quickAttachment?Mathf.Clamp(ReconnectAssist.attachmentSeconds,.01f,.05f):-1f;
+            if (Body.Settings.chain.enabled && Body.Settings.chain.fastAirborneAttachment && !Body.Grounded && Body.AssistStrength>0f)
+                shotAttachmentOverride=Mathf.Clamp(Body.Settings.chain.attachmentSeconds,.01f,.05f);
             if(reconnect)ReconnectShots++;
             return true;
         }
@@ -158,6 +169,8 @@ namespace WebShooter.Swing
         public void Activate()
         {
             Release();
+            Collision.ResetGuidance();
+            WallApproachBrakeSteps=0;
             initialized = false;
             lastDetachTime=float.NegativeInfinity;
             hasRequested = false;
@@ -252,14 +265,57 @@ namespace WebShooter.Swing
                 bool attached = Body.Attached;
                 Body.WallRunRequested = input.localMovement.z > .1f;
                 bool wantsWall = Body.WallRunRequested && (!Body.Attached || Body.Settings.features.preserveGlancingContact) && !Body.Grounded;
+                // During an assisted airborne chain, proximity alone must not
+                // steal an attached web. A real swept wall contact still uses
+                // the normal frontal-entry/collision path below.
+                if(Body.Settings.chain.enabled && Body.AssistStrength>0f &&
+                    (Body.Attached || Flying || SimulatedTime-lastDetachTime<=Body.Settings.chain.wallProximityGraceSeconds))wantsWall=false;
                 Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false,
                     Body.State == TraversalState.WallRunning ? Body.ContactNormal : Vector3.zero) : Vector3.zero, wantsWall, h);
                 if (attached && !Body.Attached) NotifyExternalRelease();
                 Vector3 before = Body.Position;
                 if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
-                if (AutomaticCruiseAssist && input.localMovement.z > .1f && !Body.Grounded)
-                    Body.AssistCruise(h, false);
-                Body.Step(h, Steering(input.localMovement, heading), Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
+                Vector3 steering=Steering(input.localMovement,heading);
+                var chain=Body.Settings.chain;
+                bool corner=false;
+                float reel=Body.Attached?Mathf.Clamp(ReelInput,-1,1):0;
+                if(chain.enabled && chain.cornerGuidance && Body.Settings.airControl>0 && Body.AssistStrength>0f && !Body.Grounded &&
+                    (Body.Attached || SimulatedTime-lastDetachTime<=1.2f))
+                {
+                    float previewRate=Body.AssistedRedirectRate;
+                    if(previewRate<=0)previewRate=Body.Settings.features.steeringTurnDegrees*(Body.RopeLoaded?1:Body.Settings.features.airSteeringRatio);
+                    steering=Collision.GuideCorner(Body.Position,Body.Velocity,steering,chain.previewSeconds,chain.previewClearance,
+                        previewRate*Body.AssistStrength,h);
+                    corner=Collision.CornerThreat;
+                }
+                Body.CornerGuidanceActive=corner;
+                if(corner)
+                {
+                    if(chain.wallApproachBrake)
+                    {
+                        var normal=Collision.CornerNormal;
+                        float approaching=Mathf.Max(0,-Vector3.Dot(Body.Velocity,normal));
+                        float correction=Mathf.Min(approaching,chain.wallApproachAcceleration*Body.AssistStrength*
+                            Mathf.Clamp01(input.localMovement.magnitude)*h);
+                        if(correction>0){Body.Velocity+=normal*correction;WallApproachBrakeSteps++;}
+                        // A no-clear-path fallback can still point along the old
+                        // incoming velocity. Do not let banking toward that stale
+                        // direction add back the wall approach we just removed.
+                        if(Vector3.Dot(steering,normal)<0)
+                        {
+                            float strength=steering.magnitude;
+                            var tangent=Vector3.ProjectOnPlane(steering,normal);
+                            if(tangent.sqrMagnitude<.0001f)tangent=Vector3.ProjectOnPlane(Body.Velocity,normal);
+                            steering=tangent.normalized*strength;
+                        }
+                    }
+                    Vector3 horizontal=Vector3.ProjectOnPlane(Body.Velocity,Vector3.up);
+                    float excess=Mathf.Max(0,horizontal.magnitude-chain.cornerSpeed);
+                    Body.Velocity-=horizontal.normalized*Mathf.Min(excess,chain.cornerDeceleration*Body.AssistStrength*
+                        Mathf.Clamp01(input.localMovement.magnitude)*h);
+                }
+                else if(AutomaticCruiseAssist && input.localMovement.z>.1f && !Body.Grounded)Body.AssistCruise(h,false);
+                Body.Step(h, steering, reel);
                 Vector3 requested = Body.Position;
                 bool ropeBeforeContact = Body.Attached;
                 Body.Position = Collision.Constrain(before, requested, false);

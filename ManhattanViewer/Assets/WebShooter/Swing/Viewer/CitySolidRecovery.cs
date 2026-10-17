@@ -87,7 +87,7 @@ namespace WebShooter.Swing
                         Vector2 outward = distance > .00001f ? (inside ? closest - q : q - closest) / distance : new Vector2(edge.y, -edge.x).normalized;
                         normal = new Vector3(outward.x, 0, outward.y); p += normal * (horizontalEscape + .001f);
                     }
-                    body.Contact(normal); corrected = true;
+                    body.Contact(normal,"City solid "+b.id); corrected = true;
                 }
                 if (!corrected) break;
             }
