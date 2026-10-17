@@ -8,6 +8,7 @@ namespace Manhattan.Viewer
     public sealed class ManhattanBootstrap : MonoBehaviour
     {
         public CityCatalog catalog;
+        [NonSerialized] public bool discoverCatalog = true;
         public Material windowFrameMaterial;
         public HeadTrackedDisplay Display { get; private set; }
         public ScreenWindowFrame Frame { get; private set; }
@@ -28,7 +29,7 @@ namespace Manhattan.Viewer
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void StartEmptyScene()
         {
-            if (HasArgument("-runTests")) return;
+            if (HasArgument("-runTests") || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "TraversalLab") return;
             if (FindFirstObjectByType<ManhattanBootstrap>() != null) return;
             var catalog = Resources.Load<CityCatalog>("CityCatalog");
             if (catalog == null) return;
@@ -38,7 +39,7 @@ namespace Manhattan.Viewer
 
         private void Awake()
         {
-            if (catalog == null) catalog = Resources.Load<CityCatalog>("CityCatalog");
+            if (catalog == null && discoverCatalog) catalog = Resources.Load<CityCatalog>("CityCatalog");
             Preferences = ViewerPersistence.Load(ViewerPersistence.PreferencesFile, new ViewerPreferences());
             foreach (var camera in FindObjectsByType<Camera>(FindObjectsSortMode.None)) camera.gameObject.SetActive(false);
             var rig = new GameObject("Observer Rig"); rig.transform.SetParent(transform, false);

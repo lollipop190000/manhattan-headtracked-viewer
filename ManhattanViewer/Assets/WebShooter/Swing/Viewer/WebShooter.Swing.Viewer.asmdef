@@ -6,7 +6,8 @@
     "WebShooter.Input",
     "Manhattan.Viewer.Runtime",
     "Unity.InputSystem",
-    "HeadTracked.Display"
+    "HeadTracked.Display",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "autoReferenced": true
 }

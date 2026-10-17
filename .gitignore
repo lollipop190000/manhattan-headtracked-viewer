@@ -71,6 +71,8 @@ Thumbs.db
 **/Assets/Resources/CityOwnership.json.meta
 **/Assets/Resources/CityOwnershipHash.txt
 **/Assets/Resources/CityOwnershipHash.txt.meta
+**/Assets/TraversalLab/MLGenerated/
+**/Assets/TraversalLab/MLGenerated.meta
 
 # Personal agent/tool files stay local (see docs/team/WORKFLOW.md)
 /PLAN.md

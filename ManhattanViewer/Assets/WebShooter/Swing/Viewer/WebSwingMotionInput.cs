@@ -22,41 +22,87 @@ namespace WebShooter.Swing
         private bool initialized, hasRequested;
         private Vector3 lastRequested;
 
-        public SwingPhysics Body { get; }
+        public SwingPhysics Body { get; private set; }
+        public DualWebLaunch Launch { get; } = new DualWebLaunch();
+        public int ConstraintSnapPreventions { get; private set; }
+        public int PreventiveRopeReleases { get; private set; }
+        public float MaxConstraintCorrection { get; private set; }
+        public float MaxExternalShortfall { get; private set; }
+        public bool PreventConstraintSnaps { get; set; } = true;
         /// <summary>거미줄이 붙을 수 있는 충돌 레이어. 뷰어의 충돌 프록시는 레이어 30이다.</summary>
         public int CollisionMask { get; set; } = 1 << 30;
         public float MaxRange { get; set; } = 250f;
         public bool Enabled { get; set; } = true;
         public bool Paused { get; set; }
+        /// <summary>Explicit replay source; null keeps the installed human/sensor adapter.</summary>
+        public IMotionInputSource InputOverride { get; set; }
         public Func<bool> CanSimulate { get; set; }
         public bool JumpRequested { get; set; }
         public float ReelInput { get; set; }
         public bool AutomaticRopeAssist { get; set; }
         public bool AutomaticCruiseAssist { get; set; }
+        // Opted into by the human/sensor composition only. Agent comparisons retain their exact inputs.
+        public ReconnectAssistSettings ReconnectAssist { get; set; } = new ReconnectAssistSettings();
+        public bool ReconnectPending => reconnectBuffered && SimulatedTime<=reconnectBufferUntil;
+        public bool LastShotWasReconnect { get; private set; }
+        public int ReconnectShots { get; private set; }
+        private float lastDetachTime=float.NegativeInfinity,reconnectBufferUntil,reconnectNextAttempt;
+        private bool reconnectBuffered;
+        private float shotAttachmentOverride=-1f;
+        private readonly FlowFeatures reconnectAim = new FlowFeatures {assistAnchor=true,anchorAssistStrength=1f,anchorSamples=16};
+        private bool CanAssistReconnect => ReconnectAssist.enabled && Body.AssistStrength>0f && !Body.Grounded &&
+            (Body.Attached || SimulatedTime-lastDetachTime<=Mathf.Clamp(ReconnectAssist.releaseWindowSeconds,.1f,2f));
+        private bool CanAssistAirShot => CanAssistReconnect || (ReconnectAssist.enabled && Body.Settings.chain.enabled &&
+            Body.Settings.chain.airborneAimTolerance && Body.AssistStrength>0f && !Body.Grounded);
         public bool MouseOwnsRope { get; private set; }
         public double LastSampleMilliseconds { get; private set; }
+        public int WallApproachBrakeSteps { get; private set; }
         public bool HandleMouseHold(bool active, bool pressed, bool held, Ray ray)
         {
-            if (!active) { Release(); return false; }
-            if (MouseOwnsRope && !held) Release();
-            if (!pressed || !held) return false;
-            bool hit = TryFire(ray);
-            MouseOwnsRope = hit;
-            return hit;
+            if (!active) { Release(); lastDetachTime=float.NegativeInfinity; return false; }
+            if (!held) { reconnectBuffered=false; if(MouseOwnsRope)Release(true); return false; }
+            if(pressed)
+            {
+                EnsureInitialized();
+                bool buffer=CanAssistAirShot && ReconnectAssist.bufferMisses;
+                bool hit=TryFire(ray);MouseOwnsRope=hit;
+                if(!hit && buffer)
+                {
+                    reconnectBuffered=true;reconnectBufferUntil=SimulatedTime+Mathf.Clamp(ReconnectAssist.bufferSeconds,.05f,.6f);
+                    reconnectNextAttempt=SimulatedTime+.03f;
+                }
+                return hit;
+            }
+            if(!reconnectBuffered)return false;
+            if(!ReconnectAssist.enabled || Body.AssistStrength<=0f || !ReconnectAssist.bufferMisses || SimulatedTime>reconnectBufferUntil)
+            {reconnectBuffered=false;return false;}
+            if(SimulatedTime+1e-6f<reconnectNextAttempt)return false;
+            float until=reconnectBufferUntil;
+            bool attached=TryFire(ray);MouseOwnsRope=attached;
+            // Retry the fresh ray supplied this frame, never a cached sensor ray.
+            if(!attached){reconnectBuffered=true;reconnectBufferUntil=until;reconnectNextAttempt=SimulatedTime+.03f;}
+            return attached;
         }
         public int CollisionReleaseCount { get; private set; }
-        public TraversalCollision Collision { get; }
+        public TraversalCollision Collision { get; private set; }
         public WebRopeRoute Route { get; } = new WebRopeRoute();
         public bool Flying { get; private set; }
         public float ShotAge { get; private set; }
         public const float GestureSeconds = .12f;
         public Vector3 ShotTarget { get; private set; }
+        public Vector3 ShotSurfaceNormal { get; private set; } = Vector3.up;
         public float ShotProgress { get; private set; }
         private float shotDuration;
+        private bool shotAttached;
         private Collider shotCollider;
 
         public event Action<Vector3> WebAttached;
         public event Action WebReleased;
+        public event Action<float> InputFireRequested;
+        public event Action<TraversalSample> PhysicsStepped;
+        public float SimulatedTime { get; private set; }
+        private Vector3 lastStepVelocity;
+        private TraversalState lastStepState;
 
         public static SwingSettings TraversalSettings() => new SwingSettings
         {
@@ -75,6 +121,17 @@ namespace WebShooter.Swing
             AutomaticCruiseAssist = settings == null;
             Collision = new TraversalCollision(origin, Body);
         }
+        public WebSwingMotionInput CopyForPrediction(ITraversalInputSource controls,FreeFlightController observer)
+        {
+            var copy=new WebSwingMotionInput(controls,observer,origin,Body.Settings){Body=Body.CopyForPrediction(),
+                CollisionMask=CollisionMask,MaxRange=MaxRange,Enabled=Enabled,Paused=false,
+                AutomaticCruiseAssist=AutomaticCruiseAssist,AutomaticRopeAssist=AutomaticRopeAssist,ReconnectAssist=ReconnectAssist,
+                yaw=yaw,pitch=pitch,initialized=true,hasRequested=false,SimulatedTime=SimulatedTime,lastDetachTime=lastDetachTime,
+                Flying=Flying,ShotAge=ShotAge,ShotTarget=ShotTarget,ShotSurfaceNormal=ShotSurfaceNormal,ShotProgress=ShotProgress,
+                shotDuration=shotDuration,shotAttached=shotAttached,shotCollider=shotCollider,shotAttachmentOverride=shotAttachmentOverride,
+                MouseOwnsRope=MouseOwnsRope,PreventConstraintSnaps=PreventConstraintSnaps};
+            copy.Collision=Collision.ForPrediction(copy.Body);copy.Route.CopyFrom(Route);return copy;
+        }
 
         /// <summary>
         /// 발사: 이전 거미줄을 먼저 끊고, 레이가 건물(충돌 프록시)에 맞으면 새로 붙인다. 허공을 쏘면 끊기만 한다.
@@ -82,17 +139,44 @@ namespace WebShooter.Swing
         /// </summary>
         public bool TryFire(Ray ray)
         {
+            Launch.Cancel();
             EnsureInitialized();
+            bool reconnect=CanAssistReconnect;
             Release();
             if (!Finite(ray.origin) || !Finite(ray.direction) || ray.direction.sqrMagnitude < .0001f) return false;
-            if (!Physics.Raycast(ray, out RaycastHit hit, MaxRange, CollisionMask, QueryTriggerInteraction.Ignore)) return false;
+            Vector3 renderPlayer=Body.Position-(origin!=null?origin.Offset:Vector3.zero);
+            var chainAim=Body.Settings.chain;
+            float minimumDistance=chainAim.enabled && chainAim.avoidUnsafeCloseAnchors && !Body.Grounded && Body.AssistStrength>0?
+                Body.Velocity.magnitude*chainAim.anchorReactionSeconds*Mathf.Clamp01(Body.AssistStrength):0;
+            RaycastHit hit;
+            if(CanAssistAirShot && ReconnectAssist.aimTolerance)
+            {
+                // Keep a direct hit exactly where aimed. Only a miss gets the bounded overhead/forward cone.
+                bool direct=Physics.Raycast(ray,out hit,MaxRange,CollisionMask,QueryTriggerInteraction.Ignore);
+                if(direct && Vector3.Distance(renderPlayer,hit.point)<minimumDistance)direct=false;
+                if(!direct)
+                {
+                    reconnectAim.anchorConeDegrees=Mathf.Clamp(ReconnectAssist.aimConeDegrees,0,15)*Mathf.Clamp01(Body.AssistStrength);
+                    reconnectAim.anchorMomentumWeight=ReconnectAssist.momentumWeight;
+                    if(reconnectAim.anchorConeDegrees<=0 || !TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,reconnectAim,out hit,
+                        Body.Settings.chain.enabled?Body.Settings.chain.aimAcquisitionRadius*Mathf.Clamp01(Body.AssistStrength):0,Body.Settings.chain.enabled,minimumDistance))return false;
+                }
+            }
+            else if(!TraversalAim.Select(ray,renderPlayer,Body.Velocity,MaxRange,CollisionMask,Body.Settings.features,out hit,minimumDistance:minimumDistance))return false;
             Vector3 anchorCity = hit.point + (origin != null ? origin.Offset : Vector3.zero);
             if (Vector3.Distance(Body.Position, anchorCity) < Body.Settings.minRopeLength) return false;
             ShotTarget = anchorCity;
+            ShotSurfaceNormal = hit.normal;
             shotCollider = hit.collider;
             ShotProgress = 0f; ShotAge = 0f;
             shotDuration = Mathf.Clamp(hit.distance / 500f, .06f, .35f);
             Flying = true;
+            shotAttached=false;
+            LastShotWasReconnect=reconnect;
+            shotAttachmentOverride=reconnect && ReconnectAssist.quickAttachment?Mathf.Clamp(ReconnectAssist.attachmentSeconds,.01f,.05f):-1f;
+            if (Body.Settings.chain.enabled && Body.Settings.chain.fastAirborneAttachment && !Body.Grounded && Body.AssistStrength>0f)
+                shotAttachmentOverride=Mathf.Clamp(Body.Settings.chain.attachmentSeconds,.01f,.05f);
+            if(reconnect)ReconnectShots++;
             return true;
         }
 
@@ -102,19 +186,27 @@ namespace WebShooter.Swing
         /// </summary>
         public void Activate()
         {
+            Launch.Cancel();
+            Release();
+            Collision.ResetGuidance();
+            WallApproachBrakeSteps=0;
             initialized = false;
+            lastDetachTime=float.NegativeInfinity;
             hasRequested = false;
             Enabled = true;
             EnsureInitialized();
         }
 
-        public void Release()
+        public void Release(bool allowBoost=false)
         {
+            reconnectBuffered=false;
             MouseOwnsRope = false;
             Flying = false;
+            shotAttached=false;
             Route.Clear();
             if (!Body.Attached) return;
-            Body.Release();
+            lastDetachTime=SimulatedTime;
+            Body.Release(allowBoost);
             WebReleased?.Invoke();
         }
 
@@ -122,6 +214,7 @@ namespace WebShooter.Swing
         {
             if (initialized) return;
             Body.Reset(flight.CityPosition);
+            lastStepVelocity = Body.Velocity; lastStepState = Body.State;
             Vector3 euler = flight.transform.rotation.eulerAngles;
             yaw = euler.y;
             pitch = Mathf.DeltaAngle(0f, euler.x);
@@ -136,11 +229,13 @@ namespace WebShooter.Swing
         }
         private MotionCommand SampleCore(float deltaTime)
         {
-            MotionCommand input = look != null ? look.Sample(deltaTime) : default;
+            var source=InputOverride??look;
+            MotionCommand input = source != null ? source.Sample(deltaTime) : default;
+            if(source is ITraversalInputSource traversal)ApplyActions(traversal.ReadActions());
             if (!Enabled) return input;
             EnsureInitialized();
             if (CanSimulate != null) Paused = !CanSimulate();
-            if (Paused) { JumpRequested = false; yaw = flight.transform.eulerAngles.y; pitch = Mathf.DeltaAngle(0f, flight.transform.eulerAngles.x); return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
+            if (Paused) { reconnectBuffered=false; JumpRequested = false; yaw = flight.transform.eulerAngles.y; pitch = Mathf.DeltaAngle(0f, flight.transform.eulerAngles.x); return new MotionCommand { hasAbsolutePose = true, cityPosition = flight.CityPosition, cityRotation = flight.transform.rotation }; }
 
             Physics.SyncTransforms();
             // 지난 프레임에 요청한 위치와 실제 위치를 비교: 크게 다르면 순간이동, 조금 다르면 충돌로 막힌 것
@@ -149,6 +244,7 @@ namespace WebShooter.Swing
             if (hasRequested)
             {
                 Vector3 shortfall = lastRequested - actual;
+                MaxExternalShortfall=Mathf.Max(MaxExternalShortfall,shortfall.magnitude);
                 if (shortfall.magnitude > TeleportDistance)
                 {
                     Body.Reset(actual);          // SetPose 등으로 옮겨졌다: 속도와 거미줄을 버린다
@@ -165,54 +261,110 @@ namespace WebShooter.Swing
             yaw += input.lookDegrees.x;
             pitch = Mathf.Clamp(pitch - input.lookDegrees.y, -85f, 85f);
             Quaternion heading = Quaternion.Euler(0f, yaw, 0f);
-            Vector3 steer = heading * new Vector3(input.localMovement.x, 0f, input.localMovement.z);   // 수평 조향
-            if (input.localMovement.z < 0f)
-                steer = heading * new Vector3(input.localMovement.x, 0f, 0f) - Vector3.ProjectOnPlane(Body.Velocity, Vector3.up).normalized * -input.localMovement.z;
-            if (Flying)
-            {
-                ShotAge += deltaTime;
-                ShotProgress = Mathf.Clamp01((ShotAge - GestureSeconds) / shotDuration);
-                if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy) Release();
-                else if (ShotProgress >= 1f)
-                {
-                    Flying = false;
-                    // Attachment is passive. Space, W and manual reeling are explicit movement inputs.
-                    if (Body.Attach(ShotTarget)) { Route.Begin(ShotTarget); WebAttached?.Invoke(ShotTarget); }
-                }
-            }
+            Body.Braking = input.localMovement.z < 0f;
             if (Body.Attached)
             {
                 float oldFixed = Route.FixedLength;
                 if (shotCollider == null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy ||
                     !Route.Update(Body.Position, origin != null ? origin.Offset : Vector3.zero, CollisionMask)) Release();
-                else Body.RouteThrough(Route.Points[0], Route.FixedLength - oldFixed);
+                else {Body.RouteThrough(Route.Points[0], Route.FixedLength - oldFixed);if(Route.Points.Count>1)Body.GuardWrappedRadius();}
             }
             if (JumpRequested)
             {
                 bool attached = Body.Attached;
                 bool jumped = Body.Jump(); JumpRequested = false;
                 Debug.Log($"TRAVERSAL_JUMP accepted={jumped} position={Body.Position} velocity={Body.Velocity}");
-                if (attached && !Body.Attached) WebReleased?.Invoke();
+                if (attached && !Body.Attached) NotifyExternalRelease();
             }
             float remaining = Mathf.Min(deltaTime, .1f);
             while (remaining > .000001f)
             {
                 float h = Mathf.Min(remaining, Body.Settings.maxStep);
+                Launch.Tick(h,Body.Position,origin!=null?origin.Offset:Vector3.zero,CollisionMask);
+                AdvanceShot(h);
+                int contactsBefore = Body.ContactSequence;
                 bool attached = Body.Attached;
-                bool wantsWall = input.localMovement.z > .1f && !Body.Attached && !Body.Grounded;
-                Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false) : Vector3.zero, wantsWall, h);
-                if (attached && !Body.Attached) WebReleased?.Invoke();
+                Body.WallRunRequested = input.localMovement.z > .1f;
+                bool wantsWall = Body.WallRunRequested && (!Body.Attached || Body.Settings.features.preserveGlancingContact) && !Body.Grounded;
+                // During an assisted airborne chain, proximity alone must not
+                // steal an attached web. A real swept wall contact still uses
+                // the normal frontal-entry/collision path below.
+                if(Body.Settings.chain.enabled && Body.AssistStrength>0f &&
+                    (Body.Attached || Flying || SimulatedTime-lastDetachTime<=Body.Settings.chain.wallProximityGraceSeconds))wantsWall=false;
+                Body.UpdateWall(wantsWall ? Collision.FindWall(Body.Position, heading * Vector3.forward, false,
+                    Body.State == TraversalState.WallRunning ? Body.ContactNormal : Vector3.zero) : Vector3.zero, wantsWall, h);
+                if (attached && !Body.Attached) NotifyExternalRelease();
                 Vector3 before = Body.Position;
                 if (AutomaticRopeAssist && Mathf.Abs(ReelInput) < .01f) Body.AssistRope(h);
-                if (AutomaticCruiseAssist && input.localMovement.z > .1f && !Body.Grounded)
-                    Body.AssistCruise(h, false);
-                Body.Step(h, steer, Body.Attached ? Mathf.Clamp(ReelInput, -1f, 1f) : 0f);
+                Vector3 steering=Launch.Charging?Vector3.zero:Steering(input.localMovement,heading);
+                var chain=Body.Settings.chain;
+                bool corner=false;
+                float reel=Body.Attached?Mathf.Clamp(ReelInput,-1,1):0;
+                if(chain.enabled && chain.cornerGuidance && Body.Settings.airControl>0 && Body.AssistStrength>0f && !Body.Grounded &&
+                    (Body.Attached || SimulatedTime-lastDetachTime<=1.2f))
+                {
+                    float previewRate=Body.AssistedRedirectRate;
+                    if(previewRate<=0)previewRate=Body.Settings.features.steeringTurnDegrees*(Body.RopeLoaded?1:Body.Settings.features.airSteeringRatio);
+                    steering=Collision.GuideCorner(Body.Position,Body.Velocity,steering,chain.previewSeconds,chain.previewClearance,
+                        previewRate*Body.AssistStrength,h);
+                    corner=Collision.CornerThreat;
+                }
+                Body.CornerGuidanceActive=corner;
+                if(corner)
+                {
+                    if(chain.wallApproachBrake)
+                    {
+                        var normal=Collision.CornerNormal;
+                        float approaching=Mathf.Max(0,-Vector3.Dot(Body.Velocity,normal));
+                        float correction=Mathf.Min(approaching,chain.wallApproachAcceleration*Body.AssistStrength*
+                            Mathf.Clamp01(input.localMovement.magnitude)*h);
+                        if(correction>0){Body.Velocity+=normal*correction;WallApproachBrakeSteps++;}
+                        // A no-clear-path fallback can still point along the old
+                        // incoming velocity. Do not let banking toward that stale
+                        // direction add back the wall approach we just removed.
+                        if(Vector3.Dot(steering,normal)<0)
+                        {
+                            float strength=steering.magnitude;
+                            var tangent=Vector3.ProjectOnPlane(steering,normal);
+                            if(tangent.sqrMagnitude<.0001f)tangent=Vector3.ProjectOnPlane(Body.Velocity,normal);
+                            steering=tangent.normalized*strength;
+                        }
+                    }
+                    Vector3 horizontal=Vector3.ProjectOnPlane(Body.Velocity,Vector3.up);
+                    float excess=Mathf.Max(0,horizontal.magnitude-chain.cornerSpeed);
+                    Body.Velocity-=horizontal.normalized*Mathf.Min(excess,chain.cornerDeceleration*Body.AssistStrength*
+                        Mathf.Clamp01(input.localMovement.magnitude)*h);
+                }
+                else if(!Launch.Charging && AutomaticCruiseAssist && input.localMovement.z>.1f && !Body.Grounded)Body.AssistCruise(h,false);
+                var priorVelocity=Body.Velocity;
+                Body.Step(h, steering, reel);
                 Vector3 requested = Body.Position;
+                if(Body.Attached && chain.enabled && chain.wallApproachBrake && Body.AssistStrength>0 &&
+                    input.localMovement.sqrMagnitude>.01f && Collision.RopeThreat(before,requested,Body.Velocity,out var ropeWall))
+                {
+                    // Rope curvature is absent from the horizontal turn preview.
+                    // Release before it pulls the capsule through the corner;
+                    // retain tangent momentum rather than pinballing on the wall.
+                    PreventiveRopeReleases++;Release();Body.Position=before;
+                    Body.Velocity=priorVelocity-ropeWall*Mathf.Min(0,Vector3.Dot(priorVelocity,ropeWall));
+                    Body.Step(h,Vector3.ProjectOnPlane(steering,ropeWall),0);requested=Body.Position;
+                }
+                float requestedTravel=Vector3.Distance(before,requested);
+                MaxConstraintCorrection=Mathf.Max(MaxConstraintCorrection,Body.RopeCorrectionMetres);
+                // A short/wrapped/reelled constraint may request a large geometric
+                // snap, unrelated to integrated travel. Detach and integrate the
+                // same substep ballistically instead of teleporting the camera.
+                float budget=(priorVelocity.magnitude+Body.Settings.reelSpeed+Body.Settings.gravity*h+Body.Settings.airControl*3*h)*h+.06f;
+                if(PreventConstraintSnaps && requestedTravel>budget && Body.Attached)
+                {
+                    ConstraintSnapPreventions++;Release();Body.Position=before;Body.Velocity=priorVelocity;
+                    Body.Step(h,steering,0);requested=Body.Position;
+                }
                 bool ropeBeforeContact = Body.Attached;
                 Body.Position = Collision.Constrain(before, requested, false);
                 // The analytic ground plane applies its friction inside Step; roofs need the same treatment.
                 if (Body.Position.y > Body.FloorY + .01f) Body.ApplySurfaceFriction(h);
-                if (ropeBeforeContact && !Body.Attached) { WebReleased?.Invoke(); CollisionReleaseCount++; }
+                if (ropeBeforeContact && !Body.Attached) { NotifyExternalRelease(); CollisionReleaseCount++; }
                 // A solid wall wins over rope length. Repeatedly projecting into
                 // the wall and back out produced violent oscillation at short ropes.
                 if (Body.Attached && Vector3.Distance(Body.Position, Body.Anchor) > Body.RopeLength + .12f)
@@ -223,6 +375,13 @@ namespace WebShooter.Swing
                 {
                     Release(); Body.Reset(Finite(before) ? before : actual);
                 }
+                SimulatedTime += h;
+                var observedState=Body.Grounded?TraversalState.Grounded:Body.State;
+                PhysicsStepped?.Invoke(new TraversalSample { time=SimulatedTime,dt=h,position=Body.Position,velocity=Body.Velocity,
+                    previousVelocity=lastStepVelocity,state=observedState,previousState=lastStepState,
+                    movementInput=!Launch.Charging && new Vector2(input.localMovement.x,input.localMovement.z).sqrMagnitude>.01f,
+                    collided=Body.ContactSequence!=contactsBefore,contactNormal=Body.ContactNormal,collider=Body.LastCollisionName });
+                lastStepVelocity=Body.Velocity;lastStepState=observedState;
                 remaining -= h;
             }
 
@@ -234,6 +393,66 @@ namespace WebShooter.Swing
                 cityPosition = Body.Position,
                 cityRotation = Quaternion.Euler(pitch, yaw, 0f)
             };
+        }
+        private Vector3 Steering(Vector3 input, Quaternion heading)
+        {
+            if (input.z >= 0f) return heading * new Vector3(input.x, 0, input.z);
+            var velocity = Vector3.ProjectOnPlane(Body.Velocity, Vector3.up);
+            Vector3 brake = -velocity.normalized;
+            var settings = Body.Settings;
+            if (settings.lowSpeedReverse && !Body.Attached && !Body.Grounded &&
+                velocity.magnitude < settings.reverseTransitionSpeed && Body.AssistStrength > 0f)
+            {
+                // A bounded target velocity avoids the old zero-speed dead end
+                // and avoids oscillating between a brake and a reverse impulse.
+                Vector3 backward = heading * Vector3.back;
+                float acceleration = settings.airControl * Body.AssistStrength;
+                brake = Vector3.ClampMagnitude((backward * Mathf.Min(settings.reverseSpeed,
+                    settings.reverseTransitionSpeed * .9f) - velocity) / Mathf.Max(.001f, acceleration * .2f), 1f);
+            }
+            return heading * new Vector3(input.x, 0, 0) + brake * -input.z;
+        }
+        private void ApplyActions(TraversalActions a)
+        {
+            Paused=!a.active;
+            if(!a.active){Launch.Cancel();HandleMouseHold(false,false,false,default);ReelInput=0;JumpRequested=false;return;}
+            if(a.toggleFlight){Launch.Cancel();Release();if(Enabled)Enabled=false;else Activate();}
+            if(!Enabled)return;
+            ReelInput=Mathf.Clamp(a.reel,-1,1);JumpRequested|=a.jump;
+            Body.AssistStrength=Mathf.Clamp01(Body.AssistStrength+a.assistDelta);
+            if(a.launchPressed && Launch.Settings.enabled)
+            {
+                EnsureInitialized();Physics.SyncTransforms();Release();
+                Launch.Begin(Body.Position,a.aim.direction,origin!=null?origin.Offset:Vector3.zero,CollisionMask);
+            }
+            bool launched=false;
+            if(Launch.Charging && (!a.launchHeld || a.launchReleased))
+            {
+                launched=Launch.Release(Body,a.aim.direction,origin!=null?origin.Offset:Vector3.zero,CollisionMask);
+                if(launched)lastDetachTime=SimulatedTime;
+            }
+            if(Launch.Charging){ReelInput=0;JumpRequested=false;return;}
+            if(a.firePressed)InputFireRequested?.Invoke(a.viewportX);
+            bool fired=HandleMouseHold(true,a.firePressed || launched && a.fireHeld,a.fireHeld,a.aim);
+            if(fired && !a.firePressed)InputFireRequested?.Invoke(a.viewportX);
+            if(a.release)Release(true);
+        }
+        private void NotifyExternalRelease()
+        {lastDetachTime=SimulatedTime;reconnectBuffered=false;Flying=false;shotAttached=false;MouseOwnsRope=false;Route.Clear();WebReleased?.Invoke();}
+        private void AdvanceShot(float dt)
+        {
+            if(!Flying)return;
+            ShotAge+=dt;ShotProgress=Mathf.Clamp01((ShotAge-GestureSeconds)/shotDuration);
+            if(shotCollider==null || !shotCollider.enabled || !shotCollider.gameObject.activeInHierarchy){Release();return;}
+            bool ready=shotAttachmentOverride>=0?ShotAge+1e-6f>=shotAttachmentOverride:Body.Settings.features.fixedAttachmentDelay?
+                ShotAge+1e-6f>=Mathf.Clamp(Body.Settings.features.attachmentDelaySeconds,.01f,.05f):ShotProgress>=1f;
+            if(!shotAttached && ready)
+            {
+                shotAttached=true;
+                if(Body.Attach(ShotTarget)){Route.Begin(ShotTarget);WebAttached?.Invoke(ShotTarget);}
+                else Release();
+            }
+            if(ShotProgress>=1f)Flying=false;
         }
         private static bool Finite(Vector3 v) => float.IsFinite(v.x) && float.IsFinite(v.y) && float.IsFinite(v.z);
     }

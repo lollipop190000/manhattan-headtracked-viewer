@@ -55,8 +55,8 @@ namespace Manhattan.Viewer
             cameraData.antialiasing = desired;
             ref var taa = ref cameraData.taaSettings;
             // Filter subpixel roof trim and road markings before accumulating history.
-            // A narrow clamp and low history weight expose the changing jitter samples
-            // even when both the city and observer are stationary.
+            // High history weight stabilizes stationary detail. Traversal lowers
+            // it during motion without changing the user's antialiasing switch.
             taa.quality = TemporalAAQuality.VeryHigh; taa.baseBlendFactor = .95f; taa.jitterScale = .75f;
             taa.mipBias = 0f; taa.varianceClampScale = 1.2f; taa.contrastAdaptiveSharpening = 0f;
             ResetHistory();

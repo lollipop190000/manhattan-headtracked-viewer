@@ -1,0 +1,5 @@
+{
+  "name": "Manhattan.Traversal.Lab",
+  "references": ["WebShooter.Swing.Core", "WebShooter.Swing.Viewer", "Manhattan.Viewer.Runtime"],
+  "autoReferenced": true
+}

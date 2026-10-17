@@ -1,0 +1,5 @@
+{
+  "name": "Manhattan.Traversal.Lab.Editor",
+  "references": ["Manhattan.Traversal.Lab", "Unity.Addressables.Editor"],
+  "includePlatforms": ["Editor"]
+}

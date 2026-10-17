@@ -1,0 +1,5 @@
+{
+  "name": "WebShooter.Swing.Editor",
+  "references": ["WebShooter.Swing.Core", "WebShooter.Swing.Viewer", "Manhattan.Viewer.Runtime"],
+  "includePlatforms": ["Editor"]
+}

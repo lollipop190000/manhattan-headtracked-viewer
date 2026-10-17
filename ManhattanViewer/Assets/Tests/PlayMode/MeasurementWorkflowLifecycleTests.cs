@@ -25,8 +25,10 @@ public sealed class MeasurementWorkflowLifecycleTests
         priorDirectory = Environment.GetEnvironmentVariable("HEADTRACKED_CALIBRATION_DIRECTORY");
         directory = Path.Combine(Path.GetTempPath(), "measurement-workflow-" + Guid.NewGuid().ToString("N"));
         Environment.SetEnvironmentVariable("HEADTRACKED_CALIBRATION_DIRECTORY", directory);
-        root = new GameObject("Synthetic measurement workflow"); app = root.AddComponent<ManhattanBootstrap>();
-        // No CityCatalog is present in this fixture. Production composition is used, with an opt-in synthetic source.
+        root = new GameObject("Synthetic measurement workflow"); root.SetActive(false);
+        app = root.AddComponent<ManhattanBootstrap>(); app.discoverCatalog = false; root.SetActive(true);
+        // This fixture explicitly opts out of city discovery even when generated assets exist.
+        // Production display composition is used, with an opt-in synthetic source.
         Assert.That(app.catalog, Is.Null);
         var c = app.Display.Calibration; c.webcamPosition = Vector3.zero; c.webcamEulerDegrees = Vector3.zero; c.mirrorImageX = false;
         source = root.AddComponent<SyntheticHeadObservationSource>(); source.Calibration = c; source.RigidPose = true;
@@ -69,10 +71,7 @@ public sealed class MeasurementWorkflowLifecycleTests
     {
         yield return WaitReady(); workflow.DeclaredDistanceMeters = .6f; workflow.MeasurementsConfirmed = true;
         Assert.That(workflow.Begin(), Is.True); ShowSettings(false); Assert.That(app.KeyboardInput.InputEnabled, Is.False);
-        Assert.That(workflow.MarkCurrentHold(), Is.True);
-        double deadline = Time.realtimeSinceStartupAsDouble + 7;
-        while (Session.Phase == MeasurementPhase.CollectA && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
-        Assert.That(Session.Phase, Is.EqualTo(MeasurementPhase.ReadyB));
+        yield return MarkAndFinish(MeasurementPhase.ReadyB);
         source.Publish = false;
         yield return new WaitForSecondsRealtime(.2f); yield return null;
         Assert.That(Session.Phase, Is.EqualTo(MeasurementPhase.ReadyA)); Assert.That(Session.Report, Is.Null); Assert.That(Gate.Ready, Is.False);
@@ -93,8 +92,23 @@ public sealed class MeasurementWorkflowLifecycleTests
     private IEnumerator MarkAndFinish(MeasurementPhase next)
     {
         Assert.That(workflow.MarkCurrentHold(), Is.True);
-        double deadline = Time.realtimeSinceStartupAsDouble + 7;
-        while (Session.Phase != next && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
+        double deadline = Time.realtimeSinceStartupAsDouble + 12;
+        int retries=0;float maximumFrameMs=0;
+        while (Session.Phase != next && Time.realtimeSinceStartupAsDouble < deadline)
+        {
+            maximumFrameMs=Mathf.Max(maximumFrameMs,Time.unscaledDeltaTime*1000);
+            // The real workflow correctly rejects observation gaps over 100 ms.
+            // Shader/import stalls can interrupt synthetic A in a rendered suite.
+            // Reacquire the full readiness window and repeat the user's A action;
+            // never relax freshness, sample count or completed-report assertions.
+            if(next==MeasurementPhase.ReadyB && Session.Phase==MeasurementPhase.ReadyA &&
+                Session.Message.StartsWith("Observation stream restarted") && retries<2)
+            {
+                TestContext.WriteLine($"Synthetic A stream reset; max frame {maximumFrameMs:F2} ms. Reacquiring readiness (retry {++retries}).");
+                yield return WaitReady();Assert.That(workflow.MarkCurrentHold(),Is.True);
+            }
+            yield return null;
+        }
         Assert.That(Session.Phase, Is.EqualTo(next), Session.Message);
     }
     [UnityTest] public IEnumerator DeclarationAndUncertaintyEditsCancelPriorHoldsAndRequireReconfirmation()

@@ -11,17 +11,17 @@ namespace WebShooter.Swing
         private ManhattanBootstrap app;
         private WebSwingMotionInput swing;
         private HandAimController hand;
-        private bool capturedLastFrame;
         private TraversalHands hands;
-        private float handSide = .7f;
         private IMotionInputSource previousInput;
         private ITranslationConstraint previousConstraint;
         private int lastFireFrame = -1;
         private float nextHandSearch;
+        private ViewerSettingsUI viewerUI;
+        private bool lastHelpMode,hasHelpMode;
         public WebSwingMotionInput Motion => swing;
         private void OnEnable() { Application.wantsToQuit += LogQuit; }
-        private void OnDisable() { Application.wantsToQuit -= LogQuit; swing?.Release(); }
-        private void OnApplicationFocus(bool focused) { if (!focused) swing?.Release(); }
+        private void OnDisable() { Application.wantsToQuit -= LogQuit; swing?.Launch.Cancel();swing?.Release(); }
+        private void OnApplicationFocus(bool focused) { if (!focused) {swing?.Launch.Cancel();swing?.Release();} }
         private bool LogQuit()
         {
             Debug.Log($"TRAVERSAL_QUIT_REQUEST state={swing?.Body.State} position={swing?.Body.Position} velocity={swing?.Body.Velocity}");
@@ -30,65 +30,53 @@ namespace WebShooter.Swing
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (!ManhattanBootstrap.HasArgument("-runTests") && !ManhattanBootstrap.HasArgument("--benchmark")) new GameObject("Web Traversal").AddComponent<MouseWebShooter>();
+            if (!ManhattanBootstrap.HasArgument("-runTests") && !ManhattanBootstrap.HasArgument("--benchmark") &&
+                !ManhattanBootstrap.HasArgument("--traversal-agent") && !ManhattanBootstrap.HasArgument("--scripted-flow") &&
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name!="TraversalLab") new GameObject("Web Traversal").AddComponent<MouseWebShooter>();
         }
         private void Update()
         {
             if (swing == null) { TryConnect(); return; }
             app.Streamer.CollisionProxiesEnabled = true;
+            if(viewerUI!=null && (!hasHelpMode || lastHelpMode!=swing.Enabled))
+            {
+                viewerUI.SetMovementHint(swing.Enabled?"WASD steer · Q hold/release launch · RMB/E reel · Z pay out · R flight":"WASD fly · Q/E descend/rise · Mouse look · R swing · Esc settings");
+                hasHelpMode=true;lastHelpMode=swing.Enabled;
+            }
             if (hand == null && Time.unscaledTime >= nextHandSearch)
             {
                 nextHandSearch = Time.unscaledTime + 2f;
                 hand = FindFirstObjectByType<HandAimController>();
                 if (hand != null) hand.Fired += Fire;
             }
-            bool active = app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured;
-            active &= Application.isFocused;
-            swing.Paused = !active;
-            var keys = Keyboard.current;
-            var mouse = Mouse.current;
-            bool mousePress = active && capturedLastFrame && swing.Enabled && mouse != null && mouse.leftButton.wasPressedThisFrame;
-            if (active && mouse != null && Mathf.Abs(mouse.delta.ReadValue().x) > .5f)
-                handSide = mouse.delta.ReadValue().x < 0 ? .3f : .7f;
-            if (mousePress && hands != null) hands.Select(Cursor.lockState == CursorLockMode.Locked ? handSide : mouse.position.ReadValue().x / Screen.width);
-            bool hadMouseRope = swing.MouseOwnsRope;
-            Ray aim = Camera.main != null ? Camera.main.ViewportPointToRay(new Vector3(.5f, .5f, 0f)) : default;
-            bool mouseHit = swing.HandleMouseHold(active && swing.Enabled, mousePress && Camera.main != null,
-                mouse != null && mouse.leftButton.isPressed, aim);
-            if (mousePress) { lastFireFrame = Time.frameCount; Debug.Log($"TRAVERSAL_MOUSE_PRESS hit={mouseHit} position={swing.Body.Position} target={swing.ShotTarget}"); }
-            if (hadMouseRope && !swing.MouseOwnsRope) Debug.Log($"TRAVERSAL_MOUSE_RELEASE attached={swing.Body.Attached} flying={swing.Flying} velocity={swing.Body.Velocity}");
-            if (active && capturedLastFrame)
-            {
-                if (keys != null && keys.rKey.wasPressedThisFrame)
-                {
-                    swing.Release();
-                    if (swing.Enabled) swing.Enabled = false; else swing.Activate();
-                }
-                if (swing.Enabled)
-                {
-                    swing.ReelInput = (keys != null && keys.eKey.isPressed ? 1f : 0f) - (keys != null && keys.qKey.isPressed ? 1f : 0f);
-                    if (keys != null && keys.leftBracketKey.wasPressedThisFrame) swing.Body.AssistStrength = Mathf.Max(0f, swing.Body.AssistStrength - .25f);
-                    if (keys != null && keys.rightBracketKey.wasPressedThisFrame) swing.Body.AssistStrength = Mathf.Min(1f, swing.Body.AssistStrength + .25f);
-                    if (mouse != null && mouse.rightButton.wasPressedThisFrame) swing.Release();
-                    if (keys != null && keys.spaceKey.wasPressedThisFrame) swing.JumpRequested = true;
-                }
-            }
-            capturedLastFrame = active;
         }
         private void TryConnect()
         {
             app = FindFirstObjectByType<ManhattanBootstrap>();
             if (app == null || app.Flight == null || app.Origin == null || app.Streamer == null || app.KeyboardInput == null) return;
             previousInput = app.Flight.InputSource;
+            viewerUI=app.GetComponent<ViewerSettingsUI>();
             previousConstraint = app.Flight.TranslationConstraint;
-            swing = new WebSwingMotionInput(previousInput, app.Flight, app.Origin) { Paused = true };
+            var tuning=gameObject.AddComponent<TraversalTuning>();
+            var human=new HumanTraversalInput(previousInput,()=>app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured && Application.isFocused);
+            swing = new WebSwingMotionInput(human, app.Flight, app.Origin,tuning.Settings) { Paused = true, AutomaticCruiseAssist = true };
+            swing.ReconnectAssist=tuning.Reconnect;
+            swing.Launch.Settings=tuning.Launch;
+            var features=swing.Body.Settings.features;
+            Debug.Log($"TRAVERSAL_FEATURES steering={features.preserveSteeringMomentum} glancing={features.preserveGlancingContact} transitions={features.preserveTransitionMomentum} wrap={features.resetLengthAtWrap} pacing={features.attachmentDrop} fastAttach={features.fixedAttachmentDelay} reconnect={swing.ReconnectAssist.enabled} chain={swing.Body.Settings.chain.enabled}");
+            app.Flight.gameObject.AddComponent<SnagLogger>().Attach(swing);
             if (app.catalog != null) swing.Collision.CitySolids = new CitySolidRecovery(app.catalog.buildings, swing.Body);
             swing.CanSimulate = () => app.KeyboardInput.InputEnabled && app.KeyboardInput.Captured && Application.isFocused;
             app.Flight.InputSource = swing;
             app.Flight.TranslationConstraint = new FlightCollisionGate(swing);
             app.Streamer.CollisionProxiesEnabled = true;
             hands = gameObject.AddComponent<TraversalHands>(); hands.Configure(swing, app.Display);
+            swing.InputFireRequested+=x=>{hands.Select(x);lastFireFrame=Time.frameCount;};
             gameObject.AddComponent<WebRopeVisual>().Configure(swing, app.Origin, hands);
+            gameObject.AddComponent<TraversalSpeedEffects>().Configure(swing,Camera.main);
+            gameObject.AddComponent<DualWebLaunchVisual>().Configure(swing,app.Origin,hands,Camera.main);
+            gameObject.AddComponent<TraversalTemporalHistory>().Configure(swing,Camera.main);
+            gameObject.AddComponent<TraversalContinuityLog>().Configure(swing,app.Flight,app.Origin);
         }
         private void Fire(Ray ray)
         {
@@ -103,12 +91,14 @@ namespace WebShooter.Swing
             if (swing == null) return;
             if (!app.KeyboardInput.Captured)
             {
-                GUI.Box(new Rect(12, Screen.height - 60, 740, 48), "Click to capture. Space: jump. Aim HIGH and HOLD left mouse to attach.\nW: boost | Let go: release | E: reel in | Q: reel out | R: flight");
+                GUI.Box(new Rect(12, Screen.height - 60, 980, 48), "Click to capture. HOLD Q then release: two-hand launch. HOLD left mouse: web swing.\nSpace: jump | W: boost | Let go LMB: detach | RMB / E: reel | Z: pay out | R: flight");
                 return;
             }
             GUI.Label(new Rect(Screen.width * .5f - 8, Screen.height * .5f - 12, 20, 24), "+");
-            GUI.Label(new Rect(12, Screen.height - 52, 1200, 24), "Space: jump | HOLD LMB: attach | Let go: release | W: boost | E/Q: reel in/out | R: flight");
+            GUI.Label(new Rect(12, Screen.height - 52, 1400, 24), "HOLD Q / release: launch | Space: jump | HOLD LMB: attach | LMB up: detach | W: boost | RMB / E: reel | Z: pay out | R: flight");
             GUI.Label(new Rect(12, Screen.height - 28, 800, 24), swing.Enabled ? $"{swing.Body.State} | {swing.Body.Velocity.magnitude:0.0} m/s | Assist {swing.Body.AssistStrength:0.00} ([ / ])" : "Free flight (wall collision ON)");
+            if(swing.Enabled && swing.Launch.Status.Length>0)GUI.Label(new Rect(Screen.width*.5f-180,Screen.height*.67f,500,26),
+                swing.Launch.Charging?$"{swing.Launch.Status}  {swing.Launch.Charge*100:0}%":swing.Launch.Status);
         }
         private void OnDestroy()
         {
