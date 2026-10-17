@@ -35,7 +35,7 @@ First launch asks for visible screen width, height and eye-to-screen distance in
 
 A Bluetooth or USB gamepad/joystick can also move the camera. See Settings → **CONTROLLER** for details.
 
-In development traversal builds, hold left mouse to attach and release it to detach; hold right mouse (or E) to reel in, Q to pay out, Space to jump, and R to toggle flight. See the [traversal controls](docs/web-swing.md). The published viewer release above retains its own flight controls.
+In development traversal builds, hold left mouse to attach and release it to detach; hold right mouse (or E) to reel in, Z to pay out, hold/release Q for a bilateral charged launch, Space to jump, and R to toggle flight. See the [traversal controls](docs/web-swing.md). The published viewer release above retains its own flight controls.
 
 Click the city to capture the mouse. Flight defaults to 10m/s; Settings supports 1–100m/s. Saved bookmarks load only when requested. A paired HID controller can also move: left stick/D-pad plus shoulder buttons on a gamepad, or stick/hat plus buttons 1/2 on a generic joystick. Add `--no-controller` to the player arguments to disable controller input.
 

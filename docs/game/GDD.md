@@ -51,7 +51,8 @@ Exit test: five outside players try it; at least three ask to play again without
 |---|---|
 | Hold left click / release left click | Fire and hold / detach |
 | Hold right click / E | Reel in |
-| Q | Pay out |
+| Q hold / release | Charge / release two-hand launch |
+| Z | Pay out |
 | R | Toggle flight / traversal |
 | Space | Ground jump / swing hop / wall jump |
 | WASD | Air steer |

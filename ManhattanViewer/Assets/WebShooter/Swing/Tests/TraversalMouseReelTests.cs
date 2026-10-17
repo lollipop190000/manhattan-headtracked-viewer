@@ -9,11 +9,12 @@ namespace WebShooter.Swing.Tests
         private Mouse mouse;private Keyboard keyboard;private bool active;private HumanTraversalInput human;
         [SetUp] public void SetUp(){mouse=InputSystem.AddDevice<Mouse>();keyboard=InputSystem.AddDevice<Keyboard>();active=true;human=new HumanTraversalInput(null,()=>active);}
         [TearDown] public void TearDown(){InputSystem.RemoveDevice(mouse);InputSystem.RemoveDevice(keyboard);}
-        private void Buttons(bool right=false,bool left=false,bool e=false,bool q=false)
+        private void Buttons(bool right=false,bool left=false,bool e=false,bool q=false,bool z=false)
         {
             var state=new MouseState();if(right)state=state.WithButton(MouseButton.Right);if(left)state=state.WithButton(MouseButton.Left);
             InputSystem.QueueStateEvent(mouse,state);
-            InputSystem.QueueStateEvent(keyboard,e?(q?new KeyboardState(Key.E,Key.Q):new KeyboardState(Key.E)):(q?new KeyboardState(Key.Q):new KeyboardState()));
+            var keys=new System.Collections.Generic.List<Key>();if(e)keys.Add(Key.E);if(q)keys.Add(Key.Q);if(z)keys.Add(Key.Z);
+            InputSystem.QueueStateEvent(keyboard,new KeyboardState(keys.ToArray()));
             InputSystem.Update();
         }
         [Test] public void RightButtonIsContinuousReelAndNeverRelease()
@@ -26,9 +27,15 @@ namespace WebShooter.Swing.Tests
         {
             Buttons(right:true,e:true);
             Assert.That(human.ReadActions().reel,Is.EqualTo(1));
-            Buttons(right:true,e:true,q:true);Assert.That(human.ReadActions().reel,Is.Zero);
-            Buttons(q:true);
+            Buttons(right:true,e:true,z:true);Assert.That(human.ReadActions().reel,Is.Zero);
+            Buttons(z:true);
             Assert.That(human.ReadActions().reel,Is.EqualTo(-1));
+        }
+        [Test] public void QChargesLaunchAndNeverPaysOut()
+        {
+            Buttons();human.ReadActions();Buttons(q:true);var a=human.ReadActions();
+            Assert.That(a.launchHeld,Is.True,"held Q");Assert.That(a.launchPressed,Is.True,"Q down edge");Assert.That(a.reel,Is.Zero);
+            Buttons();a=human.ReadActions();Assert.That(a.launchReleased,Is.True,"Q up edge");Assert.That(a.launchHeld,Is.False);
         }
         [Test] public void InactiveInputCannotReel()
         {
