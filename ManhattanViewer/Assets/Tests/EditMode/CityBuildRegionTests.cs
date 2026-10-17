@@ -22,4 +22,18 @@ public class CityBuildRegionTests
         var r = Region(); r.radius = float.NaN; Assert.Throws<ArgumentException>(() => r.Validate());
         r.radius = 450; r.halfWidth = -1; Assert.Throws<ArgumentException>(() => r.Validate());
     }
+    [TestCase(0,1000,true)][TestCase(1000,1000,false)][TestCase(190,1000,false)]
+    public void RotatedArmsFollowTheStreet(float x,float z,bool expected)
+    {
+        var r=Region();r.yaw=28.46516f;
+        var point=Quaternion.Euler(0,r.yaw,0)*new Vector3(x,0,z);
+        Assert.That(r.Intersects(new Bounds(point,Vector3.one)),Is.EqualTo(expected));
+    }
+    [Test] public void RotatedTileTouchingCorridorEdgeIsRetained()
+    {
+        var r=Region();r.yaw=28.46516f;
+        var point=Quaternion.Euler(0,r.yaw,0)*new Vector3(155,0,1000);
+        Assert.That(r.Intersects(new Bounds(point,Vector3.one*20)),Is.True);
+        r.yaw=float.NaN;Assert.Throws<ArgumentException>(()=>r.Validate());
+    }
 }
