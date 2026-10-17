@@ -20,10 +20,13 @@ namespace WebShooter.Swing
         private HeadTrackedDisplay display;
         private Material glove;
         private Texture2D fabric;
-        private float extension, grip;
+        private float grip;
+        private readonly float[] handExtension=new float[2];
         private readonly Quaternion[] smoothedPose = { Quaternion.identity, Quaternion.identity };
         public bool LeftSelected { get; private set; }
         public Vector3 WebOrigin { get; private set; }
+        public Vector3 LeftWebOrigin { get; private set; }
+        public Vector3 RightWebOrigin { get; private set; }
         public static float WristDepth(float eyeZ, float scale, float reach) =>
             Mathf.Lerp(.08f * scale, -Mathf.Min(.20f * scale, Mathf.Abs(eyeZ) * .45f), reach);
         public static bool ShouldShow(bool enabled, bool paused, bool selected, float extension) =>
@@ -115,10 +118,10 @@ namespace WebShooter.Swing
         private void LateUpdate()
         {
             if(display==null || display.ScreenPlane==null || input==null) return;
-            bool active=input.Enabled && (input.Flying || input.Body.Attached);
+            bool dual=input.Launch.Charging;
+            bool active=input.Enabled && (dual || input.Flying || input.Body.Attached);
             float dt=input.Paused?0:Mathf.Min(Time.deltaTime,.1f);
-            extension=Mathf.MoveTowards(extension,active?1:0,dt*9);
-            grip=Mathf.MoveTowards(grip,input.Body.Attached?1:0,dt*7);
+            grip=Mathf.MoveTowards(grip,dual?Mathf.Lerp(.35f,1,input.Launch.Charge):input.Body.Attached?1:0,dt*7);
             Rect aperture=display.ProjectionScreenRectMeters;
             float scale=Mathf.Clamp(aperture.width/.55f,.55f,1.8f)*.78f;
             VisibleHands=0;
@@ -126,15 +129,17 @@ namespace WebShooter.Swing
             {
                 var h=hands[i];if(h==null)continue;
                 h.root.SetParent(display.ScreenPlane,false);h.root.localPosition=Vector3.zero;h.root.localRotation=Quaternion.identity;h.root.localScale=Vector3.one;
-                float side=i==0?-1:1;bool selected=(i==0)==LeftSelected;
-                h.renderer.enabled=ShouldShow(input.Enabled,input.Paused,selected,extension);
+                float side=i==0?-1:1;bool selected=dual || (i==0)==LeftSelected;
+                handExtension[i]=Mathf.MoveTowards(handExtension[i],active && selected?1:0,dt*9);
+                h.renderer.enabled=ShouldShow(input.Enabled,input.Paused,selected || handExtension[i]>.01f,handExtension[i]);
                 if(h.renderer.enabled) VisibleHands++;
-                float reach=selected?Mathf.SmoothStep(0,1,extension):0;
+                float reach=Mathf.SmoothStep(0,1,handExtension[i]);
                 Vector3 wrist=new Vector3(aperture.center.x+side*aperture.width*(.36f-.13f*reach),aperture.yMin+aperture.height*(-.05f+.34f*reach),WristDepth(display.EyePositionMeters.z,scale,reach));
+                if(dual){wrist.x+=side*aperture.width*.09f;wrist.y-=input.Launch.Charge*.035f*scale;wrist.z-=input.Launch.Charge*.025f*scale;}
                 Vector3 elbow=new Vector3(aperture.center.x+side*aperture.width*.52f,aperture.yMin-.13f*scale,Mathf.Lerp(.16f,-.055f,reach)*scale);
                 Vector3 shoulder=new Vector3(aperture.center.x+side*aperture.width*.65f,aperture.yMin-.32f*scale,.28f*scale);
                 if(selected) SelectedWristDepth=wrist.z;
-                Vector3 target=input.Body.Attached?input.Body.Anchor:input.ShotTarget;
+                Vector3 target=dual?(i==0?input.Launch.Left:input.Launch.Right):input.Body.Attached?input.Body.Anchor:input.ShotTarget;
                 var worldOrigin=display.ScreenPlane.TransformPoint(wrist);
                 // Fingers point up/out during the web gesture; the palm turns towards tension when gripping.
                 Quaternion pose=Quaternion.Euler(-48f+grip*13f,side*(10f-16f*grip),side*(-18f+grip*30f));
@@ -143,7 +148,7 @@ namespace WebShooter.Swing
                     var camera=Camera.main;
                     if(camera!=null){var toward=display.ScreenPlane.InverseTransformDirection(target-input.Body.Position);if(toward.sqrMagnitude>.1f) pose=Quaternion.Slerp(pose,Quaternion.LookRotation(toward.normalized,Vector3.up),grip*.35f);}
                 }
-                if(extension<.05f) smoothedPose[i]=pose;
+                if(handExtension[i]<.05f) smoothedPose[i]=pose;
                 smoothedPose[i]=Quaternion.Slerp(smoothedPose[i],pose,1f-Mathf.Exp(-16f*dt));pose=smoothedPose[i];
                 Segment(h.bones[0],shoulder,elbow,.039f*scale,.033f*scale);
                 Segment(h.bones[1],elbow,wrist,.029f*scale,.024f*scale);
@@ -168,7 +173,9 @@ namespace WebShooter.Swing
                         Segment(h.bones[bone++],joint,end,(thumb?.0105f:finger==3?.0068f:.0078f)*taper*scale,(thumb?.009f:.007f)*taper*scale);joint=end;
                     }
                 }
-                if(selected) WebOrigin=display.ScreenPlane.TransformPoint(wrist+pose*new Vector3(0,Mathf.Lerp(-.023f,-.012f,grip),Mathf.Lerp(.025f,.075f,grip))*scale);
+                var webOrigin=display.ScreenPlane.TransformPoint(wrist+pose*new Vector3(0,Mathf.Lerp(-.023f,-.012f,grip),Mathf.Lerp(.025f,.075f,grip))*scale);
+                if(i==0)LeftWebOrigin=webOrigin;else RightWebOrigin=webOrigin;
+                if(selected)WebOrigin=webOrigin;
             }
         }
         private void OnDestroy(){foreach(var h in hands)if(h!=null){if(h.mesh!=null)Destroy(h.mesh);if(h.root!=null)Destroy(h.root.gameObject);}if(glove!=null)Destroy(glove);if(fabric!=null)Destroy(fabric);}

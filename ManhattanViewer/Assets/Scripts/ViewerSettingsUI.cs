@@ -13,6 +13,8 @@ namespace Manhattan.Viewer
         private Font font;
         private GameObject drawer, setup;
         private UnityEngine.UI.Text diagnostics, message, captureMessage, viewportMessage;
+        private UnityEngine.UI.Text movementHint;
+        public void SetMovementHint(string value){if(movementHint!=null)movementHint.text=value;}
         private ViewerViewportRuler viewportRuler;
         private ViewerMeasurementWorkflow measurement;
         private ViewerCameraSelection cameras;
@@ -42,7 +44,7 @@ namespace Manhattan.Viewer
             var header = Rect("Header", canvas.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -24), new Vector2(670, 132));
             header.pivot = new Vector2(0, 1);
             Text(header, "MANHATTAN  /  HEAD TRACKED", 23, 0, 0, 670, 32);
-            Text(header, "WASD fly  ·  Q/E descend / rise  ·  Mouse look  ·  Esc settings", 15, 0, -38, 670, 28);
+            movementHint=Text(header, "WASD fly  ·  Q/E descend / rise  ·  Mouse look  ·  Esc settings", 15, 0, -38, 670, 28);
             var comparisons = Rect("Comparisons", header, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, -80), new Vector2(670, 34));
             comparisons.pivot = new Vector2(0, 1);
             CompareButton(comparisons, "Tracking", 0, () => app.Preferences.tracking, value => { app.Preferences.tracking = value; app.Display.TrackingEnabled = value; app.SavePreferences(); });

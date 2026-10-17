@@ -19,10 +19,13 @@ namespace WebShooter.Swing
         }
         [Serializable] public sealed class Result
         {
-            public string route, geometry, failure="",lastCollider="";
+            public string pilot,route, geometry, failure="",lastCollider="";
             public int fixtureBuildings,beforeTurn,afterTurn,seed,fps,shots,attachments,releases,contacts,groundSteps,wallSteps,floorTouches,resets,preventiveReleases,preventiveRefires,guardedReelSteps,wallBrakeSteps;
             public bool passed;
-            public bool assisted;
+            public bool assisted; public bool groundLaunch;public float launchSpeed,chargeDisplacement;
+            public int previewPlans,previewMisses,snapPreventions,preventiveRopeReleases;
+            public float peakSpeed,maxFrameTravel,maxSubstepTravel;
+            public float routeProgress,requiredProgress;
             public float roadWidth,seconds,minHeight=10000,maxHeight,finalHeight,minWallClearance=10000,meanSpeed,finalSpeed,headingDegrees,forwardMetres,rightMetres,maxAttachSeconds,tautSeconds,reelSeconds,minAttachedSeconds=10000,minTautLinkSeconds=10000,meanSampleMilliseconds,maxSampleMilliseconds,endX,endY,endZ,turnStartX,turnStartZ,turnApproachClearance;
         }
         public struct Frame
@@ -41,21 +44,36 @@ namespace WebShooter.Swing
             private readonly List<Mesh> meshes=new List<Mesh>();
             public readonly Dictionary<Collider,float> Roofs=new Dictionary<Collider,float>();
             public readonly bool City;
+            public readonly bool Grid;
+            public readonly float GridSpacing;
             public readonly float LegDistance,ReelCeiling;
             public readonly BuildingRecord[] Records;
-            public Map(float halfRoad=30f,CityCatalog city=null)
+            public Map(float halfRoad=30f,CityCatalog city=null,bool grid=false,float gridSpacing=180)
             {
                 HalfRoad=halfRoad;
-                City=city!=null;LegDistance=City?50:60;ReelCeiling=City?55:85;
+                GridSpacing=gridSpacing;
+                City=city!=null;Grid=grid;LegDistance=City?50:60;ReelCeiling=City?55:85;
                 if(City){Records=CityChainGeometry.Create(city,Center,objects,meshes,Roofs);Physics.SyncTransforms();return;}
                 var records=new List<BuildingRecord>();
+                if(Grid)
+                {
+                    for(int x=-6;x<6;x++)for(int z=-6;z<6;z++)
+                    {
+                        var bounds=new Bounds(Center+new Vector3((x+.5f)*gridSpacing,100,(z+.5f)*gridSpacing),new Vector3(gridSpacing-HalfRoad*2,200,gridSpacing-HalfRoad*2));
+                        var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.name=$"Grid block {x}/{z}";go.layer=30;
+                        go.transform.position=bounds.center;go.transform.localScale=bounds.size;objects.Add(go);Roofs[go.GetComponent<Collider>()]=200;
+                        records.Add(new BuildingRecord{id=go.name,height=200,groundHeight=0,cityBounds=bounds,
+                            footprint=new[]{new Vector2(bounds.min.x,bounds.min.z),new Vector2(bounds.max.x,bounds.min.z),new Vector2(bounds.max.x,bounds.max.z),new Vector2(bounds.min.x,bounds.max.z)}});
+                    }
+                    Records=records.ToArray();Physics.SyncTransforms();return;
+                }
                 // A finite-height, street-level cross with four solid blocks.
                 // Long roads are needed for twenty separate airborne attachments.
                 foreach(int x in new[]{-1,1}) foreach(int z in new[]{-1,1})
                 {
                     var bounds=new Bounds(Center+new Vector3(x*(1000+HalfRoad),100,z*(1000+HalfRoad)),new Vector3(2000,200,2000));
                     var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.name=$"Chain block {x}/{z}";go.layer=30;
-                    go.transform.position=bounds.center;go.transform.localScale=bounds.size;objects.Add(go);
+                    go.transform.position=bounds.center;go.transform.localScale=bounds.size;objects.Add(go);Roofs[go.GetComponent<Collider>()]=200;
                     records.Add(new BuildingRecord { id=go.name,height=200,groundHeight=0,cityBounds=bounds,
                         footprint=new[]{new Vector2(bounds.min.x,bounds.min.z),new Vector2(bounds.max.x,bounds.min.z),
                             new Vector2(bounds.max.x,bounds.max.z),new Vector2(bounds.min.x,bounds.max.z)} });
@@ -64,12 +82,12 @@ namespace WebShooter.Swing
             }
             public void Dispose(){foreach(var go in objects)UnityEngine.Object.DestroyImmediate(go);foreach(var mesh in meshes)UnityEngine.Object.DestroyImmediate(mesh);}
         }
-        public static Result Run(Map map,int before,int after,int seed,int fps,Action<Frame> observe=null,bool assisted=true)
+        public static Result Run(Map map,int before,int after,int seed,int fps,Action<Frame> observe=null,bool assisted=true,int turnSign=1,bool groundLaunch=false,bool zigzag=false,bool modernPilot=true)
         {
             bool turn=after>0;
-            var result=new Result{route=turn?"right":"straight",beforeTurn=before,afterTurn=after,seed=seed,fps=fps,assisted=assisted,roadWidth=map.HalfRoad*2};
-            result.fixtureBuildings=map.Records.Length;
-            result.geometry=map.City?"Manhattan development footprints":"controlled cross";
+            var result=new Result{route=zigzag?(turnSign<0?"left-right":"right-left"):turn?(turnSign<0?"left":"right"):"straight",beforeTurn=before,afterTurn=after,seed=seed,fps=fps,assisted=assisted,roadWidth=map.HalfRoad*2};
+            result.pilot=modernPilot?"surface-v2":"legacy-v1";result.fixtureBuildings=map.Records.Length;
+            result.geometry=map.City?"Manhattan development footprints":map.Grid?"controlled grid":"controlled cross";
             var random=new System.Random(seed);
             var rig=new GameObject("Air chain replay input");
             var flight=rig.AddComponent<FreeFlightController>();flight.enabled=false;
@@ -80,15 +98,35 @@ namespace WebShooter.Swing
             motion.ReconnectAssist.enabled=true;
             motion.Collision.CitySolids=new CitySolidRecovery(map.Records,motion.Body);
             float startZ=turn?-before*map.LegDistance-45f:-(10*map.LegDistance+45);
-            Vector3 start=map.Center+new Vector3(0,45,startZ);
-            flight.SetPose(start,Quaternion.identity);motion.Activate();motion.Body.Velocity=Vector3.forward*(36f+seed%5);
+            Vector3 start=map.Center+new Vector3(0,groundLaunch?settings.groundHeight+settings.eyeHeight:45,startZ);
+            flight.SetPose(start,Quaternion.identity);motion.Activate();motion.Body.Velocity=groundLaunch?Vector3.zero:Vector3.forward*(36f+seed%5);
+            result.groundLaunch=groundLaunch;
+            if(groundLaunch)
+            {
+                controls.Actions=new TraversalActions{active=true,launchPressed=true,launchHeld=true,aim=new Ray(start,Vector3.forward)};
+                for(int i=0;i<Mathf.CeilToInt(1.5f*fps);i++){var c=motion.Sample(1f/fps);flight.SetPose(c.cityPosition,c.cityRotation);}
+                result.chargeDisplacement=Vector3.Distance(start,motion.Body.Position);
+                controls.Actions=new TraversalActions{active=true,launchReleased=true,aim=new Ray(start,Vector3.forward)};
+                var launchCommand=motion.Sample(1f/fps);flight.SetPose(launchCommand.cityPosition,launchCommand.cityRotation);
+                result.launchSpeed=motion.Launch.LastLaunchVelocity.magnitude;
+                if(motion.Launch.Launches!=1){result.failure="ground launch failed: "+motion.Launch.Status;motion.Collision.Dispose();UnityEngine.Object.DestroyImmediate(rig);return result;}
+            }
+            if(groundLaunch && modernPilot)
+            {
+                controls.Actions=new TraversalActions{active=true};
+                for(int i=0;i<Mathf.CeilToInt(.3f*fps);i++){var c=motion.Sample(1f/fps);flight.SetPose(c.cityPosition,c.cityRotation);}
+            }
+            int floorBaseline=motion.Body.FloorContactSequence;
+            Vector3 laneOrigin=map.Center;
             float attachedAt=-1,linkTaut=0;
             motion.WebAttached+=_=>{attachedAt=motion.SimulatedTime;linkTaut=0;result.attachments++;result.maxAttachSeconds=Mathf.Max(result.maxAttachSeconds,motion.ShotAge);};
             motion.WebReleased+=()=>{result.releases++;if(attachedAt>=0){result.minAttachedSeconds=Mathf.Min(result.minAttachedSeconds,motion.SimulatedTime-attachedAt);result.minTautLinkSeconds=Mathf.Min(result.minTautLinkSeconds,linkTaut);attachedAt=-1;}};
-            float speedSum=0;int steps=0;double sampleTotal=0;int samples=0;
+            float speedSum=0;int steps=0;double sampleTotal=0;int samples=0;var previousStep=motion.Body.Position;
             motion.PhysicsStepped+=sample=>
             {
                 steps++;speedSum+=sample.velocity.magnitude;
+                result.peakSpeed=Mathf.Max(result.peakSpeed,sample.velocity.magnitude);
+                result.maxSubstepTravel=Mathf.Max(result.maxSubstepTravel,Vector3.Distance(previousStep,sample.position));previousStep=sample.position;
                 result.minHeight=Mathf.Min(result.minHeight,sample.position.y-settings.eyeHeight);
                 result.maxHeight=Mathf.Max(result.maxHeight,sample.position.y-settings.eyeHeight);
                 if(sample.collided)result.contacts++;
@@ -98,13 +136,16 @@ namespace WebShooter.Swing
                 if(motion.Body.Attached && motion.ReelInput>0)result.reelSeconds+=sample.dt;
             };
             float dt=1f/fps;
+            using var preview=map.City && modernPilot?new TraversalPreviewPilot():null;
             try
             {
                 int total=turn?before+after:before;
                 for(int cycle=0;cycle<total;cycle++)
                 {
                     bool outgoing=turn && cycle>=before;
-                    Vector3 direction=outgoing?Vector3.right:Vector3.forward;
+                    bool second=zigzag && cycle>=before+after/2;
+                    laneOrigin=second?map.Center+Vector3.right*(turnSign*map.GridSpacing):map.Center;
+                    Vector3 direction=outgoing && !second?Vector3.right*turnSign:Vector3.forward;
                     Vector3 right=Vector3.Cross(Vector3.up,direction);
                     float side=outgoing?((cycle-before)%2==0?-1:1):(cycle%2==0?1:-1);
                     Vector3 p=motion.Body.Position;
@@ -117,7 +158,9 @@ namespace WebShooter.Swing
                     target.y=Mathf.Min(190,p.y+65);
                     if(outgoing)target.z=map.Center.z+map.HalfRoad*side;
                     else target.x=map.Center.x+map.HalfRoad*side;
-                    if(map.City)
+                    if(second){target=p+direction*35+right*(map.HalfRoad*side-Vector3.Dot(p-laneOrigin,right));target.y=Mathf.Min(190,p.y+65);}
+                    if(modernPilot && outgoing && !second && motion.Body.Position.z<map.Center.z-map.HalfRoad*.5f)target.z=map.Center.z+map.HalfRoad;
+                    if(map.City || modernPilot)
                     {
                         bool ready=false;
                         for(int wait=0;wait<=fps;wait++)
@@ -131,7 +174,12 @@ namespace WebShooter.Swing
                     float error=((float)random.NextDouble()*2-1)*3f;
                     float timingError=((float)random.NextDouble()*2-1)*.08f;
                     float coastSeconds=.16f+((float)random.NextDouble()*2-1)*.04f;
-                    int frames=Mathf.CeilToInt(2.5f*fps);
+                    float plannedReel=.12f;
+                    bool needsPlan=preview!=null && outgoing && (turnSign<0 || !preview.CanHold(motion,flight.transform.rotation,direction,laneOrigin,target,error,fps));
+                    bool planned=needsPlan && preview.Select(motion,flight.transform.rotation,direction,laneOrigin,target,error,fps,out target,out plannedReel);
+                    if(planned)result.pilot="surface-v2+controller-preview";
+                    if(needsPlan){if(planned)result.previewPlans++;else result.previewMisses++;}
+                    int frames=Mathf.CeilToInt((planned?.5f:2.5f)*fps);
                     float attachmentTime=-1;
                     for(int frame=0;frame<frames;frame++)
                     {
@@ -141,57 +189,65 @@ namespace WebShooter.Swing
                         SetPilot(direction,right);
                         if(attachmentTime<0 && motion.Body.Attached)attachmentTime=frame/(float)fps;
                         controls.Actions=new TraversalActions{active=true,firePressed=frame==0,fireHeld=true,
-                            reel=attachmentTime<0 || frame/(float)fps-attachmentTime<.12f ||
+                            reel=planned?(frame*dt<plannedReel+.05f?1:0):attachmentTime<0 || frame/(float)fps-attachmentTime<.12f ||
                                 (frame/(float)fps-attachmentTime<.45f && p.y<map.ReelCeiling)?1:0,
                             aim=new Ray(p,Quaternion.AngleAxis(error,Vector3.up)*(target-p)),viewportX=side>0?.75f:.25f};
                         if(frame==0)result.shots++;
                         Advance(cycle);
                         if(Failed())return Finish();
-                        float goal=outgoing?(cycle-before+1)*map.LegDistance:(cycle+1)*map.LegDistance;
-                        float progress=outgoing?motion.Body.Position.x-map.Center.x:motion.Body.Position.z-start.z;
-                        if(map.City && attachmentTime>=0 && frame/(float)fps-attachmentTime>=.32f && Risky(.45f))
+                        if(planned)continue;
+                        float turnLead=Mathf.Clamp(Vector3.ProjectOnPlane(motion.Body.Velocity,Vector3.up).magnitude/(settings.chain.redirectDegrees*Mathf.Deg2Rad)+12,20,map.GridSpacing*.45f);
+                        float goal=second?(cycle-before-after/2+1)*(zigzag?map.GridSpacing/(after/2):map.LegDistance):outgoing?(cycle-before+1)*(zigzag?(map.GridSpacing-turnLead)/(after/2):map.LegDistance):(cycle+1)*map.LegDistance;
+                        float progress=second?motion.Body.Position.z-map.Center.z:outgoing?(motion.Body.Position.x-map.Center.x)*turnSign:motion.Body.Position.z-start.z;
+                        if((map.City || modernPilot) && attachmentTime>=0 && frame/(float)fps-attachmentTime>=.32f && linkTaut>=.06f && Risky(.45f))
                         {result.preventiveReleases++;break;}
-                        if(map.City && attachmentTime>=0 && frame/(float)fps-attachmentTime>=.35f &&
-                            (!outgoing || Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(motion.Body.Velocity.x,motion.Body.Velocity.z)*Mathf.Rad2Deg,90))<25) &&
+                        if((map.City || modernPilot) && attachmentTime>=0 && frame/(float)fps-attachmentTime>=.35f && linkTaut>=.06f &&
+                            (!outgoing || Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(motion.Body.Velocity.x,motion.Body.Velocity.z)*Mathf.Rad2Deg,Mathf.Atan2(direction.x,direction.z)*Mathf.Rad2Deg))<25) &&
                             (motion.Body.Velocity.y>3 || frame/(float)fps-attachmentTime>.95f))break;
                         if(attachmentTime>=0 && frame/(float)fps-attachmentTime>(map.City ? .32f : .4f) &&
                             progress>=goal-Vector3.Dot(motion.Body.Velocity,direction)*(coastSeconds-timingError))break;
                     }
                     // Distinct mouse-up and airborne coast between every shot.
-                    int coast=Mathf.CeilToInt((map.City?2.5f:coastSeconds)*fps);
+                    int coast=Mathf.CeilToInt((planned?.2f:map.City || modernPilot?2.5f:coastSeconds)*fps);
                     for(int frame=0;frame<coast;frame++)
                     {
                         SetPilot(direction,right);
                         controls.Actions=new TraversalActions{active=true};Advance(cycle);
                         if(Failed())return Finish();
-                        float goal=outgoing?(cycle-before+1)*map.LegDistance:(cycle+1)*map.LegDistance;
-                        float progress=outgoing?motion.Body.Position.x-map.Center.x:motion.Body.Position.z-start.z;
-                        if(map.City && frame/(float)fps>=coastSeconds && progress>=goal)break;
-                        if(map.City && frame/(float)fps>=coastSeconds && Risky(.65f)){result.preventiveRefires++;break;}
+                        float turnLead=Mathf.Clamp(Vector3.ProjectOnPlane(motion.Body.Velocity,Vector3.up).magnitude/(settings.chain.redirectDegrees*Mathf.Deg2Rad)+12,20,map.GridSpacing*.45f);
+                        float goal=second?(cycle-before-after/2+1)*(zigzag?map.GridSpacing/(after/2):map.LegDistance):outgoing?(cycle-before+1)*(zigzag?(map.GridSpacing-turnLead)/(after/2):map.LegDistance):(cycle+1)*map.LegDistance;
+                        float progress=second?motion.Body.Position.z-map.Center.z:outgoing?(motion.Body.Position.x-map.Center.x)*turnSign:motion.Body.Position.z-start.z;
+                        if(planned)continue;
+                        if((map.City || modernPilot) && frame/(float)fps>=coastSeconds && progress>=goal)break;
+                        if((map.City || modernPilot) && frame/(float)fps>=coastSeconds && Risky(.65f)){result.preventiveRefires++;break;}
                     }
                     if(result.attachments<cycle+1){result.failure="shot did not attach";return Finish();}
                 }
                 // Do not count merely firing the last web: verify its release
                 // and sustained collision-free airborne travel afterward too.
-                for(int frame=0;frame<Mathf.CeilToInt((map.City?1.2f:.35f)*fps);frame++)
+                result.requiredProgress=turn?Mathf.Max(map.HalfRoad+5,(zigzag?map.GridSpacing:after*map.LegDistance)*.6f):before*map.LegDistance*.6f;
+                for(int frame=0;frame<Mathf.CeilToInt(2f*fps);frame++)
                 {
-                    var direction=turn?Vector3.right:Vector3.forward;
+                    var direction=turn && !zigzag?Vector3.right*turnSign:Vector3.forward;
                     SetPilot(direction,Vector3.Cross(Vector3.up,direction));controls.Actions=new TraversalActions{active=true};Advance(total);if(Failed())return Finish();
-                    if(frame/(float)fps>=.35f && (!turn || Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(motion.Body.Velocity.x,motion.Body.Velocity.z)*Mathf.Rad2Deg,90))<=15))break;
+                    float completedDistance=turn?(zigzag?motion.Body.Position.z-map.Center.z:(motion.Body.Position.x-map.Center.x)*turnSign):motion.Body.Position.z-start.z;
+                    if(frame/(float)fps>=.35f && completedDistance>=result.requiredProgress && (!turn || Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(motion.Body.Velocity.x,motion.Body.Velocity.z)*Mathf.Rad2Deg,zigzag?0:turnSign*90))<=15))break;
                 }
-                if(turn && Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(motion.Body.Velocity.x,motion.Body.Velocity.z)*Mathf.Rad2Deg,90))>15)result.failure="right turn incomplete";
+                if(turn && Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(motion.Body.Velocity.x,motion.Body.Velocity.z)*Mathf.Rad2Deg,zigzag?0:turnSign*90))>15)result.failure="turn incomplete";
                 if(result.attachments!=total)result.failure="attachment count mismatch";
                 if(result.minAttachedSeconds<.3f)result.failure="insufficient attached swing duration";
                 if(result.minTautLinkSeconds<.05f)result.failure="link never became taut long enough";
+                result.routeProgress=turn?(zigzag?motion.Body.Position.z-map.Center.z:(motion.Body.Position.x-map.Center.x)*turnSign):motion.Body.Position.z-start.z;
+                if(result.routeProgress<result.requiredProgress)result.failure="route made insufficient forward progress";
                 result.passed=result.failure.Length==0;return Finish();
             }
             finally{motion.Collision.Dispose();UnityEngine.Object.DestroyImmediate(rig);}
 
             Vector3 Desired(Vector3 direction,Vector3 right,Vector3 position)
             {
-                float lateral=Vector3.Dot(position-map.Center,right);
+                float lateral=Vector3.Dot(position-laneOrigin,right);
                 float correction=lateral*.035f;
-                if(map.City)correction=Mathf.Clamp(correction,-.5f,.5f);
+                if(map.City || modernPilot)correction=Mathf.Clamp(correction,-.5f,.5f);
                 return (direction-right*correction).normalized;
             }
             void SetPilot(Vector3 direction,Vector3 right)
@@ -234,10 +290,11 @@ namespace WebShooter.Swing
             }
             void Advance(int cycle)
             {
-                var c=motion.Sample(dt);samples++;sampleTotal+=motion.LastSampleMilliseconds;result.maxSampleMilliseconds=Mathf.Max(result.maxSampleMilliseconds,(float)motion.LastSampleMilliseconds);flight.SetPose(c.cityPosition,c.cityRotation);result.seconds+=dt;
+                var prior=motion.Body.Position;var c=motion.Sample(dt);samples++;sampleTotal+=motion.LastSampleMilliseconds;result.maxSampleMilliseconds=Mathf.Max(result.maxSampleMilliseconds,(float)motion.LastSampleMilliseconds);flight.SetPose(c.cityPosition,c.cityRotation);result.seconds+=dt;
+                result.maxFrameTravel=Mathf.Max(result.maxFrameTravel,Vector3.Distance(prior,c.cityPosition));
                 Vector3 p=motion.Body.Position;
                 float clearance=Mathf.Max(map.HalfRoad-Mathf.Abs(p.x-map.Center.x),map.HalfRoad-Mathf.Abs(p.z-map.Center.z))-.3f;
-                if(map.City)clearance=CityChainGeometry.Clearance(map.Records,p);
+                if(map.City || map.Grid)clearance=CityChainGeometry.Clearance(map.Records,p);
                 result.minWallClearance=Mathf.Min(result.minWallClearance,clearance);
                 observe?.Invoke(new Frame{run=result,time=result.seconds,position=p,velocity=motion.Body.Velocity,
                     attached=motion.Body.Attached,cycle=cycle,reel=motion.ReelInput,contacts=result.contacts,target=motion.ShotTarget,anchor=motion.Body.Anchor,
@@ -247,7 +304,7 @@ namespace WebShooter.Swing
             bool Failed()
             {
                 if(motion.Body.ResetSequence!=1){result.failure="unexpected physics reset";return true;}
-                if(result.contacts>0 || motion.Body.FloorContactSequence>0 || result.groundSteps>0 || result.wallSteps>0 || result.minHeight<=.05f)
+                if(result.contacts>0 || motion.Body.FloorContactSequence>floorBaseline || result.groundSteps>0 || result.wallSteps>0 || result.minHeight<=.05f)
                 {result.failure="ground or wall contact";return true;}
                 if(!map.City && motion.Body.Position.y>195){result.failure="over roof, street test invalid";return true;}
                 if(map.City && result.minWallClearance<0){result.failure="left street over footprint";return true;}
@@ -255,8 +312,9 @@ namespace WebShooter.Swing
             }
             Result Finish()
             {
-                result.floorTouches=motion.Body.FloorContactSequence;result.resets=motion.Body.ResetSequence;
+                result.floorTouches=motion.Body.FloorContactSequence-floorBaseline;result.resets=motion.Body.ResetSequence;
                 result.guardedReelSteps=motion.Body.ReelGuardSequence;
+                result.snapPreventions=motion.ConstraintSnapPreventions;result.preventiveRopeReleases=motion.PreventiveRopeReleases;
                 result.wallBrakeSteps=motion.WallApproachBrakeSteps;
                 var end=motion.Body.Position-map.Center;result.endX=end.x;result.endY=end.y;result.endZ=end.z;
                 result.lastCollider=motion.Body.LastCollisionName;

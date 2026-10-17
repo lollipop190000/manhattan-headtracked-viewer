@@ -41,6 +41,9 @@ namespace WebShooter.Swing
     public sealed class SwingPhysics
     {
         public SwingSettings Settings { get; }
+        // Diagnostic rollout: settings are shared read-only; all mutable body
+        // state is a value type. Never apply a predicted pose to the live body.
+        public SwingPhysics CopyForPrediction() => (SwingPhysics)MemberwiseClone();
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
         public bool Attached { get; private set; }
@@ -65,7 +68,7 @@ namespace WebShooter.Swing
                 return Attached && d.magnitude>=RopeLength-.05f && Vector3.Dot(Velocity,d.normalized)>=-.01f;
             }
         }
-        private bool SwingSteeringPlane => Attached && (!Settings.chain.enabled || !Settings.chain.respectSlackSteering || RopeLoaded);
+        private bool SwingSteeringPlane => Attached && (!Settings.chain.enabled || !Settings.chain.respectSlackSteering || RopeLoaded && !LimitCloseReel);
         public float AssistedRedirectRate
         {
             get
@@ -248,6 +251,13 @@ namespace WebShooter.Swing
                 Velocity += yankDirection * Mathf.Max(0f,Settings.reelSpeed-Vector3.Dot(Velocity,yankDirection)) * Settings.features.yankStartBlend;
             return true;
         }
+        public void Launch(Vector3 velocity)
+        {
+            Release();
+            if(wallRunning)EndWallRun(.3f);
+            Grounded=false;wallEscapeTime=0;wallCooldown=Mathf.Max(wallCooldown,.3f);
+            releaseRedirectRemaining=Settings.chain.releaseRedirectSeconds;Velocity=velocity;
+        }
         public void FinishYank()
         {
             if(!yanking) return;
@@ -275,6 +285,13 @@ namespace WebShooter.Swing
             if(Settings.features.resetLengthAtWrap)
             { RopeLength = Mathf.Max(Settings.minRopeLength,Vector3.Distance(Position,anchor)); return; }
             RopeLength = Mathf.Max(Mathf.Max(Settings.minRopeLength, Vector3.Distance(Position, anchor)), RopeLength - fixedLengthChange);
+        }
+        // A newly introduced surface corner can leave centimetres of effective
+        // rope. Pay out slack instead of forcing an unsafe tiny-radius orbit.
+        public void GuardWrappedRadius()
+        {
+            if(Attached && Settings.chain.enabled && Settings.chain.closeAnchorReelGuard && AssistStrength>0)
+                RopeLength=Mathf.Max(RopeLength,Velocity.magnitude*Settings.chain.anchorReactionSeconds*AssistStrength);
         }
 
         public void AssistRope(float dt)

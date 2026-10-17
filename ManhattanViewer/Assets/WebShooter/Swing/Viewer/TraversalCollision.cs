@@ -11,11 +11,25 @@ namespace WebShooter.Swing
         public const int Mask = 1 << 30;
         public const float Radius = .3f, Skin = .02f;
         private CapsuleCollider probe;
+        private bool ownsProbe=true;
         private readonly Collider[] overlaps = new Collider[128];
         public CitySolidRecovery CitySolids { get; set; }
         public TraversalCollision(FloatingOrigin origin, SwingPhysics body) { this.origin = origin; this.body = body; }
+        public TraversalCollision ForPrediction(SwingPhysics target)
+        {
+            return new TraversalCollision(origin,target){CitySolids=CitySolids?.ForBody(target),probe=probe,ownsProbe=false,
+                cornerRemaining=cornerRemaining,CornerThreat=CornerThreat,CornerNormal=CornerNormal};
+        }
         private Vector3 Offset => origin != null ? origin.Offset : Vector3.zero;
         private Vector3 Bottom(Vector3 eye) => eye - Vector3.up * (body.Settings.eyeHeight - Radius);
+        public bool RopeThreat(Vector3 city,Vector3 requested,Vector3 velocity,out Vector3 normal)
+        {
+            normal=Vector3.zero;var delta=requested-city;if(delta.sqrMagnitude<.000001f)return false;
+            float ahead=Mathf.Max(.5f,velocity.magnitude*.18f);
+            if(!Physics.CapsuleCast(Bottom(city-Offset),city-Offset,Radius,delta.normalized,out var hit,
+                delta.magnitude+ahead,Mask,QueryTriggerInteraction.Ignore) || Mathf.Abs(hit.normal.y)>.2f)return false;
+            normal=hit.normal;return true;
+        }
 
         public Vector3 Constrain(Vector3 current, Vector3 requested) => Constrain(current, requested, true);
         public Vector3 Constrain(Vector3 current, Vector3 requested, bool synchronize)
@@ -47,6 +61,7 @@ namespace WebShooter.Swing
         {
             if (probe == null)
             {
+                ownsProbe=true;
                 var go = new GameObject("Traversal overlap query") { hideFlags = HideFlags.HideAndDontSave, layer = 2 };
                 probe = go.AddComponent<CapsuleCollider>();
                 probe.isTrigger = true;
@@ -78,7 +93,7 @@ namespace WebShooter.Swing
 
         public void Dispose()
         {
-            if (probe == null) return;
+            if (probe == null || !ownsProbe) return;
             if (Application.isPlaying) Object.Destroy(probe.gameObject); else Object.DestroyImmediate(probe.gameObject);
             probe = null;
         }

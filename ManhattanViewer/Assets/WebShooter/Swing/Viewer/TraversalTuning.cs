@@ -19,6 +19,9 @@ namespace WebShooter.Swing
             {enabled=!Manhattan.Viewer.ManhattanBootstrap.HasArgument("--reconnect-off")};
         public SwingSettings Settings => settings;
         public ReconnectAssistSettings Reconnect => reconnect;
+        [SerializeField] private DualWebLaunchSettings launch=new DualWebLaunchSettings
+            {enabled=!Manhattan.Viewer.ManhattanBootstrap.HasArgument("--launch-off"),chargeFeedback=!Manhattan.Viewer.ManhattanBootstrap.HasArgument("--no-charge-shake")};
+        public DualWebLaunchSettings Launch => launch;
         public static SwingSettings Defaults()
         {
             var s=WebSwingMotionInput.TraversalSettings();s.features.SetFlow(!Manhattan.Viewer.ManhattanBootstrap.HasArgument("--flow-off"));

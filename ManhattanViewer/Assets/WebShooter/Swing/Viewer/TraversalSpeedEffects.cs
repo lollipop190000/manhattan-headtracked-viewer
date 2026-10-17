@@ -49,10 +49,14 @@ namespace WebShooter.Swing
         }
         private void Begin(ScriptableRenderContext context,Camera camera)
         {
-            if(camera!=view || applied || amount<.001f || (!speedFov && !cameraShake))return;
+            float charge=motion!=null && !motion.Paused?motion.Launch.FeedbackAmplitude:0;
+            if(camera!=view || applied || charge<=0 && (amount<.001f || (!speedFov && !cameraShake)))return;
             savedProjection=camera.projectionMatrix;savedPosition=camera.transform.position;applied=true;
             if(speedFov){var p=savedProjection;float scale=1f/(1f+fovExpansion*amount);p[0,0]*=scale;p[1,1]*=scale;camera.projectionMatrix=p;}
             if(cameraShake)camera.transform.position+=camera.transform.right*(Mathf.Sin(Time.time*43f)*shakeMetres*amount)+camera.transform.up*(Mathf.Sin(Time.time*57f)*shakeMetres*amount*.6f);
+            // One render-scoped owner restores the pose. A second shake component
+            // would restore stale transforms when begin/end callbacks interleave.
+            if(charge>0)camera.transform.position+=camera.transform.right*(Mathf.Sin(Time.time*47f)*charge)+camera.transform.up*(Mathf.Sin(Time.time*61f)*charge*.65f);
         }
         private void End(ScriptableRenderContext context,Camera camera){if(camera==view)Restore();}
         private void Restore(){if(!applied || view==null)return;view.projectionMatrix=savedProjection;view.transform.position=savedPosition;applied=false;}

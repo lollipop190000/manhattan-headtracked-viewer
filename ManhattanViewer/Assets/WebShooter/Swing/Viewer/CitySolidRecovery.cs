@@ -15,6 +15,8 @@ namespace WebShooter.Swing
         private const float Radius = TraversalCollision.Radius + TraversalCollision.Skin;
         private readonly Dictionary<Vector2Int, List<BuildingRecord>> cells = new Dictionary<Vector2Int, List<BuildingRecord>>();
         private readonly SwingPhysics body;
+        private CitySolidRecovery(Dictionary<Vector2Int,List<BuildingRecord>> index,SwingPhysics target){cells=index;body=target;}
+        public CitySolidRecovery ForBody(SwingPhysics target)=>new CitySolidRecovery(cells,target);
         public CitySolidRecovery(BuildingRecord[] buildings, SwingPhysics body)
         {
             this.body = body;
