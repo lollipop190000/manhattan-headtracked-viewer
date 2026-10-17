@@ -9,6 +9,7 @@ namespace WebShooter.Swing
     public sealed class SwingSettings
     {
         public FlowFeatures features = new FlowFeatures();
+        public AirChainAssistance chain = new AirChainAssistance();
         [Tooltip("중력 가속도 (m/s^2, 아래 방향)")] public float gravity = 9.81f;
         [Tooltip("선형 공기 저항 계수 (1/s). 클수록 속도가 빨리 줄어든다")] public float airDrag = 0.05f;
         [Tooltip("최대 속도 (m/s)")] public float maxSpeed = 70f;
@@ -55,8 +56,36 @@ namespace WebShooter.Swing
         public float AssistStrength { get; set; } = 1f;
         public bool Braking { get; set; }
         public bool WallRunRequested { get; set; }
+        public bool CornerGuidanceActive { get; set; }
+        public bool RopeLoaded
+        {
+            get
+            {
+                var d=Position-Anchor;
+                return Attached && d.magnitude>=RopeLength-.05f && Vector3.Dot(Velocity,d.normalized)>=-.01f;
+            }
+        }
+        private bool SwingSteeringPlane => Attached && (!Settings.chain.enabled || !Settings.chain.respectSlackSteering || RopeLoaded);
+        public float AssistedRedirectRate
+        {
+            get
+            {
+                var c=Settings.chain;
+                if(!c.enabled || !c.inputRedirect || Braking || AssistStrength<=0 || Settings.airControl<=0 ||
+                    Vector3.ProjectOnPlane(Velocity,Vector3.up).magnitude<c.minimumRedirectSpeed)return 0;
+                if(Attached)return attachmentAge<=c.redirectSeconds || CornerGuidanceActive?c.redirectDegrees:0;
+                return c.releaseRedirect && releaseRedirectRemaining>0 && !Grounded && !wallRunning && wallEscapeTime<=0?
+                    c.redirectDegrees*c.releaseRedirectRatio:0;
+            }
+        }
         public string LastCollisionName { get; private set; } = "";
         public int ContactSequence { get; private set; }
+        public int FloorContactSequence { get; private set; }
+        public int ResetSequence { get; private set; }
+        public int ReelGuardSequence { get; private set; }
+        private bool manualSlackRequested;
+        private bool LimitCloseReel => Settings.chain.enabled && Settings.chain.closeAnchorReelGuard && AssistStrength>0 && Attached &&
+            Velocity.magnitude>=Settings.chain.closeAnchorSpeed && Vector3.Distance(Position,Anchor)<=Settings.chain.closeAnchorDistance;
         public float TensionAcceleration { get; private set; }
         public float RopeCorrectionMetres { get; private set; }
         private bool wallRunning;
@@ -65,12 +94,14 @@ namespace WebShooter.Swing
         private float wallTime, wallCooldown;
         private bool wallExhausted;
         private float wallEscapeTime, attachmentTakeupRemaining;
+        private float attachmentAge,releaseRedirectRemaining;
+        private Vector3 requestedHeading;
         private Vector3 escapeNormal;
         public int WallDeflections { get; private set; }
         public void AssistCruise(float dt, bool braking)
         {
             if (!Attached || AssistStrength <= 0f || braking || Velocity.magnitude >= Settings.cruiseSpeed) return;
-            Vector3 tangent = Vector3.ProjectOnPlane(Velocity, (Position - Anchor).normalized);
+            Vector3 tangent = Vector3.ProjectOnPlane(Velocity, SwingSteeringPlane?(Position-Anchor).normalized:Vector3.up);
             if (tangent.sqrMagnitude > 1f)
                 Velocity += tangent.normalized * (Settings.cruiseAcceleration * AssistStrength * Mathf.Clamp(dt, 0f, .1f));
         }
@@ -164,10 +195,12 @@ namespace WebShooter.Swing
 
         public void Reset(Vector3 position)
         {
+            ResetSequence++;FloorContactSequence=ReelGuardSequence=0;manualSlackRequested=false;
             Position = position;
             Velocity = Vector3.zero;
             Grounded = position.y <= FloorY + .03f;
             wallRunning = false;
+            CornerGuidanceActive=false;attachmentAge=releaseRedirectRemaining=0;requestedHeading=Vector3.zero;
             yanking = yankContact = yankExhausted = false; LastCollisionName = "";
             wallExhausted = false;
             wallTime = wallCooldown = wallEscapeTime = 0f; WallDeflections = 0;
@@ -186,6 +219,8 @@ namespace WebShooter.Swing
             RopeLength = distance;
             if(Settings.features.attachmentDrop)RopeLength=Mathf.Clamp(distance*Settings.features.initialLengthRatio,Settings.minRopeLength,250f);
             Attached = true;
+            attachmentAge = 0f;
+            releaseRedirectRemaining=0;
             attachmentTakeupRemaining = Mathf.Max(0f, Settings.attachmentTakeupSeconds);
             if (Settings.attachPull > 0f) Velocity += (anchor - Position) / distance * Settings.attachPull;
             return true;
@@ -193,6 +228,7 @@ namespace WebShooter.Swing
 
         public void Release(bool allowBoost=false)
         {
+            if(Attached)releaseRedirectRemaining=Settings.chain.releaseRedirectSeconds;
             var f=Settings.features;
             if(allowBoost && Attached && f.releaseBoost && !Grounded && Velocity.y>f.releaseMinimumUpSpeed &&
                 Vector3.Dot((Position-Anchor).normalized,Vector3.down)<f.releasePhaseCosine)
@@ -205,7 +241,7 @@ namespace WebShooter.Swing
 
         public bool BeginYank()
         {
-            if(!Attached || yankExhausted || Vector3.Distance(Position,Anchor) <= Settings.minRopeLength + Settings.features.yankWallClearance) return false;
+            if(!Attached || LimitCloseReel || yankExhausted || Vector3.Distance(Position,Anchor) <= Settings.minRopeLength + Settings.features.yankWallClearance) return false;
             if(yanking) return true;
             yanking = true; yankContact = false; yankDirection = (Anchor-Position).normalized;
             if(Settings.features.preserveTransitionMomentum)
@@ -268,13 +304,16 @@ namespace WebShooter.Swing
         public void Step(float dt, Vector3 steer = default, float reel = 0f)
         {
             if (dt <= 0f) return;
+            manualSlackRequested=reel>0;
+            if(reel>0 && LimitCloseReel){yanking=false;reel=0;ReelGuardSequence++;}
             if(reel > 0f) BeginYank();
             else { FinishYank(); yankExhausted = false; }
             dt = Mathf.Min(dt, 0.1f);   // 멈췄다 재개할 때 폭주하지 않도록
             int steps = Mathf.Max(1, Mathf.CeilToInt(dt / Settings.maxStep));
             float h = dt / steps;
-            Vector3 steering = Vector3.ClampMagnitude(steer, 1f) * Settings.airControl * AssistStrength * (Attached || Grounded || wallRunning ? 3f : 1f);
-            if (Attached) steering = Vector3.ProjectOnPlane(steering, (Position - Anchor).normalized);
+            Vector3 steering = Vector3.ClampMagnitude(steer, 1f) * Settings.airControl * AssistStrength * (SwingSteeringPlane || Grounded || wallRunning ? 3f : 1f);
+            requestedHeading=Vector3.ProjectOnPlane(Vector3.ClampMagnitude(steer,1f),Vector3.up);
+            if (SwingSteeringPlane) steering = Vector3.ProjectOnPlane(steering, (Position - Anchor).normalized);
             if (wallRunning)
             {
                 float intoWall = Mathf.Max(0f, -Vector3.Dot(steering, ContactNormal));
@@ -292,21 +331,38 @@ namespace WebShooter.Swing
 
         private void Substep(float h, Vector3 steering, Vector3 gravity, float reel)
         {
+            if(reel>0 && LimitCloseReel){yanking=false;reel=0;ReelGuardSequence++;}
+            if (Attached) attachmentAge += h;
+            releaseRedirectRemaining=Mathf.Max(0,releaseRedirectRemaining-h);
             TensionAcceleration=0;
             RopeCorrectionMetres=0;
             AdvanceYank(h);
-            if (Settings.features.preserveSteeringMomentum && !Braking && !wallRunning && !Grounded && steering.sqrMagnitude > .0001f)
+            var chain=Settings.chain;
+            Vector3 horizontal=Vector3.ProjectOnPlane(Velocity,Vector3.up);
+            float redirectRate=AssistedRedirectRate;
+            bool redirect=redirectRate>0 && requestedHeading.sqrMagnitude>.0001f;
+            if(redirect)
             {
-                Vector3 normal = Attached ? (Position - Anchor).normalized : Vector3.up;
+                // Deliberate input banks the horizontal trajectory. Preserve its
+                // magnitude and vertical velocity; the rope still removes any
+                // outward radial component in the ordinary constraint below.
+                Vector3 turned=Vector3.RotateTowards(horizontal,requestedHeading.normalized*horizontal.magnitude,
+                    redirectRate*Mathf.Clamp01(requestedHeading.magnitude)*AssistStrength*Mathf.Deg2Rad*h,0);
+                Velocity+=turned-horizontal;steering=Vector3.zero;
+            }
+            if (!redirect && Settings.features.preserveSteeringMomentum && !Braking && !wallRunning && !Grounded && steering.sqrMagnitude > .0001f)
+            {
+                bool swingPlane=SwingSteeringPlane;
+                Vector3 normal = swingPlane ? (Position - Anchor).normalized : Vector3.up;
                 Vector3 tangent = Vector3.ProjectOnPlane(Velocity, normal);
                 Vector3 direction = Vector3.ProjectOnPlane(steering, normal).normalized;
-                float target = Attached ? Settings.cruiseSpeed : Settings.features.airTargetSpeed;
+                float target = swingPlane ? Settings.cruiseSpeed : Settings.features.airTargetSpeed;
                 if (tangent.magnitude >= target)
                 {
                     // Preserve the effective input force: normalization must not turn a tiny axis or assist into full steering.
-                    float fullAcceleration = Settings.airControl * (Attached ? 3f : 1f);
+                    float fullAcceleration = Settings.airControl * (swingPlane ? 3f : 1f);
                     float inputStrength = Mathf.Clamp01(steering.magnitude / Mathf.Max(.0001f, fullAcceleration));
-                    float turnScale = inputStrength * (Attached ? 1f : Settings.features.airSteeringRatio);
+                    float turnScale = inputStrength * (swingPlane ? 1f : Settings.features.airSteeringRatio);
                     Vector3 turned = Vector3.RotateTowards(tangent, direction * tangent.magnitude,
                         Settings.features.steeringTurnDegrees * turnScale * Mathf.Deg2Rad * h, 0f);
                     Velocity += turned - tangent;
@@ -323,7 +379,7 @@ namespace WebShooter.Swing
             Vector3 p = Position + v * h;
             // Resolve the supporting plane before rope tension so gravity cannot pull a resting
             // body below the floor and turn that penetration into horizontal web propulsion.
-            if (p.y <= FloorY) { p.y = FloorY; if (v.y < 0f) v.y = 0f; }
+            if (p.y <= FloorY) { p.y = FloorY; if (v.y < 0f) {FloorContactSequence++;v.y = 0f;} }
 
             if (Attached)
             {
@@ -334,6 +390,8 @@ namespace WebShooter.Swing
                 if (reel != 0f) RopeLength = Mathf.Clamp(RopeLength - reel * (reel > 0f ? Settings.reelSpeed : Settings.payoutSpeed) * h, Settings.minRopeLength, 250f);
                 Vector3 d = p - Anchor;
                 float dist = d.magnitude;
+                if(Settings.chain.enabled && AssistStrength>0 && manualSlackRequested && attachmentAge<=Settings.chain.initialSlackSeconds*Mathf.Clamp01(AssistStrength))
+                    RopeLength=Mathf.Min(RopeLength,Mathf.Max(Settings.minRopeLength,dist));
                 // Reel in only length already made slack by inward movement. No teleport or impulse.
                 if (attachmentTakeupRemaining > 0f)
                 {
